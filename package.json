@@ -7,9 +7,20 @@
         "dev": "vite"
     },
     "devDependencies": {
+        "@iconify/utils": "^3.1.0",
+        "@rollup/plugin-html": "^2.0.0",
         "axios": "^1.11.0",
         "concurrently": "^9.0.1",
+        "glob": "^13.0.0",
         "laravel-vite-plugin": "^2.0.0",
+        "sass-embedded": "^1.93.3",
         "vite": "^7.0.7"
+    },
+    "dependencies": {
+        "@popperjs/core": "^2.11.8",
+        "bootstrap": "^5.3.8",
+        "highlight.js": "^11.11.1",
+        "jquery": "^3.7.1",
+        "perfect-scrollbar": "^1.5.6"
     }
 }
