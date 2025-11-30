@@ -14,7 +14,7 @@
           <div class="app-brand justify-content-center">
             <a href="{{ url('/') }}" class="app-brand-link gap-2 mb-3">
               <span class="app-brand-logo demo">@include('_partials.macros')</span>
-              <span class="app-brand-text demo text-heading fw-bold">PRIMA POLINUS</span>
+              <span class="app-brand-text demo text-heading fw-bold">prima</span>
             </a>
           </div>
           <p class="mb-4">Silakan login menggunakan akun SI-AKAD Anda.</p>

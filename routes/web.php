@@ -43,6 +43,7 @@ use App\Http\Controllers\user_interface\TooltipsPopovers;
 use App\Http\Controllers\pages\AccountSettingsConnections;
 use App\Http\Controllers\pages\AccountSettingsNotifications;
 use App\Http\Controllers\authentications\ForgotPasswordBasic;
+use App\Http\Controllers\authentications\UserController;
 use App\Http\Controllers\user_interface\PaginationBreadcrumbs;
 
 // Main Page Route
@@ -56,8 +57,19 @@ Route::middleware('guest')->group(function () {
 // Route untuk yang Sudah Login
 Route::middleware('auth')->group(function () {
     Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
-  });
+
+});
+
   Route::get('/', [Analytics::class, 'index'])->name('dashboard');
+  Route::resource('/user', UserController::class)
+    ->except('show','edit','create')
+    ->names([
+        'index' => 'user',
+        'store' => 'user.store',
+        'update' => 'user.update',
+        'destroy' => 'user.destroy'
+    ]);
+
   // layout
   Route::get('/layouts/without-menu', [WithoutMenu::class, 'index'])->name('layouts-without-menu');
   Route::get('/layouts/without-navbar', [WithoutNavbar::class, 'index'])->name('layouts-without-navbar');
