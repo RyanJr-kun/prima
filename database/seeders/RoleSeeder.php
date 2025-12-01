@@ -17,6 +17,7 @@ class RoleSeeder extends Seeder
 
         // Daftar Role Project Anda
         $roles = [
+            'Admin',
             'BAAK',      // Admin Akademik
             'Mahasiswa',
             'Dosen',

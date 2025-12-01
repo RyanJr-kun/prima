@@ -1,61 +1,49 @@
 @extends('layouts/contentNavbarLayout')
 
-@section('title', 'User Management - SiPadu')
+@section('vendor-style')
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" />
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/select2-bootstrap-5-theme@1.3.0/dist/select2-bootstrap-5-theme.min.css" />
 
+@endsection
 @section('vendor-script')
-<script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-@vite('resources/assets/vendor/libs/bootstrap/bootstrap.js')
+<script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
 @endsection
 
-@section('page-script')
-@vite('resources/assets/js/app-user-list.js')
-@endsection
-
+@section('title', 'User Management - SiPadu')
 @section('content')
 
-<meta name="csrf-token" content="{{ csrf_token() }}">
-
-<div class="row g-6 mb-6">
-  <div class="col-sm-6 col-xl-3">
-    <div class="card">
-      <div class="card-body">
-        <div class="d-flex align-items-start justify-content-between">
-          <div class="content-left">
-            <span>Session</span>
-            <div class="d-flex align-items-end mt-2">
-              <h3 class="mb-0 me-2">21,459</h3>
-              <small class="text-success">(+29%)</small>
-            </div>
-            <small>Total Users</small>
-          </div>
-          <span class="badge bg-label-primary rounded p-2">
-            <i class="bx bx-user bx-sm"></i>
-          </span>
-        </div>
+{{-- TOAST NOTIFICATION --}}
+@if (session('success'))
+<div class="toast-container top-0 end-0 p-3" style="z-index: 1050;">
+  <div id="successToast" class="toast align-items-center bg-success text-white" role="alert" aria-live="assertive" aria-atomic="true">
+    <div class="d-flex">
+      <div class="toast-body">
+        {{ session('success') }}
       </div>
+      <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
     </div>
   </div>
-  </div>
+</div>
+@endif
 
 <div class="card">
+
   <div class="card-header border-bottom">
-    <h5 class="card-title mb-0">Search Filter</h5>
-    <div class="d-flex justify-content-between align-items-center row pt-4 gap-4 gap-md-0">
-      <div class="col-md-4 user_role"></div>
-      <div class="col-md-4 user_plan"></div>
-      <div class="col-md-4 user_status"></div>
+    <div class="row">
+
+        <div class="col-6">
+            <h4 class="card-title mb-0">List Pengguna</h4>
+        </div>
+        <div class="col-6 text-end">
+            <button class="btn btn-primary add-new" type="button" data-bs-toggle="offcanvas" data-bs-target="#offcanvasAddUser" id="btnCreate">
+                <span><i class="bx bx-plus me-2"></i>Penggguna</span>
+            </button>
+        </div>
     </div>
   </div>
 
   <div class="card-datatable table-responsive">
-    <div class="d-flex justify-content-between align-items-center m-3">
-        <h5 class="card-title mb-0">List Users</h5>
-        <button class="btn btn-secondary add-new btn-primary" type="button" data-bs-toggle="offcanvas" data-bs-target="#offcanvasAddUser" id="btnCreate">
-            <span><i class="bx bx-plus bx-sm me-0 me-sm-2"></i><span class="d-none d-sm-inline-block">Add New User</span></span>
-        </button>
-    </div>
-
     <table class="table border-top" id="tableUser">
       <thead>
         <tr>
@@ -67,7 +55,7 @@
       </thead>
       <tbody>
         @foreach ($data as $key => $user)
-        <tr id="row_{{ $user->id }}">
+        <tr>
             <td>{{ ++$key }}</td>
             <td>
                 <div class="d-flex justify-content-start align-items-center user-name">
@@ -83,16 +71,29 @@
                 </div>
             </td>
             <td>
-                @foreach($user->getRoleNames() as $role)
-                    <span class="text-truncate d-flex align-items-center">
-                        <span class="badge badge-center rounded-pill bg-label-warning w-px-30 h-px-30 me-2"><i class="bx bx-user bx-xs"></i></span>
-                        {{ $role }}
-                    </span>
-                @endforeach
+                 @php
+                    $roleColors = [
+                        'admin' => 'danger',
+                        'baak' => 'secondary',
+                        'mahasiswa' => 'success',
+                        'dosen' => 'primary',
+                        'kaprodi' => 'primary',
+                        'wadir1' => 'warning',
+                        'wadir2' => 'warning',
+                        'direktur' => 'dark',
+                    ];
+                @endphp
+                @forelse($user->getRoleNames() as $role)
+                    @php $colorClass = $roleColors[strtolower($role)] ?? 'primary'; @endphp
+                    <span class="badge bg-label-{{ $colorClass }} me-1">{{ $role }}</span>
+                @empty
+                    <span class="text-muted small">Tanpa Role</span>
+                @endforelse
             </td>
             <td><span class="badge bg-label-success">Active</span></td>
             <td>
                 <div class="d-flex align-items-center">
+                    {{-- Perhatikan penambahan data-roles dengan @json --}}
                     <a href="javascript:;" class="text-body edit-record me-2"
                        data-bs-toggle="offcanvas"
                        data-bs-target="#offcanvasAddUser"
@@ -100,12 +101,18 @@
                        data-name="{{ $user->name }}"
                        data-username="{{ $user->username }}"
                        data-email="{{ $user->email }}"
-                       data-role="{{ $user->roles->first()->name ?? '' }}">
+                       data-roles='@json($user->getRoleNames())'
+                       data-action="{{ route('user.update', $user->id) }}">
                         <i class="bx bx-edit text-muted bx-sm"></i>
                     </a>
-                    <a href="javascript:;" class="text-body delete-record" data-id="{{ $user->id }}">
-                        <i class="bx bx-trash text-muted bx-sm"></i>
-                    </a>
+
+                    <form action="{{ route('user.destroy', $user->id) }}" method="POST" class="d-inline delete-form">
+                        @csrf
+                        @method('DELETE')
+                        <a href="javascript:;" class="text-body delete-record">
+                            <i class="bx bx-trash text-muted bx-sm"></i>
+                        </a>
+                    </form>
                 </div>
             </td>
         </tr>
@@ -121,41 +128,45 @@
     </div>
     <div class="offcanvas-body mx-0 grow-0 p-6 h-100">
 
-      <form class="add-new-user pt-0" id="addNewUserForm" onsubmit="return false">
-        <input type="hidden" id="user_id" name="user_id"> <div class="mb-6">
+      <form class="add-new-user pt-0" id="addNewUserForm" action="{{ route('user.store') }}" method="POST">
+        @csrf
+        <div id="methodInput"></div>
+        <input type="hidden" id="user_id" name="user_id">
+
+        <div class="mb-6">
           <label class="form-label" for="add-user-fullname">Full Name</label>
-          <input type="text" class="form-control" id="add-user-fullname" placeholder="John Doe" name="name" aria-label="John Doe" />
-          <div class="invalid-feedback error-text name_error"></div>
+          <input type="text" class="form-control @error('name') is-invalid @enderror" id="add-user-fullname" placeholder="John Doe" name="name" value="{{ old('name') }}" />
+          @error('name') <div class="invalid-feedback">{{ $message }}</div> @enderror
         </div>
 
         <div class="mb-6">
           <label class="form-label" for="add-user-username">Username</label>
-          <input type="text" class="form-control" id="add-user-username" placeholder="johndoe" name="username" aria-label="johndoe" />
-          <div class="invalid-feedback error-text username_error"></div>
+          <input type="text" class="form-control @error('username') is-invalid @enderror" id="add-user-username" placeholder="johndoe" name="username" value="{{ old('username') }}" />
+          @error('username') <div class="invalid-feedback">{{ $message }}</div> @enderror
         </div>
 
         <div class="mb-6">
           <label class="form-label" for="add-user-email">Email</label>
-          <input type="text" class="form-control" id="add-user-email" placeholder="john.doe@example.com" name="email" aria-label="john.doe@example.com" />
-          <div class="invalid-feedback error-text email_error"></div>
+          <input type="text" class="form-control @error('email') is-invalid @enderror" id="add-user-email" placeholder="john.doe@example.com" name="email" value="{{ old('email') }}" />
+          @error('email') <div class="invalid-feedback">{{ $message }}</div> @enderror
         </div>
 
         <div class="mb-6">
           <label class="form-label" for="user-role">User Role</label>
-          <select id="user-role" class="form-select" name="userRole">
-            <option value="">Select Role</option>
+          {{-- 3. Select dengan atribut Multiple --}}
+          <select id="user-role" class="select2 form-select @error('userRole') is-invalid @enderror" name="userRole[]" multiple>
             @foreach($roles as $role)
-                <option value="{{ $role }}">{{ $role }}</option>
+                <option value="{{ $role }}" {{ (collect(old('userRole'))->contains($role)) ? 'selected' : '' }}>{{ $role }}</option>
             @endforeach
           </select>
-          <div class="invalid-feedback error-text userRole_error"></div>
+          @error('userRole') <div class="invalid-feedback d-block">{{ $message }}</div> @enderror
         </div>
 
         <div class="mb-6">
-            <label class="form-label" for="add-user-password">Password</label>
-            <input type="password" class="form-control" id="add-user-password" name="password" placeholder="********" />
-            <small class="text-muted" id="password-help" style="display:none">Biarkan kosong jika tidak ingin mengganti password.</small>
-            <div class="invalid-feedback error-text password_error"></div>
+          <label class="form-label" for="add-user-password">Password</label>
+          <input type="password" class="form-control @error('password') is-invalid @enderror" id="add-user-password" name="password" placeholder="********" />
+          <small class="text-muted" id="password-help" style="display:none">Biarkan kosong jika tidak ingin mengganti password.</small>
+          @error('password') <div class="invalid-feedback">{{ $message }}</div> @enderror
         </div>
 
         <div class="mb-6">
@@ -163,7 +174,7 @@
             <input type="password" class="form-control" id="confirm-password" name="confirm-password" placeholder="********" />
         </div>
 
-        <button type="submit" class="btn btn-primary me-3 data-submit" id="saveBtn">Submit</button>
+        <button type="submit" class="btn btn-primary me-3" id="saveBtn">Submit</button>
         <button type="reset" class="btn btn-label-danger" data-bs-dismiss="offcanvas">Cancel</button>
       </form>
     </div>
@@ -171,145 +182,115 @@
 </div>
 
 <script>
-$(document).ready(function() {
+document.addEventListener('DOMContentLoaded', function () {
 
-    // Setup CSRF
-    $.ajaxSetup({
-        headers: {
-            'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content')
+    if (window.jQuery) {
+        $('#user-role').select2({
+            placeholder: "Pilih Role",
+            allowClear: true,
+            dropdownParent: $('#offcanvasAddUser'), // jQuery selector untuk parent
+            theme: 'bootstrap-5'
+        });
+    }
+
+    const btnCreate = document.getElementById('btnCreate');
+    if (btnCreate) {
+        btnCreate.addEventListener('click', function() {
+            document.getElementById('offcanvasAddUserLabel').textContent = "Add User";
+            document.getElementById('saveBtn').textContent = "Submit";
+            document.getElementById('user_id').value = '';
+            document.getElementById('password-help').style.display = 'none';
+
+            let form = document.getElementById('addNewUserForm');
+            form.reset();
+            form.setAttribute('action', "{{ route('user.store') }}");
+            document.getElementById('methodInput').innerHTML = '';
+
+            if (window.jQuery) {
+                $('#user-role').val(null).trigger('change');
+            }
+
+            document.querySelectorAll('.is-invalid').forEach(el => el.classList.remove('is-invalid'));
+            document.querySelectorAll('.invalid-feedback').forEach(el => el.textContent = '');
+        });
+    }
+
+    document.body.addEventListener('click', function(e) {
+        const target = e.target.closest('.edit-record');
+
+        if (target) {
+            let id = target.getAttribute('data-id');
+            let name = target.getAttribute('data-name');
+            let username = target.getAttribute('data-username');
+            let email = target.getAttribute('data-email');
+            let rolesData = JSON.parse(target.getAttribute('data-roles'));
+            let actionUrl = target.getAttribute('data-action');
+
+            document.getElementById('offcanvasAddUserLabel').textContent = "Edit User";
+            document.getElementById('saveBtn').textContent = "Update";
+            document.getElementById('password-help').style.display = 'block';
+
+            document.getElementById('user_id').value = id;
+            document.getElementById('add-user-fullname').value = name;
+            document.getElementById('add-user-username').value = username;
+            document.getElementById('add-user-email').value = email;
+
+            let form = document.getElementById('addNewUserForm');
+            form.setAttribute('action', actionUrl);
+            document.getElementById('methodInput').innerHTML = '<input type="hidden" name="_method" value="PUT">';
+
+            if (window.jQuery) {
+                $('#user-role').val(rolesData).trigger('change');
+            }
+
+            document.querySelectorAll('.is-invalid').forEach(el => el.classList.remove('is-invalid'));
         }
     });
 
-    // 1. Reset Form saat tombol Tambah diklik
-    $('#btnCreate').click(function() {
-        $('#offcanvasAddUserLabel').text("Add User");
-        $('#saveBtn').text("Submit");
-        $('#user_id').val('');
-        $('#addNewUserForm')[0].reset();
-        $('.invalid-feedback').text('');
-        $('input, select').removeClass('is-invalid');
-        $('#password-help').hide(); // Sembunyikan pesan help password
-    });
+    document.body.addEventListener('click', function(e) {
+        const target = e.target.closest('.delete-record');
 
-    // 2. Isi Form saat tombol Edit diklik
-    $('body').on('click', '.edit-record', function() {
-        var id = $(this).data('id');
+        if (target) {
+            e.preventDefault();
+            const form = target.closest('form');
 
-        $('#offcanvasAddUserLabel').text("Edit User");
-        $('#saveBtn').text("Update");
-
-        // Isi input
-        $('#user_id').val(id);
-        $('#add-user-fullname').val($(this).data('name'));
-        $('#add-user-username').val($(this).data('username'));
-        $('#add-user-email').val($(this).data('email'));
-        $('#user-role').val($(this).data('role'));
-
-        // Bersihkan password
-        $('#add-user-password').val('');
-        $('#confirm-password').val('');
-        $('#password-help').show(); // Tampilkan pesan help
-
-        // Hapus error lama
-        $('.invalid-feedback').text('');
-        $('input, select').removeClass('is-invalid');
-    });
-
-    // 3. Simpan Data (AJAX)
-    $('#addNewUserForm').submit(function(e) {
-        e.preventDefault();
-
-        var id = $('#user_id').val();
-        var url = id ? "/user/" + id : "{{ route('user.store') }}";
-        var type = id ? "PUT" : "POST";
-
-        $('#saveBtn').prop('disabled', true).text('Processing...');
-
-        $.ajax({
-            url: url,
-            type: type,
-            data: $(this).serialize(),
-            success: function(response) {
-                $('#saveBtn').prop('disabled', false).text('Submit');
-
-                // Tutup Offcanvas
-                var offcanvasEl = document.getElementById('offcanvasAddUser');
-                var offcanvas = bootstrap.Offcanvas.getInstance(offcanvasEl);
-                offcanvas.hide();
-
+            if (form) {
                 Swal.fire({
-                    icon: 'success',
-                    title: 'Success',
-                    text: response.success,
-                    timer: 1500,
-                    showConfirmButton: false
-                }).then(() => {
-                    location.reload();
-                });
-            },
-            error: function(response) {
-                $('#saveBtn').prop('disabled', false).text('Submit');
-
-                if(response.status === 422) {
-                    var errors = response.responseJSON.errors;
-                    $('input, select').removeClass('is-invalid');
-                    $('.invalid-feedback').text('');
-
-                    $.each(errors, function(key, val) {
-                        // Mapping nama field controller ke ID input HTML
-                        var inputSelector = '';
-                        if(key == 'name') inputSelector = '#add-user-fullname';
-                        else if(key == 'username') inputSelector = '#add-user-username';
-                        else if(key == 'email') inputSelector = '#add-user-email';
-                        else if(key == 'userRole') inputSelector = '#user-role';
-                        else if(key == 'password') inputSelector = '#add-user-password';
-
-                        if(inputSelector) {
-                            $(inputSelector).addClass('is-invalid');
-                            $(inputSelector).siblings('.invalid-feedback').text(val[0]);
-                        }
-                    });
-                } else {
-                    Swal.fire('Error', 'Something went wrong!', 'error');
-                }
-            }
-        });
-    });
-
-    // 4. Delete Data
-    $('body').on('click', '.delete-record', function() {
-        var id = $(this).data('id');
-
-        Swal.fire({
-            title: 'Are you sure?',
-            text: "You won't be able to revert this!",
-            icon: 'warning',
-            showCancelButton: true,
-            confirmButtonText: 'Yes, delete it!',
-            customClass: {
-              confirmButton: 'btn btn-primary me-3',
-              cancelButton: 'btn btn-label-secondary'
-            },
-            buttonsStyling: false
-        }).then((result) => {
-            if (result.isConfirmed) {
-                $.ajax({
-                    url: "/user/" + id,
-                    type: "DELETE",
-                    success: function(response) {
-                        $('#row_' + id).fadeOut();
-                        Swal.fire({
-                            icon: 'success',
-                            title: 'Deleted!',
-                            text: response.success,
-                            customClass: { confirmButton: 'btn btn-success' }
-                        });
+                    title: 'Apakah Anda yakin?',
+                    text: "Data yang dihapus tidak dapat dikembalikan!",
+                    icon: 'warning',
+                    showCancelButton: true,
+                    confirmButtonText: 'Ya, hapus!',
+                    cancelButtonText: 'Batal',
+                    customClass: {
+                        confirmButton: 'btn btn-primary me-3',
+                        cancelButton: 'btn btn-label-secondary'
+                    },
+                    buttonsStyling: false
+                }).then((result) => {
+                    if (result.isConfirmed) {
+                        form.submit();
                     }
                 });
             }
-        });
+        }
     });
 
+    @if ($errors->any())
+        const offcanvasEl = document.getElementById('offcanvasAddUser');
+        if (offcanvasEl) {
+            const offcanvas = new bootstrap.Offcanvas(offcanvasEl);
+            offcanvas.show();
+        }
+    @endif
+
+    const toastEl = document.getElementById('successToast');
+    if (toastEl) {
+        const toast = new bootstrap.Toast(toastEl, {
+            delay: 5000
+        });
+        toast.show();
+    }
 });
 </script>
 @endsection
