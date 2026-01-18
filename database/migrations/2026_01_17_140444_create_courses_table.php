@@ -20,7 +20,7 @@ return new class extends Migration
             $table->integer('sks_praktik')->default(0);
             $table->integer('sks_lapangan')->default(0);
             $table->integer('semester');
-            $table->string('prodi')->default('TRPL');
+            $table->foreignId('prodi_id')->constrained('prodis');
             $table->timestamps();
             $table->unique(['kurikulum_id', 'code']);
         });

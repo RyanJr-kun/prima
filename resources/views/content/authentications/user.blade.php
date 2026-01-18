@@ -1,16 +1,10 @@
 @extends('layouts/contentNavbarLayout')
 
-@section('vendor-style')
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" />
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/select2-bootstrap-5-theme@1.3.0/dist/select2-bootstrap-5-theme.min.css" />
-
-@endsection
 @section('vendor-script')
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-<script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
 @endsection
 
-@section('title', 'User Management - SiPadu')
+@section('title', 'Managemen Pengguna - prima')
 @section('content')
 
 {{-- TOAST NOTIFICATION --}}
@@ -33,7 +27,7 @@
     <div class="row">
 
         <div class="col-6">
-            <h4 class="card-title mb-0">List Pengguna</h4>
+            <h4 class="card-title mb-0">Managemen Pengguna</h4>
         </div>
         <div class="col-6 text-end">
             <button class="btn btn-primary add-new" type="button" data-bs-toggle="offcanvas" data-bs-target="#offcanvasAddUser" id="btnCreate">
@@ -154,7 +148,7 @@
         <div class="mb-6">
           <label class="form-label" for="user-role">User Role</label>
           {{-- 3. Select dengan atribut Multiple --}}
-          <select id="user-role" class="select2 form-select @error('userRole') is-invalid @enderror" name="userRole[]" multiple>
+          <select id="user-role" class="form-select select2 @error('userRole') is-invalid @enderror" name="userRole[]" multiple>
             @foreach($roles as $role)
                 <option value="{{ $role }}" {{ (collect(old('userRole'))->contains($role)) ? 'selected' : '' }}>{{ $role }}</option>
             @endforeach

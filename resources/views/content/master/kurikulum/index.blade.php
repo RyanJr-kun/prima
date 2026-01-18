@@ -1,5 +1,5 @@
 @extends('layouts/contentNavbarLayout')
-@section('title', 'Ruang Kelas - PRIMA')
+@section('title', 'Mata Kuliah - PRIMA')
 @section('content')
 
 @endsection

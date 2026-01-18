@@ -1,0 +1,56 @@
+@import "select2/dist/css/select2.css";
+
+/* =========================================================
+   CLEAN ADMIN SELECT2 (Bootstrap 5 Friendly)
+   ========================================================= */
+
+.select2-container {
+  width: 100% !important;
+  font-size: .875rem;
+}
+
+.select2-selection--single {
+  height: calc(2.5rem + 2px);
+  border-radius: .5rem;
+  border: 1px solid #dee2e6;
+  background-color: #fff;
+  padding: 0 .75rem;
+  display: flex;
+  align-items: center;
+}
+
+.select2-selection__rendered {
+  padding-left: 0 !important;
+  color: #212529;
+}
+
+.select2-selection__arrow {
+  height: 100%;
+}
+
+.select2-container--default.select2-container--focus
+.select2-selection--single {
+  border-color: #007bff;
+  box-shadow: 0 0 0 .15rem rgba(0,123,255,.15);
+}
+
+.select2-dropdown {
+  border-radius: .5rem;
+  border: 1px solid #dee2e6;
+  box-shadow: 0 .5rem 1rem rgba(0,0,0,.08);
+  padding: .25rem 0;
+}
+
+.select2-results__option {
+  padding: .5rem .75rem;
+}
+
+.select2-results__option--highlighted {
+  background-color: #007bff !important;
+  color: #fff;
+}
+
+.select2-results__option[aria-selected="true"] {
+  background-color: rgba(0,123,255,.08);
+  color: #007bff;
+}

@@ -16,7 +16,7 @@ return new class extends Migration
             $table->foreignId('academic_period_id')->constrained()->cascadeOnDelete();
             $table->foreignId('kurikulum_id')->constrained()->restrictOnDelete();
             $table->string('name');
-            $table->string('prodi');
+            $table->foreignId('prodi_id')->constrained('prodis');
             $table->integer('semester');
             $table->string('angkatan');
             $table->integer('total_students')->default(0);

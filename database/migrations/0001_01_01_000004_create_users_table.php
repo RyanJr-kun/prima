@@ -22,6 +22,8 @@ return new class extends Migration
             $table->string('nidn')->nullable();
             $table->boolean('status')->default(true);
             $table->rememberToken();
+                        
+            $table->foreignId('prodi_id')->nullable()->constrained('prodis')->nullOnDelete();
             $table->timestamps();
         });
 

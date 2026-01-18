@@ -11,12 +11,11 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('kurikulums', function (Blueprint $table) {
+        Schema::create('prodis', function (Blueprint $table) {
             $table->id();
+            $table->string('code')->unique();
             $table->string('name');
-            $table->year('year');
-            $table->foreignId('prodi_id')->constrained('prodis');
-            $table->boolean('is_active')->default(true);
+            $table->string('jenjang');
             $table->timestamps();
         });
     }
@@ -26,6 +25,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('curricula');
+        Schema::dropIfExists('prodis');
     }
 };
