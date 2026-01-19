@@ -23,7 +23,8 @@ class DatabaseSeeder extends Seeder
         $prodiTrpl = \App\Models\Prodi::create([
             'code' => 'TRPL',
             'name' => 'Teknologi Rekayasa Perangkat Lunak',
-            'jenjang' => 'D4'
+            'jenjang' => 'D4',
+            'kaprodi_id' => null,
         ]);
 
         // 2. Buat Akun SUPER ADMIN (Anda)
@@ -76,6 +77,10 @@ class DatabaseSeeder extends Seeder
         ]);
         $kaprodi->assignRole($roleKaprodi);
         $kaprodi->assignRole($roleDosen);
+        
+        $prodiTrpl->update([
+        'kaprodi_id' => $kaprodi->id
+        ]);
 
         // 4. Buat Akun DOSEN LAIN (Sesuai Distribusi Matkul)
 
@@ -122,9 +127,11 @@ class DatabaseSeeder extends Seeder
 
         $kurikulum = \App\Models\Kurikulum::create([
             'name' => 'Kurikulum 2023',
-            'year' => '2023',
+            'tanggal' => '2023-01-01',
+            'semester' => '7',
             'prodi_id' => $prodiTrpl->id,
             'is_active' => true,
+            'file_path' => null,
         ]);
     }
 }

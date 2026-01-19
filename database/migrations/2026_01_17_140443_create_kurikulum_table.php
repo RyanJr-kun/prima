@@ -14,9 +14,11 @@ return new class extends Migration
         Schema::create('kurikulums', function (Blueprint $table) {
             $table->id();
             $table->string('name');
-            $table->year('year');
+            $table->date('tanggal')->nullable();
+            $table->integer('semester');
             $table->foreignId('prodi_id')->constrained('prodis');
             $table->boolean('is_active')->default(true);
+            $table->string('file_path')->nullable();
             $table->timestamps();
         });
     }
