@@ -34,16 +34,16 @@
             "slug": "master.program-studi.index"
         },
         {
-            "url": "master/kelas",
-            "name": "Data Kelas",
-            "icon": "menu-icon icon-base bx bx-class",
-            "slug": "master.kelas.index"
-        },
-        {
             "url": "master/kurikulum",
             "name": "Kurikulum",
             "icon": "menu-icon icon-base bx bx-document-add-outline",
             "slug": "master.kurikulum.index"
+        },
+        {
+            "url": "master/kelas",
+            "name": "Kelas Perkuliahan",
+            "icon": "menu-icon icon-base bx bx-class",
+            "slug": "master.kelas.index"
         },
         {
             "url": "master/mata-kuliah",

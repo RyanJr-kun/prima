@@ -1,0 +1,25 @@
+@import 'sweetalert2/src/sweetalert2.scss';
+
+.swal2-popup {
+  border-radius: 12px;
+  padding: 1.5rem;
+  font-family: var(--bs-font-sans-serif);
+}
+
+.swal2-title {
+  color: #212529;
+  font-size: 1.25rem;
+}
+
+.swal2-confirm {
+  background-color: #007bff !important;
+}
+
+.swal2-cancel {
+  background-color: #6c757d !important;
+}
+
+.swal2-icon.swal2-warning {
+  border-color: #ffc107;
+  color: #ffc107;
+}

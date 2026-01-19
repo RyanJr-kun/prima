@@ -23,7 +23,7 @@ return new class extends Migration
             $table->boolean('status')->default(true);
             $table->rememberToken();
                         
-            $table->foreignId('prodi_id')->nullable()->constrained('prodis')->nullOnDelete();
+            $table->foreignId('prodi_id')->nullable();
             $table->timestamps();
         });
 

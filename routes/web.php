@@ -30,12 +30,12 @@ Route::middleware('auth')->group(function () {
     Route::get('/Jadwal', [JadwalController::class, 'index'])->name('jadwal');
     Route::get('/Ruangan', [RuanganController::class, 'index'])->name('ruang');
     Route::get('/Pengaturan', [PengaturanController::class, 'index'])->name('setting');
-    Route::resource('/user', UserController::class)->except('show', 'edit', 'create');
+    Route::resource('user', UserController::class)->except('show', 'edit', 'create');
     
     Route::prefix('master')->name('master.')->group(function () {
-        Route::resource('kurikulum', KurikulumController::class);
-        Route::resource('kelas', StudyClassController::class);
-        Route::resource('mata-kuliah', CourseController::class);
-        route::resource('program-studi', ProdiController::class);
+        Route::resource('kurikulum', KurikulumController::class)->except('show', 'edit', 'create');
+        Route::resource('kelas', StudyClassController::class)->except('show', 'edit', 'create');
+        Route::resource('mata-kuliah', CourseController::class)->except('show', 'edit', 'create');
+        route::resource('program-studi', ProdiController::class)->except('show', 'edit', 'create');
     });
 });

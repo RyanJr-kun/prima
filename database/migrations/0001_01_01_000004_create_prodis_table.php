@@ -16,8 +16,17 @@ return new class extends Migration
             $table->string('code')->unique();
             $table->string('name');
             $table->string('jenjang');
+            $table->integer('lama_studi')->default(8);
+            $table->foreignId('kaprodi_id')->nullable()->constrained('users')->nullOnDelete();
+            
             $table->timestamps();
         });
+        
+        Schema::table('users', function (Blueprint $table) {
+        $table->foreign('prodi_id')
+              ->references('id')->on('prodis')
+              ->nullOnDelete();
+        }); 
     }
 
     /**

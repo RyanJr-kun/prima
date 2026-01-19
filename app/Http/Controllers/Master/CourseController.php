@@ -11,14 +11,15 @@ class CourseController extends Controller
 {
     public function index()
     {
+        $prodis = \App\Models\Prodi::all();
         $courses = Course::with('kurikulum')->get();
-        return view('content.master.courses.index', compact('courses'));
+        $kurikulums = Kurikulum::where('is_active', true)->get();
+        return view('content.master.courses.index', compact('courses','kurikulums','prodis'));
     }
 
     public function create()
     {
-        $kurikulums = Kurikulum::where('is_active', true)->get();
-        return view('content.master.courses.create', compact('kurikulums'));
+        return view('content.master.courses.create');
     }
 
     public function store(Request $request)
@@ -29,6 +30,7 @@ class CourseController extends Controller
             'name' => 'required',
             'semester' => 'required|numeric',
             'kurikulum_id' => 'required',
+            'prodi_id' => 'required',
             'sks_teori' => 'required|numeric|min:0',
             'sks_praktik' => 'required|numeric|min:0',
             'sks_lapangan' => 'required|numeric|min:0',
@@ -42,7 +44,7 @@ class CourseController extends Controller
     {
         //
     }
-    
+
     public function update(Request $request)
     {
         //

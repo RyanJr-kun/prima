@@ -24,6 +24,7 @@ class DatabaseSeeder extends Seeder
             'code' => 'TRPL',
             'name' => 'Teknologi Rekayasa Perangkat Lunak',
             'jenjang' => 'D4',
+            'lama_studi' => '8',
             'kaprodi_id' => null,
         ]);
 
@@ -94,30 +95,15 @@ class DatabaseSeeder extends Seeder
         ];
 
         foreach ($dosenList as $dosenData) {
-            $user = User::firstOrCreate([
-                'email' => $dosenData[1] . '@poltek.ac.id' // agung@poltek, dewi@poltek
-            ], [
+            $user = User::firstOrCreate(['email' => $dosenData[1] . '@poltek.ac.id' ], 
+            [
                 'name' => $dosenData[0],
                 'username' => $dosenData[1],
                 'password' => Hash::make('password'),
-                'nidn' => rand(10000, 99999), // NIDN Dummy
+                'nidn' => rand(10000, 99999), 
             ]);
             $user->assignRole($roleDosen);
-
-            // Khusus Pak Canggih, jika di Sheet 1 beliau Direktur,
-            // kita bisa tambahkan role direktur manual nanti jika diperlukan.
-            // Untuk skenario ini kita anggap Bu Suci Direkturnya sesuai Sheet 2.
         }
-
-        // 5. Akun Mahasiswa Dummy
-        $mhs = User::firstOrCreate([
-            'email' => 'mhs@poltek.ac.id'
-        ], [
-            'name' => 'Mahasiswa Test',
-            'username' => 'mahasiswa',
-            'password' => Hash::make('password'),
-        ]);
-        $mhs->assignRole($roleMahasiswa);
 
         $periode = \App\Models\AcademicPeriod::create([
             'name' => 'Ganjil 2025/2026',

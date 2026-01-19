@@ -8,9 +8,14 @@ use Illuminate\Database\Eloquent\Casts\Attribute;
 class Course extends Model
 {
     protected $fillable = [
-        'code', 'name',
-        'sks_teori', 'sks_praktik', 'sks_lapangan',
-        'semester', 'prodi'
+        'code',
+        'name',
+        'sks_teori',
+        'sks_praktik',
+        'sks_lapangan',
+        'semester',
+        'kurikulum_id',
+        'prodi_id'
     ];
 
     /**

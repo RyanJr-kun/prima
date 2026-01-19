@@ -8,8 +8,14 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 class StudyClass extends Model
 {
     protected $fillable = [
-        'academic_period_id', 'name', 'prodi_id', 'kurikulum_id','angkatan', 'semester',
-        'total_students', 'academic_advisor_id'
+        'academic_period_id', 
+        'name', 
+        'prodi_id', 
+        'kurikulum_id',
+        'angkatan', 
+        'semester',
+        'total_students', 
+        'academic_advisor_id'
     ];
 
     public function academicAdvisor(): BelongsTo
@@ -30,9 +36,26 @@ class StudyClass extends Model
     }
     public function getFullNameAttribute()
     {
-        if ($this->prodi) {
-            return $this->prodi->jenjang . ' ' . $this->prodi->code . ' - ' . $this->name;
-        }
-        return $this->name;
+        $tahunDuaDigit = substr($this->angkatan, -2);
+        $kodeProdi = $this->prodi->code ?? 'PRODI';
+        $jenjang = $this->prodi->jenjang ?? '';
+        return "{$jenjang} {$kodeProdi} {$tahunDuaDigit}{$this->name}";
+    }
+    
+    public function getSemesterRomawiAttribute()
+    {
+        $map = [
+            1 => 'I',
+            2 => 'II',
+            3 => 'III',
+            4 => 'IV',
+            5 => 'V',
+            6 => 'VI',
+            7 => 'VII',
+            8 => 'VIII'
+        ];
+
+        // Kembalikan romawi jika ada, jika tidak kembalikan angka aslinya
+        return $map[$this->semester] ?? $this->semester;
     }
 }

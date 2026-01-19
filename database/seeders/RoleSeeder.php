@@ -15,15 +15,13 @@ class RoleSeeder extends Seeder
     {
         app()[\Spatie\Permission\PermissionRegistrar::class]->forgetCachedPermissions();
 
-        // Daftar Role Project Anda
         $roles = [
             'Admin',
-            'BAAK',      // Admin Akademik
-            'Mahasiswa',
+            'BAAK',    
             'Dosen',
             'Kaprodi',
-            'Wadir1',    // Wakil Direktur 1
-            'Wadir2',    // Wakil Direktur 2
+            'Wadir1',    
+            'Wadir2',    
             'Direktur',
         ];
 
