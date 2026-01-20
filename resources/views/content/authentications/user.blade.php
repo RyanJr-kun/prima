@@ -94,12 +94,13 @@
                         'kaprodi' => 'primary',
                         'wadir1' => 'warning',
                         'wadir2' => 'warning',
+                        'wadir3' => 'warning',
                         'direktur' => 'dark',
                     ];
                 @endphp
                 @forelse($user->getRoleNames() as $role)
                     @php $colorClass = $roleColors[strtolower($role)] ?? 'primary'; @endphp
-                    <span class="badge bg-label-{{ $colorClass }} me-1">{{ $role }}</span>
+                    <p class="badge mb-1 bg-label-{{ $colorClass }} me-1">{{ $role }} </p>
                 @empty
                     <span class="text-muted small">Tanpa Role</span>
                 @endforelse

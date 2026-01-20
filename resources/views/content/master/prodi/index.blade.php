@@ -164,9 +164,9 @@
             <small class="text-muted">Kelas akan otomatis berhenti digenerate jika melebihi angka ini.</small>
         </div>
         <div class="mb-3">
-            <label class="form-label">Kepala Program Studi (Kaprodi)</label>
+            <label class="form-label" for="kaprodi_id">Kepala Program Studi (Kaprodi)</label>
             <select name="kaprodi_id" id="kaprodi_id" class="form-select select2">
-                <option value="">-- Pilih Kaprodi --</option>
+                <option value=""></option>Pilih Kaprodi</option>
                 @foreach($dosens as $dosen)
                     <option value="{{ $dosen->id }}" {{ $prodi->kaprodi_id == $dosen->id ? 'selected' : '' }}>
                         {{ $dosen->name }}
@@ -177,7 +177,7 @@
         </div>
 
         <button type="submit" class="btn btn-primary me-3" id="saveBtn">Submit</button>
-        <button type="reset" class="btn btn-label-danger" data-bs-dismiss="offcanvas">Cancel</button>
+        <button type="reset" class="btn btn-secondary" data-bs-dismiss="offcanvas">Cancel</button>
       </form>
     </div>
   </div>
@@ -197,12 +197,10 @@
             if (editBtn) {
                 const d = editBtn.dataset;
 
-                // Ubah tampilan offcanvas menjadi Mode Edit
                 offcanvasTitle.textContent = 'Edit Program Studi';
                 saveBtn.textContent = 'Simpan Perubahan';
-                form.action = d.action; // Menggunakan route update dari data-action
+                form.action = d.action; 
 
-                // Tambahkan input hidden method PUT untuk Laravel
                 let methodInput = form.querySelector('input[name="_method"]');
                 if (!methodInput) {
                     methodInput = document.createElement('input');
@@ -232,11 +230,9 @@
             form.action = defaultAction;
             form.reset();
             
-            // Hapus method PUT agar kembali menjadi POST
             const methodInput = form.querySelector('input[name="_method"]');
             if (methodInput) methodInput.remove();
 
-            // Reset Select2
             if (window.$) { 
                 $('#kaprodi_id').val('').trigger('change');
                 $('#jenjang').val('').trigger('change');

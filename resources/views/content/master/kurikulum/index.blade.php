@@ -72,9 +72,11 @@
                 <small>Tahun : {{ $kurikulum->tanggal }} </small>
             </td>
             <td class="text-center">{{ $kurikulum->prodi->jenjang }} {{ $kurikulum->prodi->code }}</td>
-            <td class="text-center">Semester {{ $kurikulum->semester_romawi }}</td>
             <td class="text-center">
-                @if ($kurikulum->is_active == 1)
+                <span class="badge bg-label-info">Semester {{ $kurikulum->semester_romawi }}</span>
+            </td>
+            <td class="text-center">
+                @if ($kurikulum->is_active == 1) 
                   <span class="badge bg-label-success me-1">Active</span>
                 @else
                   <span class="badge bg-label-secondary me-1">Offline</span>
@@ -204,7 +206,7 @@
         </div>
 
         <button type="submit" class="btn btn-primary me-3" id="saveBtn">Submit</button>
-        <button type="reset" class="btn btn-danger" data-bs-dismiss="offcanvas">Cancel</button>
+        <button type="reset" class="btn btn-secondary" data-bs-dismiss="offcanvas">Cancel</button>
       </form>
     </div>
   </div>

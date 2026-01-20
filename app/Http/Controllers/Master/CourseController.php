@@ -2,24 +2,29 @@
 
 namespace App\Http\Controllers\Master;
 
-use App\Http\Controllers\Controller;
+use App\Models\Prodi;
 use App\Models\Course;
 use App\Models\Kurikulum;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
+use App\Http\Controllers\Controller;
+use Illuminate\Database\QueryException;
 
 class CourseController extends Controller
 {
     public function index()
     {
-        $prodis = \App\Models\Prodi::all();
-        $courses = Course::with('kurikulum')->get();
-        $kurikulums = Kurikulum::where('is_active', true)->get();
+        $prodis = Prodi::all();
+        $courses = Course::with('kurikulum.prodi')->get();
+        $kurikulums = Kurikulum::with('prodi')
+                    ->where('is_active', true)
+                    ->get();
         return view('content.master.courses.index', compact('courses','kurikulums','prodis'));
     }
 
     public function create()
     {
-        return view('content.master.courses.create');
+        //
     }
 
     public function store(Request $request)
@@ -30,14 +35,13 @@ class CourseController extends Controller
             'name' => 'required',
             'semester' => 'required|numeric',
             'kurikulum_id' => 'required',
-            'prodi_id' => 'required',
             'sks_teori' => 'required|numeric|min:0',
             'sks_praktik' => 'required|numeric|min:0',
             'sks_lapangan' => 'required|numeric|min:0',
         ]);
 
         Course::create($request->all());
-        return redirect()->route('master.courses.index')->with('success', 'Mata Kuliah tersimpan!');
+        return redirect()->route('master.mata-kuliah.index')->with('success', 'Mata Kuliah tersimpan!');
     }
 
     public function edit(Request $request)
@@ -45,13 +49,42 @@ class CourseController extends Controller
         //
     }
 
-    public function update(Request $request)
+    public function update(Request $request, string $id)
     {
-        //
+        $courses = Course::findOrFail($id);
+
+        $request->validate([
+            'code' => ['required', Rule::unique('courses', 'code')->ignore($id)],
+            'name' => 'required',
+            'semester' => 'required|numeric',
+            'kurikulum_id' => 'required',
+            'sks_teori' => 'nullable|numeric|min:0',
+            'sks_praktik' => 'nullable|numeric|min:0',
+            'sks_lapangan' => 'nullable|numeric|min:0',
+        ]);
+
+        $data = $request->all();
+
+        $courses->update($data);
+        return redirect()->route('master.mata-kuliah.index')->with('success', 'Mata Kuliah berhasil diperbarui!');
     }
 
-    public function destroy(Request $request)
+    public function destroy($id)
     {
-        //
+        try {
+            $Courses = Course::findOrFail($id);
+            $Courses->delete();
+            return redirect()->route('master.mata-kuliah.index')->with('success', 'Mata Kuliah berhasil dihapus!');
+
+        } catch (QueryException $e) {
+           
+            if ($e->errorInfo[1] == 1451) {
+                return redirect()->route('master.mata-kuliah.index')
+                    ->with('error', 'Gagal menghapus: Data Kelas Karna Masih Terpakai');
+            }
+
+            return redirect()->route('master.mata-kuliah.index')
+                ->with('error', 'Terjadi kesalahan sistem saat menghapus data.');
+        }
     }
 }

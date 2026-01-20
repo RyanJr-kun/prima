@@ -32,7 +32,7 @@ class UserController extends Controller
             'password' => 'required|same:confirm-password',
             'userRole' => 'required|array',
             'signature_path' => 'nullable|image|mimes:png,webp|max:3072', 
-            'status' => 'boolean',
+            'status' => 'required|boolean',
         ]);
 
         $input['password'] = Hash::make($input['password']);
@@ -58,7 +58,7 @@ class UserController extends Controller
             'password' => 'nullable|same:confirm-password',
             'userRole' => 'required|array',
             'signature_path' => 'nullable|image|mimes:png,webp|max:3072', 
-            'status' => 'boolean',
+            'status' => 'required|boolean',
         ]);
 
         if(!empty($input['password'])){

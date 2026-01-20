@@ -82,8 +82,8 @@ class KurikulumController extends Controller
     try {
             $kurikulum = Kurikulum::findOrFail($id);
             
-            if ($kurikulum->file_sk && \Storage::exists($kurikulum->file_sk)) {
-                 \Storage::delete($kurikulum->file_sk);
+            if ($kurikulum->file_sk && Storage::exists($kurikulum->file_sk)) {
+                 Storage::delete($kurikulum->file_sk);
             }
 
             $kurikulum->delete();
@@ -95,7 +95,7 @@ class KurikulumController extends Controller
            
             if ($e->errorInfo[1] == 1451) {
                 return redirect()->route('master.kurikulum.index')
-                    ->with('error', 'Gagal menghapus: Data Kurikulum ini masih digunakan oleh Kelas atau Mata Kuliah.');
+                    ->with('error', 'Gagal menghapus: Data Kurikulum Masih Terpakai');
             }
 
             return redirect()->route('master.kurikulum.index')

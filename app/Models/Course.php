@@ -36,4 +36,15 @@ class Course extends Model
     {
         return $this->belongsTo(Kurikulum::class);
     }
+    public function prodi()
+    { 
+        return $this->hasOneThrough(
+            Prodi::class,
+            kurikulum::class,
+            'id', 
+            'id', 
+            'kurikulum_id', 
+            'prodi_id'
+        );
+    }
 }

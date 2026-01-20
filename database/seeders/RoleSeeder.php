@@ -16,17 +16,18 @@ class RoleSeeder extends Seeder
         app()[\Spatie\Permission\PermissionRegistrar::class]->forgetCachedPermissions();
 
         $roles = [
-            'Admin',
-            'BAAK',    
-            'Dosen',
-            'Kaprodi',
-            'Wadir1',    
-            'Wadir2',    
-            'Direktur',
+            'admin',
+            'baak',
+            'direktur',
+            'wadir1',
+            'wadir2',
+            'wadir3',
+            'kaprodi',
+            'dosen',
         ];
 
         foreach ($roles as $roleName) {
-            Role::create(['name' => $roleName]);
+            Role::firstOrCreate(['name' => $roleName]);
         }
     }
 }

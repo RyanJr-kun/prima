@@ -8,10 +8,17 @@
 @vite(['resources/assets/vendor/fonts/iconify/iconify.css'])
 
 <!-- Core CSS -->
-@vite(['resources/assets/vendor/scss/core.scss', 'resources/assets/css/demo.css'])
+@vite([
+    'resources/assets/vendor/scss/core.scss', 
+    'resources/assets/css/demo.css'
+    ])
 
 <!-- Vendor Styles -->
-@vite('resources/assets/vendor/libs/perfect-scrollbar/perfect-scrollbar.scss')
+@vite([
+    'resources/assets/vendor/libs/perfect-scrollbar/perfect-scrollbar.scss',
+    'resources/assets/vendor/libs/select2/select2.scss',
+    'resources/assets/vendor/libs/sweetalert2/swal.scss'
+    ])
 @yield('vendor-style')
 
 <!-- Page Styles -->

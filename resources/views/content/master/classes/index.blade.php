@@ -231,7 +231,7 @@
         </div>  --}}
 
         <button type="submit" class="btn btn-primary me-3" id="saveBtn">Simpan Data</button>
-        <button type="button" class="btn btn-label-secondary" data-bs-dismiss="offcanvas">Batal</button>
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="offcanvas">Batal</button>
       </form>
     </div>
   </div>
