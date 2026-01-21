@@ -22,10 +22,10 @@
             "slug": "jadwal"
         },
         {
-            "url": "/Jadwal",
+            "url": "/distributions",
             "name": "Distribusi Mata Kuliah",
             "icon": "menu-icon icon-base bx bx-calendar-v2",
-            "slug": "jadwal"
+            "slug": "distributions.index"
         },
         {
             "url": "/BKD",
@@ -53,6 +53,12 @@
             "name": "Kurikulum",
             "icon": "menu-icon icon-base bx bx-document-add-outline",
             "slug": "master.kurikulum.index"
+        },
+        {
+            "url": "master/ruangan",
+            "name": "Ruangan",
+            "icon": "menu-icon icon-base bx bx-location",
+            "slug": "master.ruangan.index"
         },
         {
             "url": "master/kelas",

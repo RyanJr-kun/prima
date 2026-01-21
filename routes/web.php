@@ -1,7 +1,9 @@
 <?php
 
+use App\Models\Room;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\bkd\BkdController;
+use App\Http\Controllers\master\RoomController;
 use App\Http\Controllers\Master\ProdiController;
 use App\Http\Controllers\jadwal\JadwalController;
 use App\Http\Controllers\Master\CourseController;
@@ -14,6 +16,7 @@ use App\Http\Controllers\dashboard\AnalisisController;
 use App\Http\Controllers\setting\PengaturanController;
 use App\Http\Controllers\authentications\AuthController;
 use App\Http\Controllers\authentications\UserController;
+use App\Http\Controllers\dokumen\DistributionController;
 
 Route::middleware('guest')->group(function () {
     Route::get('/auth/login', [AuthController::class, 'showLoginForm'])->name('login');
@@ -37,5 +40,10 @@ Route::middleware('auth')->group(function () {
         Route::resource('kelas', StudyClassController::class)->except('show', 'edit', 'create');
         Route::resource('mata-kuliah', CourseController::class)->except('show', 'edit', 'create');
         route::resource('program-studi', ProdiController::class)->except('show', 'edit', 'create');
+        route::resource('ruangan', RoomController::class)->except('show', 'edit', 'create');
     });
+
+    Route::resource('distributions', DistributionController::class);
+    Route::get('/ajax/get-courses-by-class/{classId}', [DistributionController::class, 'getCoursesByClass'])->name('ajax.courses');
+    Route::get('/ajax/get-curriculums-by-prodi/{prodiId}', [StudyClassController::class, 'getKurikulumByProdi']);
 });

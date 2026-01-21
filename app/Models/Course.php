@@ -15,7 +15,8 @@ class Course extends Model
         'sks_lapangan',
         'semester',
         'kurikulum_id',
-        'prodi_id'
+        'prodi_id',
+        'required_tag'
     ];
 
     /**

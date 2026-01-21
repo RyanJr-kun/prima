@@ -1,52 +1,134 @@
+// Ubah path ini. Hapus "/include" di belakangnya.
+@import "../../scss/bootstrap-extended"; 
+
+// Import style bawaan Select2
 @import "select2/dist/css/select2.css";
 
+// Style Wrapper Sneat (Tetap seperti sebelumnya)
 .select2-container {
-  width: 100% !important;
-  font-size: .875rem;
+  .select2-selection--single {
+    height: $input-height;
+    border: 1px solid $input-border-color;
+    border-radius: $border-radius;
+    transition: border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
+  }
+  .select2-selection__rendered {
+    line-height: calc(#{$input-height} - 2px);
+    padding-left: 0.75rem;
+    color: $input-color;
+  }
+  .select2-selection__arrow {
+    height: calc(#{$input-height} - 2px);
+    right: 0.75rem;
+  }
+
+  // --- TAMBAHAN: Style untuk Multiple Select (Tagging) ---
+  .select2-selection--multiple {
+    border: 1px solid $input-border-color;
+    border-radius: $border-radius;
+    min-height: $input-height;
+    padding-left: 0.25rem;
+    transition: border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
+
+    .select2-selection__choice {
+      /* Requirement 1: Tags kotak tumpul, abu-abu terang/transparan */
+      background-color: rgba(67, 89, 113, 0.1) !important; 
+      color: #697a8d !important; /* Warna teks gelap Sneat */
+      border: none !important;
+      border-radius: 0.4rem !important; /* Kotak Tumpul (bukan pill) */
+      padding-left: 1rem !important; /* py-2 approx */
+      padding-right: 0.30rem !important; /* px-2 approx */
+      font-size: 0.85rem;
+      font-weight: 600;
+      margin-top: 1px; 
+    }
+
+    .select2-selection__choice__remove {
+      color: #697a8d !important;
+      border-right: none !important;
+      margin-right: 0.5rem !important; /* mx-2 */
+      padding-right: 0 !important;
+      
+      &:hover {
+        background-color: rgba(255,255,255,0.2) !important;
+        color: #fff !important;
+      }
+    }
+  }
+
+  // State Active/Focus: Border Primary & Agak Tebal
+  &.select2-container--open,
+  &.select2-container--focus {
+    .select2-selection--single,
+    .select2-selection--multiple {
+      border-color: var(--bs-primary) !important;
+      box-shadow: 0 0 0 1px var(--bs-primary); /* Efek tebal visual tanpa geser layout */
+    }
+  }
 }
 
-.select2-selection--single {
-  height: calc(2.5rem + 2px);
-  border-radius: .5rem;
-  border: 1px solid #dee2e6;
-  background-color: #fff;
-  padding: 0 .75rem;
-  display: flex;
-  align-items: center;
+// Dark Mode Support
+@if $enable-dark-mode {
+  @include color-mode(dark) {
+    .select2-container {
+      .select2-selection--single {
+        background-color: $input-bg;
+        border-color: $input-border-color;
+      }
+      .select2-selection__rendered {
+        color: $input-color;
+      }
+      .select2-dropdown {
+        background-color: $dropdown-bg;
+        border-color: $dropdown-border-color;
+      }
+    }
+  }
 }
 
-.select2-selection__rendered {
-  padding-left: 0 !important;
-  color: #212529;
-}
-
-.select2-selection__arrow {
-  height: 100%;
-}
-
-.select2-container--default.select2-container--focus
-.select2-selection--single {
-  border-color: #007bff;
-  box-shadow: 0 0 0 .15rem rgba(0,123,255,.15);
+.select2-container {
+    z-index: 9999 !important; 
 }
 
 .select2-dropdown {
-  border-radius: .5rem;
-  border: 1px solid #dee2e6;
-  box-shadow: 0 .5rem 1rem rgba(0,0,0,.08);
-  padding: .25rem 0;
+    z-index: 9999 !important;
 }
 
+// Style Search Field di dalam Dropdown (Tipis & Transparan)
+.select2-search--dropdown .select2-search__field  {
+    border: 1px solid rgba(72, 72, 72, 0.371) !important;
+    border-radius: $border-radius;
+    outline: none !important;
+    
+}
+
+// Fix warna teks jika background gelap (Opsional/Jaga-jaga)
 .select2-results__option {
-  padding: .5rem .75rem;
+    color: #697a8d; // Warna teks default Sneat (sesuaikan jika perlu)
+    padding: 0.5rem 0.75rem;
+    margin-top: 4px;
+    margin-bottom: 4px;
+    margin-left: 7px;
+    margin-right: 7px; 
+    border-radius: 0.375rem; /* Requirement 3: Kotak tumpul pada dropdown */
 }
 
-.select2-results__option--highlighted {
-  background-color: #007bff !important;
-  color: #fff;
+/* Requirement 3: Hover state primary opacity 30% */
+.select2-results__option--highlighted[aria-selected] {
+    background-color: rgba(var(--bs-primary-rgb), 0.1) !important; 
+    color: var(--bs-primary) !important;
+    
 }
 
-.select2-results__option[aria-selected="true"] {
-  background-color: rgba(0,123,255,.08);
-  color: #007bff;
+/* Requirement 3: Scrollbar Primary */
+.select2-results__options::-webkit-scrollbar {
+    width: 3px;
+}
+
+.select2-results__options::-webkit-scrollbar-thumb {
+    background-color: var(--bs-primary);
+    border-radius: 10px;
+}
+.select2-results__options::-webkit-scrollbar-track {
+    background: rgba(174, 207, 242, 0.1);
 }

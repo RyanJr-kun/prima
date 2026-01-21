@@ -14,12 +14,20 @@ class CourseController extends Controller
 {
     public function index()
     {
+        $tags = [
+            'general' => 'Umum / Standar',
+            'computer' => 'Lab Komputer (PC)',
+            'network' => 'Lab Jaringan & IoT',
+            'resto' => 'Lab Restoran & Tata Hidang',
+            'automotive' => 'Bengkel Otomotif',
+            'hotel_fo' => 'Front Office Hotel',
+        ];
         $prodis = Prodi::all();
         $courses = Course::with('kurikulum.prodi')->get();
         $kurikulums = Kurikulum::with('prodi')
                     ->where('is_active', true)
                     ->get();
-        return view('content.master.courses.index', compact('courses','kurikulums','prodis'));
+        return view('content.master.courses.index', compact('courses','kurikulums','prodis', 'tags'));
     }
 
     public function create()
@@ -38,6 +46,7 @@ class CourseController extends Controller
             'sks_teori' => 'required|numeric|min:0',
             'sks_praktik' => 'required|numeric|min:0',
             'sks_lapangan' => 'required|numeric|min:0',
+            'required_tag' => 'required|string',
         ]);
 
         Course::create($request->all());
@@ -61,6 +70,7 @@ class CourseController extends Controller
             'sks_teori' => 'nullable|numeric|min:0',
             'sks_praktik' => 'nullable|numeric|min:0',
             'sks_lapangan' => 'nullable|numeric|min:0',
+            'required_tag' => 'required|string',
         ]);
 
         $data = $request->all();

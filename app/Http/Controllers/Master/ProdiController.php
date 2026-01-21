@@ -64,7 +64,7 @@ class ProdiController extends Controller
             'kaprodi_id' => 'required|exists:users,id',
         ]);
 
-        $data = $request->all();
+        $data = $request->all(); 
 
         $prodis->update($data);
         return redirect()->route('master.program-studi.index')->with('success', 'Program Studi berhasil diperbarui');

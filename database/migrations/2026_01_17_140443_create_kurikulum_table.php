@@ -15,7 +15,6 @@ return new class extends Migration
             $table->id();
             $table->string('name');
             $table->date('tanggal')->nullable();
-            $table->integer('semester');
             $table->foreignId('prodi_id')->constrained('prodis');
             $table->boolean('is_active')->default(true);
             $table->string('file_path')->nullable();

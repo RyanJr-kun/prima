@@ -12,6 +12,7 @@ class DatabaseSeeder extends Seeder
             RoleSeeder::class,
             UserSeeder::class,
             ProdiSeeder::class,
+            RoomSeeder::class,
         ]);
 
         \App\Models\AcademicPeriod::create([

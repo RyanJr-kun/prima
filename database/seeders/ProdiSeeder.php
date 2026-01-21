@@ -13,69 +13,25 @@ class ProdiSeeder extends Seeder
      */
     public function run(): void
     {
-        Prodi::firstOrCreate([
-            'code' => 'AP',
-            'name' => 'Akuntansi Perpajakan',
-            'jenjang' => 'D4',
-            'lama_studi' => '8',
-            'kaprodi_id' => '6',
-        ]);
-        Prodi::firstOrCreate([
-            'code' => 'BMR',
-            'name' => 'Bisnis & Management Retail',
-            'jenjang' => 'D4',
-            'lama_studi' => '8',
-            'kaprodi_id' => '7',
-        ]);
-        Prodi::firstOrCreate([
-            'code' => 'PM',
-            'name' => 'Produksi Media',
-            'jenjang' => 'D4',
-            'lama_studi' => '8',
-            'kaprodi_id' => '8',
-        ]);
-        Prodi::firstOrCreate([
-            'code' => 'HT',
-            'name' => 'Perhotelan',
-            'jenjang' => 'D3',
-            'lama_studi' => '6',
-            'kaprodi_id' => '9',
-        ]);
-        Prodi::firstOrCreate([
-            'code' => 'TRPL',
-            'name' => 'Teknologi Rekayasa Perangkat Lunak',
-            'jenjang' => 'D4',
-            'lama_studi' => '8',
-            'kaprodi_id' => '10',
-        ]);
-        Prodi::firstOrCreate([
-            'code' => 'TRO',
-            'name' => 'Teknologi Rekayasa Otomotif',
-            'jenjang' => 'D4',
-            'lama_studi' => '8',
-            'kaprodi_id' => '11',
-        ]);
-        Prodi::firstOrCreate([
-            'code' => 'FM',
-            'name' => 'Farmasi',
-            'jenjang' => 'D3',
-            'lama_studi' => '6',
-            'kaprodi_id' => '12',
-        ]);
-        Prodi::firstOrCreate([
-            'code' => 'MIK',
-            'name' => 'Manajemen Informasi Kesehatan',
-            'jenjang' => 'D4',
-            'lama_studi' => '8',
-            'kaprodi_id' => '13',
-        ]);
-        Prodi::firstOrCreate([
-            'code' => 'TLM',
-            'name' => 'Teknologi Laboratorium Medis',
-            'jenjang' => 'D4',
-            'lama_studi' => '8',
-            'kaprodi_id' => '14',
-        ]);
-
+        $prodis = [
+            ['AP', 'Akuntansi Perpajakan', 'D4', '8', '6'], 
+            ['BMR', 'Bisnis & Management Retail', 'D4', '8', '7'], 
+            ['PM', 'Produksi Media', 'D4', '8', '8'], 
+            ['HT', 'Perhotelan', 'D3', '6', '9'], 
+            ['TRPL', 'Teknologi Rekayasa Perangkat Lunak', 'D4', '8', '10'], 
+            ['TRO', 'Teknologi Rekayasa Otomotif', 'D4', '8', '11'], 
+            ['FM', 'Farmasi', 'D3', '6', '12'], 
+            ['MIK', 'Manajemen Informasi Kesehatan', 'D4', '8', '13'],
+            ['TLM', 'Teknologi Laboratorium Medis', 'D4', '8', '14']]; 
+        
+            foreach ($prodis as $prodi) {
+            Prodi::firstOrCreate([
+                'code' => $prodi[0],
+                'name' => $prodi[1],
+                'jenjang' => $prodi[2],
+                'lama_studi' => $prodi[3], 
+                'kaprodi_id' => $prodi[4],
+            ]);
+        }
     }
 }

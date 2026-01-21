@@ -27,7 +27,6 @@ class KurikulumController extends Controller
     $request->validate([
         'name' => 'required',
         'tanggal' => 'required|date',
-        'semester' => 'required',
         'prodi_id' => 'required',
         'is_active' => 'required|boolean',
         'file_sk' => 'nullable|mimes:pdf|max:3072', 
@@ -56,7 +55,6 @@ class KurikulumController extends Controller
     $request->validate([
         'name' => 'required',
         'tanggal' => 'required|date',
-        'semester' => 'required',
         'prodi_id' => 'required',
         'is_active' => 'required|boolean',
         'file_sk' => 'nullable|mimes:pdf|max:3072', 

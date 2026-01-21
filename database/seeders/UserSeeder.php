@@ -92,7 +92,7 @@ class UserSeeder extends Seeder
         foreach ($dosenList as $dosenData) {
             $user = User::firstOrCreate(['email' => $dosenData[1] . '@poltekindonusa.ac.id' ], [
                 'name' => $dosenData[0], 
-                'username' => $dosenData[1],
+                'username' => $dosenData[1], 
                 'password' => Hash::make('password'),
                 'nidn' => Null, 
             ]);

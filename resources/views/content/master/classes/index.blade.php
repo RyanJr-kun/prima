@@ -1,6 +1,5 @@
 @extends('layouts/contentNavbarLayout')
-
-@section('title', 'Master Data Kelas')
+@section('title', 'Kelas Perkuliahan - PRIMA')
 
 @section('content')
 
@@ -28,7 +27,7 @@
   </div>
   @endif
 </div>
-
+ 
 <div class="card">
   {{-- 2. CARD HEADER --}}
   <div class="card-header border-bottom">
@@ -344,4 +343,68 @@
         }
     });
 </script>
-@endsection
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+    // 1. Ambil elemen DOM
+    const selectProdi = document.getElementById('prodi_id');
+    const selectKurikulum = document.getElementById('kurikulum_id');
+
+    // Pastikan elemen ada sebelum menjalankan script (untuk menghindari error di halaman lain)
+    if (selectProdi && selectKurikulum) {
+
+        // 2. Event Listener 'change'
+        selectProdi.addEventListener('change', function() {
+            const prodiId = this.value;
+
+            // Reset dropdown & Tampilkan Loading
+            selectKurikulum.innerHTML = '<option value="">Loading...</option>';
+
+            if (prodiId) {
+                
+                fetch('/ajax/get-curriculums-by-prodi/' + prodiId)
+                    .then(response => {
+                        // Cek jika response sukses (Status 200-299)
+                        if (!response.ok) {
+                            throw new Error('Network response was not ok');
+                        }
+                        return response.json(); // Parsing JSON
+                    })
+                    .then(data => {
+                        // Kosongkan dropdown lagi
+                        selectKurikulum.innerHTML = '';
+
+                        if (data.length === 0) {
+                            const option = document.createElement('option');
+                            option.value = "";
+                            option.textContent = "Tidak ada kurikulum aktif di prodi ini";
+                            selectKurikulum.appendChild(option);
+                        } else {
+                            // Tambah opsi default
+                            const defaultOption = document.createElement('option');
+                            defaultOption.value = "";
+                            defaultOption.textContent = "Pilih Kurikulum";
+                            selectKurikulum.appendChild(defaultOption);
+
+                            // Looping data (pengganti $.each)
+                            data.forEach(curr => {
+                                const option = document.createElement('option');
+                                option.value = curr.id;
+                                const year = curr.tanggal ? new Date(curr.tanggal).getFullYear() : '';
+                                option.textContent = `${curr.name} (${year})`;
+                                selectKurikulum.appendChild(option); 
+                            });
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error:', error);
+                        selectKurikulum.innerHTML = '<option value="">Gagal memuat data</option>';
+                    });
+            } else {
+                // Jika Prodi tidak dipilih (kembali ke default)
+                selectKurikulum.innerHTML = '<option value="">-- Pilih Prodi Terlebih Dahulu --</option>';
+            }
+        });
+    }
+});
+</script>
+@endsection 

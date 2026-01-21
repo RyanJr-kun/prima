@@ -1,9 +1,3 @@
-/**
- * Main
- */
-
-'use strict';
-
 let menu,
   animate;
 document.addEventListener('DOMContentLoaded', function () {

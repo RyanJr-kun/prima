@@ -151,4 +151,13 @@ class StudyClassController extends Controller
             return back()->with('error', 'Gagal generate kelas: ' . $e->getMessage());
         }
     }
+    public function getKurikulumByProdi($prodiId)
+    {
+        $kurikulum = Kurikulum::where('prodi_id', $prodiId)
+                        ->where('is_active', true) // Hanya tampilkan yg aktif
+                        ->orderBy('tanggal', 'desc')
+                        ->get();
+                        
+        return response()->json($kurikulum);
+    }
 }

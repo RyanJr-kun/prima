@@ -12,17 +12,19 @@ return new class extends Migration
     public function up(): void
     {
         Schema::create('course_distributions', function (Blueprint $table) {
-            $table->id();
+            $table->id(); 
             $table->foreignId('academic_period_id')->constrained()->cascadeOnDelete();
-            $table->foreignId('course_id')->constrained()->cascadeOnDelete();
-            $table->foreignId('user_id')->constrained()->cascadeOnDelete();
-            $table->foreignId('pdpt_user_id')->nullable()->constrained('users')->nullOnDelete();
-            $table->text('referensi')->nullable();
-            $table->text('luaran')->nullable();
-            $table->string('class_name');
-            $table->integer('total_students')->default(0);
+            $table->foreignId('study_class_id')->constrained('study_classes')->cascadeOnDelete();
+            $table->foreignId('course_id')->constrained()->cascadeOnDelete();   
+            $table->foreignId('user_id')->constrained('users')->cascadeOnDelete();
+            $table->foreignId('pddikti_user_id')->nullable()->constrained('users')->nullOnDelete();
+            $table->text('referensi')->nullable(); 
+            $table->text('luaran')->nullable();   
             $table->timestamps();
-            $table->unique(['academic_period_id', 'course_id', 'class_name'], 'unique_distribution');
+            $table->unique(
+                ['academic_period_id', 'study_class_id', 'course_id'], 
+                'unique_dist_per_class'
+            );
         });
     }
 
