@@ -1,6 +1,4 @@
 <?php
-
-use App\Models\Room;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\bkd\BkdController;
 use App\Http\Controllers\master\RoomController;
@@ -44,6 +42,8 @@ Route::middleware('auth')->group(function () {
         route::resource('ruangan', RoomController::class)->except('show', 'edit', 'create');
     });
 
+    Route::get('course-distributions/template', [DistributionController::class, 'downloadTemplate'])->name('course-distributions.template');
+    Route::post('course-distributions/import', [DistributionController::class, 'import'])->name('course-distributions.import');
     Route::resource('distributions', DistributionController::class);
     Route::get('/ajax/get-courses-by-class/{classId}', [DistributionController::class, 'getCoursesByClass'])->name('ajax.courses');
     Route::get('/ajax/get-curriculums-by-prodi/{prodiId}', [StudyClassController::class, 'getKurikulumByProdi']);

@@ -90,7 +90,8 @@ $custom-height: 37px;
 }
 
 .select2-container {
-    z-index: 9999 !important; 
+    /* Fix: Mencegah input Select2 pada filter (main page) muncul di atas backdrop Modal/Offcanvas */
+    z-index: 0 !important; 
 }
 
 .select2-dropdown {

@@ -33,9 +33,9 @@ class CourseDistribution extends Model
         );
     }
 
-    public function studyClass(): BelongsTo
+    public function studyClass() 
     {
-        return $this->belongsTo(StudyClass::class);
+        return $this->belongsTo(StudyClass::class, 'study_class_id');
     }
 
     public function user(): BelongsTo
@@ -47,6 +47,7 @@ class CourseDistribution extends Model
     {
         return $this->belongsTo(AcademicPeriod::class);
     }
+    
 
     public function teamTeaching(): BelongsTo
     {

@@ -42,7 +42,7 @@ class CourseController extends Controller
             'code' => 'required|unique:courses,code',
             'name' => 'required',
             'semester' => 'required|numeric',
-            'kurikulum_id' => 'required',
+            'kurikulum_id' => 'required|exists:kurikulums,id',
             'sks_teori' => 'required|numeric|min:0',
             'sks_praktik' => 'required|numeric|min:0',
             'sks_lapangan' => 'required|numeric|min:0',
@@ -64,9 +64,9 @@ class CourseController extends Controller
 
         $request->validate([
             'code' => ['required', Rule::unique('courses', 'code')->ignore($id)],
-            'name' => 'required',
+            'name' => 'required|string',
             'semester' => 'required|numeric',
-            'kurikulum_id' => 'required',
+            'kurikulum_id' => 'required|exists:kurikulums,id',
             'sks_teori' => 'nullable|numeric|min:0',
             'sks_praktik' => 'nullable|numeric|min:0',
             'sks_lapangan' => 'nullable|numeric|min:0',

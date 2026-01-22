@@ -16,7 +16,7 @@ return new class extends Migration
             $table->foreignId('academic_period_id')->constrained()->cascadeOnDelete();
             $table->foreignId('study_class_id')->constrained('study_classes')->cascadeOnDelete();
             $table->foreignId('course_id')->constrained()->cascadeOnDelete();   
-            $table->foreignId('user_id')->constrained('users')->cascadeOnDelete();
+            $table->foreignId('user_id')->nullable()->constrained('users')->onDelete('set null');
             $table->foreignId('pddikti_user_id')->nullable()->constrained('users')->nullOnDelete();
             $table->text('referensi')->nullable(); 
             $table->text('luaran')->nullable();   

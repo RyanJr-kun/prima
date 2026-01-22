@@ -58,7 +58,6 @@
                         <th rowspan="2">Nama Matkul</th>
                         <th colspan="4" class="text-center py-1 border">SKS</th>
                         <th rowspan="2" class="text-center">Semester</th>
-                        <th rowspan="2" class="text-center">Kurikulum</th>
                         <th rowspan="2">Aksi</th>
                     </tr>
 
@@ -76,11 +75,7 @@
                             <td>{{ ++$key }}</td>
                             <td>{{ $matkul->code }}</td>
                             <td>
-                                <div>
-                                    <h6 class="mb-0">{{ $matkul->name }}</h6>
-                                    <small class="text-xs text-truncate">Prodi : {{ $matkul->kurikulum->prodi->jenjang }}
-                                        {{ $matkul->kurikulum->prodi->code }} </small>
-                                </div>
+                                <h6 class="mb-0">{{ $matkul->name }}</h6>
                             </td>
                             <td class="text-center border">{{ $matkul->sks_teori }}</td>
                             <td class="text-center border">{{ $matkul->sks_praktik }}</td>
@@ -90,12 +85,46 @@
                             <td class="text-center">
                                 <span class="badge bg-label-info">Semester {{ $matkul->semester }}</span>
                             </td>
-                            <td class="text-center">{{ $matkul->kurikulum->name }}</td>
-
-                            {{-- <td><span class="badge bg-label-success">Active</span></td> --}}
                             <td>
                                 <div class="d-flex align-items-center">
-                                    {{--  --}}
+                                    <a href="javascript:;" class="text-body view-record me-2" data-bs-toggle="popover"
+                                        data-bs-trigger="hover focus" data-bs-placement="left" data-bs-html="true"
+                                        data-bs-custom-class="popover-primary"
+                                        title="<span class='fw-medium'><i class='bx bx-book-open me-1'></i> Detail Mata Kuliah</span>"
+                                        data-bs-content="
+                                            <div class='d-flex flex-column gap-2 p-1' style='min-width: 240px;'>
+                                                <div class='border-bottom'>
+                                                    <span class='text-muted small d-block mb-1'>Mata Kuliah:</span>
+                                                    <span class='text-body small fw-bold'>{{ $matkul->name }}</span>
+                                                </div>
+                                                <div class='d-flex justify-content-between align-items-center border-bottom pb-1'>
+                                                    <span class='text-muted small'>Kode MK</span>
+                                                    <span class='fw-bold small'>{{ $matkul->code }}</span>
+                                                </div>
+                                                <div class='d-flex justify-content-between align-items-center border-bottom pb-1'>
+                                                    <span class='text-muted small'>Prodi</span>
+                                                    <span class='fw-bold small'>{{ $matkul->kurikulum->prodi->jenjang }} {{ $matkul->kurikulum->prodi->code }}</span>
+                                                </div>
+                                                <div class='d-flex justify-content-between align-items-center border-bottom pb-1'>
+                                                    <span class='text-muted small'>Total SKS</span>
+                                                    <span class='badge bg-label-primary'>{{ $matkul->sksTotal }} SKS</span>
+                                                </div>
+                                                <div class='d-flex justify-content-between align-items-center border-bottom pb-1'>
+                                                    <span class='text-muted small'>Rincian (T/P/L)</span>
+                                                    <span class='fw-medium small'>{{ $matkul->sks_teori }} / {{ $matkul->sks_praktik }} / {{ $matkul->sks_lapangan }}</span>
+                                                </div>
+                                                <div class='d-flex justify-content-between align-items-center border-bottom pb-1'>
+                                                    <span class='text-muted small'>Fasilitas</span>
+                                                    <span class='badge bg-label-warning'>{{ $tags[$matkul->required_tag] ?? 'Standar' }}</span>
+                                                </div>
+                                                <div>
+                                                    <span class='text-muted small d-block mb-1'>Kurikulum:</span>
+                                                    <span class='text-body small fw-medium'>{{ $matkul->kurikulum->name }}</span>
+                                                </div>
+                                            </div>
+                                        ">
+                                        <i class="bx bx-eye text-muted bx-sm"></i>
+                                    </a>
                                     <a href="javascript:;" class="text-body edit-record me-2"
                                         class="text-body edit-record me-2" data-bs-toggle="offcanvas"
                                         data-bs-target="#offcanvasAddCourse" data-id="{{ $matkul->id }}"
@@ -129,7 +158,8 @@
             aria-labelledby="offcanvasAddCourseLabel">
             <div class="offcanvas-header border-bottom">
                 <h5 id="offcanvasAddCourseLabel" class="offcanvas-title">Tambah Mata Kuliah</h5>
-                <button type="button" class="btn-close text-reset" data-bs-dismiss="offcanvas" aria-label="Close"></button>
+                <button type="button" class="btn-close text-reset" data-bs-dismiss="offcanvas"
+                    aria-label="Close"></button>
             </div>
             <div class="offcanvas-body mx-0 grow-0 p-6 h-100">
 
@@ -195,7 +225,7 @@
                             data-placeholder="Pilih Fasilitas">
                             <option value=""></option>
                             @foreach ($tags as $key => $label)
-                                @if ($key != 'general')
+                                @if ($key)
                                     <option value="{{ $key }}">{{ $label }}</option>
                                 @endif
                             @endforeach
@@ -326,13 +356,13 @@
                     document.getElementById('add-sks-lapangan').value = d.sksLapangan;
 
                     if (window.$) {
+                        $('#required_tag').val(d.requiredTag).trigger('change');
                         $('#semester').val(d.semester).trigger('change');
                         $('#kurikulum_id').val(d.kurikulumId).trigger('change');
-                        $('#required_tag').val(d.requiredTag).trigger('change');
                     } else {
+                        document.getElementById('required_tag').value = d.requiredTag;
                         document.getElementById('semester').value = d.semester;
                         document.getElementById('kurikulum_id').value = d.kurikulumId;
-                        document.getElementById('required_tag').value = d.requiredTag;
                     }
                 }
             });
