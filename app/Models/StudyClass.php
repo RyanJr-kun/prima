@@ -15,7 +15,8 @@ class StudyClass extends Model
         'angkatan', 
         'semester',
         'total_students', 
-        'academic_advisor_id'
+        'academic_advisor_id',
+        'shift',
     ];
 
     public function academicAdvisor(): BelongsTo

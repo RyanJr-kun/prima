@@ -42,6 +42,7 @@ class StudyClassController extends Controller
             'total_students' => 'required|numeric',
             'kurikulum_id' => 'required|exists:kurikulums,id',
             'academic_advisor_id' => 'required|exists:users,id',
+            'shift' => 'required|in:pagi,malam',
         ]);
 
         $activePeriod = AcademicPeriod::where('is_active', true)->firstOrFail();
@@ -55,6 +56,7 @@ class StudyClassController extends Controller
             'total_students' => $request->total_students,
             'kurikulum_id' => $request->kurikulum_id,
             'academic_advisor_id' => $request->academic_advisor_id,
+            'shift' => $request->shift,
         ]);
 
         return redirect()->route('master.kelas.index')->with('success', 'Kelas berhasil dibuat!');
@@ -77,6 +79,7 @@ class StudyClassController extends Controller
             'total_students' => 'required|numeric',
             'kurikulum_id' => 'required|exists:kurikulums,id',
             'academic_advisor_id' => 'required|exists:users,id',
+            'shift' => 'required|in:pagi,malam',
         ]);
 
         $data=$request->all();

@@ -33,6 +33,7 @@ Route::middleware('auth')->group(function () {
     Route::get('/Jadwal', [JadwalController::class, 'index'])->name('jadwal');
     Route::get('/Ruangan', [RuanganController::class, 'index'])->name('ruang');
     Route::get('/Pengaturan', [PengaturanController::class, 'index'])->name('setting');
+    Route::post('/users/sync-siakad', [UserController::class, 'syncSiakad'])->name('users.sync-siakad');
     Route::resource('user', UserController::class)->except('show', 'edit', 'create');
     
     Route::prefix('master')->name('master.')->group(function () {

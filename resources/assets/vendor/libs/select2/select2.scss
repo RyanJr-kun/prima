@@ -4,11 +4,14 @@
 // Import style bawaan Select2
 @import "select2/dist/css/select2.css";
 
+$custom-height: 37px;
+
 // Style Wrapper Sneat (Tetap seperti sebelumnya)
 .select2-container {
   .select2-selection--single {
-    height: $input-height;
+    height: $custom-height !important;
     border: 1px solid $input-border-color;
+    padding-top: 0.2rem !important;
     border-radius: $border-radius;
     transition: border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
   }

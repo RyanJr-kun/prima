@@ -8,10 +8,11 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Spatie\Permission\Models\Role;
 use App\Http\Controllers\Controller;
-use Illuminate\Support\Facades\Hash;
 use Illuminate\Database\QueryException;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Hash;
 
 class UserController extends Controller
 {
@@ -110,5 +111,77 @@ class UserController extends Controller
                 ->with('error', 'Terjadi kesalahan sistem saat menghapus data.');
         }
   }
+
+    public function syncSiakad()
+    {
+        
+        try {
+            $response = Http::withHeaders([
+                'Authorization' => 'Bearer TOKEN_RAHASIA_DARI_MAS_ANDRE', 
+            ])->get('#link_api');
+            
+            if ($response->failed()) {
+                return back()->with('error', 'Gagal koneksi ke SIAKAD.');
+            }
+
+            $dosenSiakad = $response->json();
+            $updatedCount = 0;
+            $createdCount = 0;
+
+            // 2. Looping Data dari API
+            foreach ($dosenSiakad as $dosen) {
+                
+                // Bersihkan nama (trim spasi) agar pencocokan akurat
+                $namaApi = trim($dosen['nama']); 
+                
+                // CARI: Apakah dosen ini sudah ada di database lokal kita?
+                // Kita cari berdasarkan NAMA (karena NIDN mungkin kosong di lokal)
+                $localUser = User::where('name', 'LIKE', $namaApi)->first();
+
+                if ($localUser) {
+                    // SKENARIO A: User Sudah Ada (dari Seeder)
+                    // Cek apakah NIDN atau Email masih kosong/null?
+                    $needUpdate = false;
+
+                    if (empty($localUser->nidn) && !empty($dosen['nidn'])) {
+                        $localUser->nidn = $dosen['nidn'];
+                        $needUpdate = true;
+                    }
+                    
+                    if (empty($localUser->email) && !empty($dosen['email'])) {
+                        // Pastikan email dari API tidak duplikat dengan user lain
+                        $emailExists = User::where('email', $dosen['email'])->where('id', '!=', $localUser->id)->exists();
+                        if (!$emailExists) {
+                            $localUser->email = $dosen['email'];
+                            $needUpdate = true;
+                        }
+                    }
+
+                    if ($needUpdate) {
+                        $localUser->save();
+                        $updatedCount++;
+                    }
+
+                } else {
+                    // SKENARIO B: User Belum Ada (Dosen Baru di SIAKAD)
+                    // Opsional: Anda mau buat user baru atau abaikan?
+                    // Jika ingin buat baru:
+                    User::create([
+                        'name' => $namaApi,
+                        'nidn' => $dosen['nidn'],
+                        'email' => $dosen['email'] ?? str_replace(' ', '', strtolower($namaApi)) . '@default.com', // Email dummy jika kosong
+                        'password' => Hash::make('dosen123'), // Password Default
+                        'role' => 'dosen', // Sesuaikan dengan role Anda
+                    ]);
+                    $createdCount++;
+                }
+            }
+
+            return back()->with('success', "Sinkronisasi Selesai. $updatedCount data diperbarui, $createdCount data baru ditambahkan.");
+
+        } catch (\Exception $e) {
+            return back()->with('error', 'Terjadi kesalahan sistem: ' . $e->getMessage());
+        }
+    }
     
 }

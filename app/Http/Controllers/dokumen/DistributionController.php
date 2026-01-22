@@ -6,7 +6,8 @@ use App\Models\CourseDistribution;
 use App\Models\StudyClass;
 use App\Models\User;
 use App\Models\AcademicPeriod;
-use Illuminate\Http\Request; 
+use Illuminate\Http\Request;
+use Illuminate\Database\QueryException;
 
 
 class DistributionController extends Controller
@@ -93,6 +94,22 @@ class DistributionController extends Controller
     }
     public function destroy($id)
     {
-        //
+        try {
+            $distribution = CourseDistribution::findOrFail($id);
+
+            $distribution->delete();
+            return redirect()->route('distributions.index')
+                ->with('success', 'Distribusi mata kuliah berhasil dihapus!');
+
+        } catch (QueryException $e) {
+        
+            if ($e->errorInfo[1] == 1451) {
+                return redirect()->route('distributions.index')
+                    ->with('error', 'Gagal menghapus: Data distribusi mata kuliah ini sedang digunakan.');
+            }
+
+            return redirect()->route('distributions.index')->with('error', 'Terjadi kesalahan sistem saat menghapus data distribusi mata kuliah.');
+        }
+        
     }
 }

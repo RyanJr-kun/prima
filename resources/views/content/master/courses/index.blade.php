@@ -190,9 +190,10 @@
                                 data-bs-trigger="hover" title="Informasi"
                                 data-bs-content="Pilih jika mata kuliah ini WAJIB menggunakan alat tertentu (Misal: Matkul 'Web' wajib 'Lab Komputer')."></i>
                         </label>
-                        <select name="required_tag"
-                            class="form-select select2 @error('requiered_tag') is-invalid @enderror">
-                            <option value="">Pilih Fasilitas</option>
+                        <select name="required_tag" id="required_tag"
+                            class="form-select select2 @error('required_tag') is-invalid @enderror"
+                            data-placeholder="Pilih Fasilitas">
+                            <option value=""></option>
                             @foreach ($tags as $key => $label)
                                 @if ($key != 'general')
                                     <option value="{{ $key }}">{{ $label }}</option>
@@ -206,8 +207,9 @@
                     <div class="mb-3">
                         <label class="form-label" for="semester">Semester</label>
                         <select name="semester" id="semester"
-                            class="form-select select2 @error('semester') is-invalid @enderror" required>
-                            <option value="">Pilih Semester</option>
+                            class="form-select select2 @error('semester') is-invalid @enderror" required
+                            data-placeholder="Pilih Semester">
+                            <option value=""></option>
                             @for ($i = 1; $i <= 8; $i++)
                                 <option value="{{ $i }}">Semester {{ $i }}</option>
                             @endfor
@@ -220,8 +222,9 @@
                     <div class="mb-3">
                         <label class="form-label" for="kurikulum_id">Kurikulum</label>
                         <select name="kurikulum_id" id="kurikulum_id"
-                            class="form-select select2 @error('kurikulum_id') is-invalid @enderror">
-                            <option value="">Pilih Kurikulum</option>
+                            class="form-select select2 @error('kurikulum_id') is-invalid @enderror"
+                            data-placeholder="Pilih Kurikulum">
+                            <option value=""></option>
                             @if (isset($kurikulums))
                                 @foreach ($kurikulums as $kurikulum)
                                     <option value="{{ $kurikulum->id }}">{{ $kurikulum->name }}</option>
@@ -239,7 +242,49 @@
             </div>
         </div>
     </div>
+@endsection
 
+@section('page-script')
+    <script type="module">
+        // Fungsi inisialisasi
+        const initSelect2 = () => {
+            // Cek apakah jQuery dan Select2 sudah siap
+            if (typeof $ !== 'undefined' && $.fn.select2) {
+
+                // Targetkan select2 di dalam Offcanvas secara spesifik
+                $('#offcanvasAddCourse .select2').each(function() {
+                    const $this = $(this);
+                    $this.select2({
+                        placeholder: $this.data('placeholder') || "Pilih...",
+                        allowClear: true,
+                        dropdownParent: $('#offcanvasAddCourse'), // <--- INI KUNCINYA
+                        width: '100%', // Paksa lebar agar tidak menyempit
+                        templateSelection: function(data) {
+                            if (!data.id) {
+                                return data.text;
+                            }
+                            // Gunakan data-code jika ada (untuk prodi), jika tidak gunakan text biasa
+                            const code = $(data.element).data('code');
+                            return code ? code : data.text;
+                        }
+                    });
+                });
+
+            } else {
+                // Jika belum siap, coba lagi dalam 100ms
+                setTimeout(initSelect2, 100);
+            }
+        };
+
+        // Jalankan saat script dimuat
+        initSelect2();
+
+        // PENTING: Jalankan ulang saat Offcanvas dibuka (untuk jaga-jaga rendering error)
+        const offcanvasElement = document.getElementById('offcanvasAddCourse');
+        offcanvasElement.addEventListener('shown.bs.offcanvas', function() {
+            initSelect2();
+        });
+    </script>
     <script>
         document.addEventListener('DOMContentLoaded', function() {
             const form = document.getElementById('addNewCourseForm');

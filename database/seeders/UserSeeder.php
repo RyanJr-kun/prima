@@ -100,7 +100,7 @@ class UserSeeder extends Seeder
         }
 
         $baak = User::firstOrCreate([
-            'email' => 'baak@poltek.ac.id'
+            'email' => 'baak@poltekindonusa.ac.id'
         ], [
             'name' => 'Dewi Amelia, M.Kom',
             'username' => 'baak',
