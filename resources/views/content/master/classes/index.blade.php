@@ -29,21 +29,73 @@
             </div>
         @endif
     </div>
+    <div class="card mb-4">
+        <div class="card-body">
+            <form action="{{ route('master.kelas.index') }}" method="GET">
+                <div class="row g-3">
+                    <div class="col-md-3">
+                        <label class="form-label">Cari Nama Kelas</label>
+                        <input type="text" name="q" class="form-control" placeholder="Contoh: A, B"
+                            value="{{ request('q') }}">
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label">Program Studi</label>
+                        <select name="prodi_id" class="form-select select2">
+                            <option value="">Semua Program Studi</option>
+                            @foreach ($prodis as $prodi)
+                                <option value="{{ $prodi->id }}"
+                                    {{ request('prodi_id') == $prodi->id ? 'selected' : '' }}>
+                                    {{ $prodi->jenjang }} - {{ $prodi->name }}
+                                </option>
+                            @endforeach
+                        </select>
+                    </div>
+                    <div class="col-6 col-md-2">
+                        <label class="form-label">Shift</label>
+                        <select name="shift" class="form-select select2">
+                            <option value="">Semua</option>
+                            <option value="pagi" {{ request('shift') == 'pagi' ? 'selected' : '' }}>Pagi</option>
+                            <option value="malam" {{ request('shift') == 'malam' ? 'selected' : '' }}>Malam</option>
+                        </select>
+                    </div>
+                    <div class="col-6 col-md-2">
+                        <label class="form-label">Angkatan</label>
+                        <select name="angkatan" class="form-select select2">
+                            <option value="">Semua</option>
+                            @foreach ($angkatans as $angkatan)
+                                <option value="{{ $angkatan }}"
+                                    {{ request('angkatan') == $angkatan ? 'selected' : '' }}>{{ $angkatan }}</option>
+                            @endforeach
+                        </select>
+                    </div>
+                    <div class="col-6 col-md-2 text-end d-flex align-items-end">
+                        <a href="{{ route('master.kelas.index') }}" class="btn btn-secondary me-3">Reset</a>
+                        <button type="submit" class="btn btn-primary"><i class="bx bx-filter-alt me-1"></i> Filter</button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
 
     <div class="card">
         {{-- 2. CARD HEADER --}}
         <div class="card-header border-bottom">
             <div class="row">
                 <div class="col-6">
-                    <h4 class="card-title mb-0">Kelas Perkuliahan</h4>
-                    <small class="text-muted">Data kelas aktif berdasarkan Periode Akademik.</small>
+                    <h5 class="card-title fw-bold mb-0">Kelas Perkuliahan</h5>
+                    <small class="d-none d-md-block text-muted">Data kelas aktif berdasarkan Periode Akademik.</small>
                 </div>
                 <div class="col-6 text-end">
+                    <button type="button" class="btn btn-success my-1" data-bs-toggle="modal"
+                        data-bs-target="#importModal">
+                        <i class="bx bx-spreadsheet me-1"></i> Import
+                    </button>
                     {{-- Tombol Tambah --}}
                     <button class="btn btn-primary add-new" type="button" data-bs-toggle="offcanvas"
                         data-bs-target="#offcanvasAddKelas" id="btnCreate">
-                        <span><i class="bx bx-plus me-2"></i>Tambah Kelas</span>
+                        <span><i class="bx bx-plus me-2"></i> Kelas</span>
                     </button>
+
                 </div>
             </div>
         </div>
@@ -88,7 +140,8 @@
                                             </span>
                                         </div>
                                         <div class="d-flex flex-column">
-                                            <span class="text-truncate fw-medium">{{ $kelas->academicAdvisor->name }}</span>
+                                            <span
+                                                class="text-truncate fw-medium">{{ $kelas->academicAdvisor->name }}</span>
                                         </div>
                                     </div>
                                 @else
@@ -130,10 +183,12 @@
             </table>
         </div>
 
-        <div class="offcanvas offcanvas-end" tabindex="-1" id="offcanvasAddKelas" aria-labelledby="offcanvasAddKelasLabel">
+        <div class="offcanvas offcanvas-end" tabindex="-1" id="offcanvasAddKelas"
+            aria-labelledby="offcanvasAddKelasLabel">
             <div class="offcanvas-header border-bottom">
                 <h5 id="offcanvasAddKelasLabel" class="offcanvas-title">Tambah Kelas Baru</h5>
-                <button type="button" class="btn-close text-reset" data-bs-dismiss="offcanvas" aria-label="Close"></button>
+                <button type="button" class="btn-close text-reset" data-bs-dismiss="offcanvas"
+                    aria-label="Close"></button>
             </div>
 
             <div class="offcanvas-body mx-0 grow-0 p-6 h-100">
@@ -271,6 +326,38 @@
             </div>
         </div>
     </div>
+    <div class="modal fade" id="importModal" tabindex="-1">
+        <div class="modal-dialog">
+            <form action="{{ route('kelas-perkuliahan.import') }}" method="POST" enctype="multipart/form-data">
+                @csrf
+                <div class="modal-content">
+                    {{-- INPUT HIDDEN PERIODE AKADEMIK (WAJIB) --}}
+                    @if (isset($activePeriod))
+                        <input type="hidden" name="academic_period_id" value="{{ $activePeriod->id }}">
+                    @endif
+
+                    <div class="modal-header">
+                        <h5 class="modal-title">Import Data</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="alert alert-info">
+                            <small>Download format excel: <a href="{{ route('kelas-perkuliahan.template') }}"
+                                    class="fw-bold">Klik Disini</a></small>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">File Excel</label>
+                            <input type="file" name="file" class="form-control" required>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="submit" class="btn btn-primary">Upload</button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
 
 @endsection
 
@@ -280,6 +367,13 @@
         const initSelect2 = () => {
             // Cek apakah jQuery dan Select2 sudah siap
             if (typeof $ !== 'undefined' && $.fn.select2) {
+
+                // Init Select2 untuk Filter di halaman utama
+                $('.card-body .select2').select2({
+                    width: '100%',
+                    allowClear: true,
+                    placeholder: 'Pilih...'
+                });
 
                 // Targetkan select2 di dalam Offcanvas secara spesifik
                 $('#offcanvasAddKelas .select2').each(function() {

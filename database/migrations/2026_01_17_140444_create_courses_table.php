@@ -13,7 +13,6 @@ return new class extends Migration
     {
         Schema::create('courses', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('kurikulum_id')->constrained()->cascadeOnDelete();
             $table->string('code');
             $table->string('name');
             $table->integer('sks_teori')->default(0);
@@ -21,6 +20,7 @@ return new class extends Migration
             $table->integer('sks_lapangan')->default(0);
             $table->string('required_tag')->nullable();
             $table->integer('semester');
+            $table->foreignId('kurikulum_id')->constrained()->cascadeOnDelete();
             $table->timestamps();
             $table->unique(['kurikulum_id', 'code']);
         });

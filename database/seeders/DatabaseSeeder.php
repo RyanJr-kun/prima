@@ -12,6 +12,7 @@ class DatabaseSeeder extends Seeder
             RoleSeeder::class,
             UserSeeder::class,
             ProdiSeeder::class,
+            KurikulumSeeder::class,
             RoomSeeder::class,
         ]);
 
@@ -20,6 +21,5 @@ class DatabaseSeeder extends Seeder
             'is_active' => true,
             'distribution_status' => \App\Enums\DistributionStatus::DRAFT,
         ]);
-
     }
 }

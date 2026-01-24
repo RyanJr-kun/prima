@@ -2,21 +2,20 @@
 
 namespace App\Exports;
 
-use Maatwebsite\Excel\Concerns\FromArray;
 use Maatwebsite\Excel\Concerns\WithHeadings;
 use Maatwebsite\Excel\Concerns\ShouldAutoSize;
 use Maatwebsite\Excel\Concerns\WithStyles;
 use PhpOffice\PhpSpreadsheet\Worksheet\Worksheet;
-use App\Models\CourseDistribution;
+use Maatwebsite\Excel\Concerns\FromArray;
 
 
-class CourseDistributionTemplateExport implements FromArray, WithHeadings, ShouldAutoSize, WithStyles
+class CoursesTemplateExport implements FromArray, WithHeadings, ShouldAutoSize, WithStyles
 {
     public function array(): array
     {
         return [
-            ['1', 'TI-101', 'Algoritma', 'Budi Santoso', 'Siti Aminah', 'Buku A', 'Paham Logika'],
-            ['2', 'TI-102', 'Basis Data', 'Siti Aminah', '', 'Modul B', 'Bisa Query'],
+            ['1', 'TRPL101', 'Algoritma', '1', '2', '1', '1', 'perangkat lunak', 'pc'],
+            ['2', 'TRPL102', 'Basis Data', '2', '3', '0', '2', 'perangkat lunak', 'pc'],
         ];
     }
 
@@ -26,15 +25,18 @@ class CourseDistributionTemplateExport implements FromArray, WithHeadings, Shoul
             'NO',
             'KODE_MATKUL',
             'NAMA_MATKUL',
-            'DOSEN_UTAMA',
-            'DOSEN_PDDIKTI',
-            'REFERENSI',
-            'LUARAN'
+            'SKS_TEORI',
+            'SKS_PRAKTIK',
+            'SKS_LAPANGAN',
+            'SEMESTER',
+            'NAMA_KURIKULUM',
+            'FASILITAS'
         ];
     }
 
     public function styles(Worksheet $sheet)
     {
+        // Bikin Header jadi Tebal (Bold)
         return [
             1 => ['font' => ['bold' => true]],
         ];

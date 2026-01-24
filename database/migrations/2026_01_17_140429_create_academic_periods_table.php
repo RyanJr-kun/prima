@@ -15,12 +15,29 @@ return new class extends Migration
             $table->id();
             $table->string('name');
             $table->boolean('is_active')->default(false);
-            $table->string('distribution_status')->default('draft');
-            $table->foreignId('distribution_approved_by')->nullable()->constrained('users');
-            $table->timestamp('distribution_approved_at')->nullable();
-            $table->boolean('schedule_is_published')->default(false);
+
+            $table->string('distribution_status')->default('draft'); // draft, pending, approved
+            $table->foreignId('distribution_kaprodi_id')->nullable()->constrained('users')->onDelete('set null');
+            $table->timestamp('distribution_kaprodi_at')->nullable();
+            $table->foreignId('distribution_wadir_id')->nullable()->constrained('users')->onDelete('set null');
+            $table->timestamp('distribution_wadir_at')->nullable();
+            $table->foreignId('distribution_direktur_id')->nullable()->constrained('users')->onDelete('set null');
+            $table->timestamp('distribution_direktur_at')->nullable();
+
+            $table->string('bkd_status')->default('draft');
+            $table->foreignId('bkd_kaprodi_id')->nullable()->constrained('users')->onDelete('set null');
+            $table->timestamp('bkd_kaprodi_at')->nullable();
+            $table->foreignId('bkd_wadir_id')->nullable()->constrained('users')->onDelete('set null');
+            $table->timestamp('bkd_wadir_at')->nullable();
+            $table->foreignId('bkd_direktur_id')->nullable()->constrained('users')->onDelete('set null');
+            $table->timestamp('bkd_direktur_at')->nullable();
+
             $table->string('calendar_status')->default('draft');
-            $table->timestamp('calendar_approved_at')->nullable();
+            $table->boolean('schedule_is_published')->default(false);
+            $table->foreignId('calendar_wadir_id')->nullable()->constrained('users')->onDelete('set null');
+            $table->timestamp('calendar_wadir_at')->nullable();
+            $table->foreignId('calendar_direktur_id')->nullable()->constrained('users')->onDelete('set null');
+            $table->timestamp('calendar_direktur_at')->nullable();
             $table->timestamps();
         });
     }

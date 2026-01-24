@@ -10,12 +10,12 @@ class CourseDistribution extends Model
 {
     protected $fillable = [
         'academic_period_id',
-        'study_class_id', 
+        'study_class_id',
         'course_id',
         'user_id',
         'pddikti_user_id',
         'referensi',
-        'luaran',      
+        'luaran',
     ];
 
     public function course(): BelongsTo
@@ -26,14 +26,13 @@ class CourseDistribution extends Model
     protected function sksTotal(): Attribute
     {
         return Attribute::make(
-            get: fn (mixed $value, array $attributes) =>
-                ($attributes['sks_teori'] ?? 0) +
+            get: fn(mixed $value, array $attributes) => ($attributes['sks_teori'] ?? 0) +
                 ($attributes['sks_praktik'] ?? 0) +
                 ($attributes['sks_lapangan'] ?? 0)
         );
     }
 
-    public function studyClass() 
+    public function studyClass()
     {
         return $this->belongsTo(StudyClass::class, 'study_class_id');
     }
@@ -47,11 +46,10 @@ class CourseDistribution extends Model
     {
         return $this->belongsTo(AcademicPeriod::class);
     }
-    
 
-    public function teamTeaching(): BelongsTo
+
+    public function pddiktiUser(): BelongsTo
     {
         return $this->belongsTo(User::class, 'pddikti_user_id');
     }
-    
 }

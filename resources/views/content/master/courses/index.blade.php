@@ -31,20 +31,66 @@
         @endif
     </div>
 
-    <div class="card">
+    <div class="card mb-4">
+        <div class="card-body">
+            <form action="{{ route('master.mata-kuliah.index') }}" method="GET">
+                <div class="row g-3">
+                    <div class="col-md-4">
+                        <label class="form-label">Cari Matkul / Kode</label>
+                        <input type="text" name="q" class="form-control" placeholder="Nama atau Kode Matkul"
+                            value="{{ request('q') }}">
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label">Program Studi</label>
+                        <select name="prodi_id" class="form-select select2">
+                            <option value="">Semua Program Studi</option>
+                            @if (isset($prodis))
+                                @foreach ($prodis as $prodi)
+                                    <option value="{{ $prodi->id }}"
+                                        {{ request('prodi_id') == $prodi->id ? 'selected' : '' }}>
+                                        {{ $prodi->jenjang }} - {{ $prodi->name }}
+                                    </option>
+                                @endforeach
+                            @endif
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label">Semester</label>
+                        <select name="semester" class="form-select select2">
+                            <option value="">Semua Semester</option>
+                            @for ($i = 1; $i <= 8; $i++)
+                                <option value="{{ $i }}" {{ request('semester') == $i ? 'selected' : '' }}>
+                                    Semester {{ $i }}</option>
+                            @endfor
+                        </select>
+                    </div>
+                    <div class="col-md-2 d-flex align-items-end">
+                        <button type="submit" class="btn btn-primary w-100"><i class="bx bx-filter-alt me-1"></i>
+                            Filter</button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
 
+    <div class="card">
         <div class="card-header border-bottom">
             <div class="row">
 
                 <div class="col-6">
-                    <h4 class="card-title mb-0">Mata Kuliah</h4>
-                    <small>Management Data Matkul Disini.</small>
+                    <h5 class="card-title fw-bold mb-0">Mata Kuliah</h5>
+                    <small class="d-none d-md-block text-muted">Management Data Matkul Disini.</small>
                 </div>
                 <div class="col-6 text-end">
+                    <button type="button" class="btn btn-success my-1" data-bs-toggle="modal"
+                        data-bs-target="#importModal">
+                        <i class="bx bx-spreadsheet me-1"></i> Import
+                    </button>
                     <button class="btn btn-primary add-new" type="button" data-bs-toggle="offcanvas"
                         data-bs-target="#offcanvasAddCourse" id="btnCreate">
                         <span><i class="bx bx-plus me-2"></i>Matkul</span>
                     </button>
+
                 </div>
             </div>
         </div>
@@ -272,6 +318,33 @@
             </div>
         </div>
     </div>
+    <div class="modal fade" id="importModal" tabindex="-1">
+        <div class="modal-dialog">
+            <form action="{{ route('mata-kuliah.import') }}" method="POST" enctype="multipart/form-data">
+                @csrf
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title">Import Data</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="alert alert-info">
+                            <small>Download format excel: <a href="{{ route('mata-kuliah.template') }}"
+                                    class="fw-bold">Klik Disini</a></small>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">File Excel</label>
+                            <input type="file" name="file" class="form-control" required>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="submit" class="btn btn-primary">Upload</button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
 @endsection
 
 @section('page-script')
@@ -280,6 +353,13 @@
         const initSelect2 = () => {
             // Cek apakah jQuery dan Select2 sudah siap
             if (typeof $ !== 'undefined' && $.fn.select2) {
+
+                // Init Select2 untuk Filter di halaman utama
+                $('.card-body .select2').select2({
+                    width: '100%',
+                    allowClear: true,
+                    placeholder: 'Pilih...'
+                });
 
                 // Targetkan select2 di dalam Offcanvas secara spesifik
                 $('#offcanvasAddCourse .select2').each(function() {

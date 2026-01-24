@@ -37,8 +37,8 @@
             <div class="row">
 
                 <div class="col-6">
-                    <h4 class="card-title mb-0">Program Studi</h4>
-                    <small>Management Data Prodi Disini.</small>
+                    <h5 class="card-title fw-bold mb-0">Program Studi</h5>
+                    <small class="d-none d-md-block text-muted">Management Data Prodi Disini.</small>
                 </div>
                 <div class="col-6 text-end">
                     <button class="btn btn-primary add-new" type="button" data-bs-toggle="offcanvas"

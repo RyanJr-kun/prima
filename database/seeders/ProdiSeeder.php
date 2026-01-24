@@ -22,7 +22,8 @@ class ProdiSeeder extends Seeder
             ['TRO', 'Teknologi Rekayasa Otomotif', 'D4', '8', '11'], 
             ['FM', 'Farmasi', 'D3', '6', '12'], 
             ['MIK', 'Manajemen Informasi Kesehatan', 'D4', '8', '13'],
-            ['TLM', 'Teknologi Laboratorium Medis', 'D4', '8', '14']]; 
+            ['TLM', 'Teknologi Laboratorium Medis', 'D4', '8', '14']
+            ]; 
         
             foreach ($prodis as $prodi) {
             Prodi::firstOrCreate([

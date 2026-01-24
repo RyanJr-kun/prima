@@ -89,10 +89,10 @@ $custom-height: 37px;
   }
 }
 
-.select2-container {
-    /* Fix: Mencegah input Select2 pada filter (main page) muncul di atas backdrop Modal/Offcanvas */
-    z-index: 0 !important; 
-}
+// .select2-container {
+//     /* Fix: Mencegah input Select2 pada filter (main page) muncul di atas backdrop Modal/Offcanvas */
+//     z-index: 0 !important; 
+// }
 
 .select2-dropdown {
     z-index: 9999 !important;

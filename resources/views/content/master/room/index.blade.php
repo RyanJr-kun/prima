@@ -34,8 +34,8 @@
         <div class="card-header border-bottom">
             <div class="row">
                 <div class="col-6">
-                    <h4 class="card-title mb-0">Ruangan</h4>
-                    <small class="text-muted">Managemen Data Ruangan.</small>
+                    <h5 class="card-title fw-bold mb-0">Data Ruangan</h5>
+                    <small class="d-none d-md-block text-muted">Managemen Data Ruangan.</small>
                 </div>
                 <div class="col-6 text-end">
                     <button class="btn btn-primary add-new" type="button" data-bs-toggle="offcanvas"

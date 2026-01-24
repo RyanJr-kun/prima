@@ -1,10 +1,6 @@
 @extends('layouts/contentNavbarLayout')
 @section('title', 'Kurikulum - PRIMA')
 
-@section('vendor-script')
-    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-@endsection
-
 @section('content')
 
     {{-- Toast Notification --}}
@@ -42,8 +38,8 @@
             <div class="row">
 
                 <div class="col-6">
-                    <h4 class="card-title mb-0">Kurikulum</h4>
-                    <small>Management Data Kurikulum Disini.</small>
+                    <h5 class="card-title fw-bold mb-0">Data Kurikulum</h5>
+                    <small class="d-none d-md-block text-muted">Management Data Kurikulum Disini.</small>
                 </div>
                 <div class="col-6 text-end">
                     <button class="btn btn-primary add-new" type="button" data-bs-toggle="offcanvas"
