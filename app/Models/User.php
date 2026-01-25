@@ -7,11 +7,12 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Spatie\Permission\Traits\HasRoles;
+use Laravel\Sanctum\HasApiTokens;
 
 class User extends Authenticatable
 {
     /** @use HasFactory<\Database\Factories\UserFactory> */
-    use HasFactory, Notifiable, HasRoles;
+    use HasApiTokens, HasFactory, Notifiable, HasRoles;
 
     /**
      * The attributes that are mass assignable.
@@ -22,6 +23,8 @@ class User extends Authenticatable
         'username',
         'name',
         'email',
+        'email_verified_at',
+        'password',
         'signature_path',
         'nidn',
         'status',
@@ -54,5 +57,15 @@ class User extends Authenticatable
     public function getRouteKeyName(): string
     {
         return 'username';
+    }
+    public function managedProdi()
+    {
+        return $this->hasOne(Prodi::class, 'kaprodi_id');
+    }
+
+    public function teachingDistributions()
+    {
+        return $this->belongsToMany(CourseDistribution::class, 'course_lecturers')
+            ->wherePivot('category', 'real_teaching');
     }
 }

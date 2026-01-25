@@ -1,25 +1,27 @@
 @php
-use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Route;
+    use Illuminate\Support\Facades\Auth;
+    use Illuminate\Support\Facades\Route;
 @endphp
 
 <!--  Brand demo (display only for navbar-full and hide on below xl) -->
-@if(isset($navbarFull))
-<div class="navbar-brand app-brand demo d-none d-xl-flex py-0 me-4">
-    <a href="{{url('/')}}" class="app-brand-link gap-2">
-        <span class="app-brand-logo demo">@include('_partials.macros')</span>
-        <span class="app-brand-text demo menu-text fw-bold text-heading">{{config('variables.templateName')}}</span>
-    </a>
-</div>
+@if (isset($navbarFull))
+    <div class="navbar-brand app-brand demo d-none d-xl-flex py-0 me-4">
+        <a href="{{ url('/') }}" class="app-brand-link gap-2">
+            <span class="app-brand-logo demo">@include('_partials.macros')</span>
+            <span
+                class="app-brand-text demo menu-text fw-bold text-heading">{{ config('variables.templateName') }}</span>
+        </a>
+    </div>
 @endif
 
 <!-- ! Not required for layout-without-menu -->
-@if(!isset($navbarHideToggle))
-<div class="layout-menu-toggle navbar-nav align-items-xl-center me-4 me-xl-0 {{ isset($contentNavbar) ?' d-xl-none ' : '' }}">
-    <a class="nav-item nav-link px-0 me-xl-6" href="javascript:void(0)">
-        <i class="icon-base bx bx-menu icon-md"></i>
-    </a>
-</div>
+@if (!isset($navbarHideToggle))
+    <div
+        class="layout-menu-toggle navbar-nav align-items-xl-center me-4 me-xl-0 {{ isset($contentNavbar) ? ' d-xl-none ' : '' }}">
+        <a class="nav-item nav-link px-0 me-xl-6" href="javascript:void(0)">
+            <i class="icon-base bx bx-menu icon-md"></i>
+        </a>
+    </div>
 @endif
 
 <div class="navbar-nav-right d-flex align-items-center" id="navbar-collapse">
@@ -27,7 +29,8 @@ use Illuminate\Support\Facades\Route;
     <div class="navbar-nav align-items-center">
         <div class="nav-item d-flex align-items-center">
             <i class="icon-base bx bx-search icon-md"></i>
-            <input type="text" class="form-control border-0 shadow-none ps-1 ps-sm-2" placeholder="Search..." aria-label="Search...">
+            <input type="text" class="form-control border-0 shadow-none ps-1 ps-sm-2" placeholder="Search..."
+                aria-label="Search...">
         </div>
     </div>
     <!-- /Search -->
@@ -36,7 +39,7 @@ use Illuminate\Support\Facades\Route;
         <!-- Notification -->
         <li class="nav-item dropdown-notifications navbar-dropdown dropdown me-3 me-xl-2">
             <a class="nav-link dropdown-toggle hide-arrow" href="javascript:void(0);" data-bs-toggle="dropdown"
-            data-bs-auto-close="outside" aria-expanded="false">
+                data-bs-auto-close="outside" aria-expanded="false">
                 <span class="position-relative">
                     <i class="icon-base bx bx-bell icon-md"></i>
                     <span class="badge rounded-pill bg-danger badge-dot badge-notifications border"></span>
@@ -47,10 +50,11 @@ use Illuminate\Support\Facades\Route;
                     <div class="dropdown-header d-flex align-items-center py-3">
                         <h6 class="mb-0 me-auto">Notification</h6>
                         <div class="d-flex align-items-center h6 mb-0">
-                        <span class="badge bg-label-primary me-2">8 New</span>
-                        <a href="javascript:void(0)" class="dropdown-notifications-all p-2" data-bs-toggle="tooltip"
-                            data-bs-placement="top" aria-label="Mark all as read" data-bs-original-title="Mark all as read"><i
-                            class="icon-base bx bx-envelope-open text-heading"></i></a>
+                            <span class="badge bg-label-primary me-2">8 New</span>
+                            <a href="javascript:void(0)" class="dropdown-notifications-all p-2" data-bs-toggle="tooltip"
+                                data-bs-placement="top" aria-label="Mark all as read"
+                                data-bs-original-title="Mark all as read"><i
+                                    class="icon-base bx bx-envelope-open text-heading"></i></a>
                         </div>
                     </div>
                 </li>
@@ -60,9 +64,8 @@ use Illuminate\Support\Facades\Route;
                             <div class="d-flex">
                                 <div class="flex-shrink-0 me-3">
                                     <div class="avatar">
-                                        <img
-                                        src="https://demos.themeselection.com/sneat-bootstrap-html-laravel-admin-template/demo/assets/img/avatars/1.png"
-                                        alt="" class="rounded-circle">
+                                        <img src="https://demos.themeselection.com/sneat-bootstrap-html-laravel-admin-template/demo/assets/img/avatars/1.png"
+                                            alt="" class="rounded-circle">
                                     </div>
                                 </div>
                                 <div class="flex-grow-1">
@@ -72,9 +75,9 @@ use Illuminate\Support\Facades\Route;
                                 </div>
                                 <div class="flex-shrink-0 dropdown-notifications-actions">
                                     <a href="javascript:void(0)" class="dropdown-notifications-read"><span
-                                        class="badge badge-dot"></span></a>
+                                            class="badge badge-dot"></span></a>
                                     <a href="javascript:void(0)" class="dropdown-notifications-archive"><span
-                                    class="icon-base bx bx-x"></span></a>
+                                            class="icon-base bx bx-x"></span></a>
                                 </div>
                             </div>
                         </li>
@@ -86,15 +89,15 @@ use Illuminate\Support\Facades\Route;
                                     </div>
                                 </div>
                                 <div class="flex-grow-1">
-                                <h6 class="small mb-0">Charles Franklin</h6>
+                                    <h6 class="small mb-0">Charles Franklin</h6>
                                     <small class="mb-1 d-block text-body">Accepted your connection</small>
                                     <small class="text-body-secondary">12hr ago</small>
                                 </div>
                                 <div class="flex-shrink-0 dropdown-notifications-actions">
                                     <a href="javascript:void(0)" class="dropdown-notifications-read"><span
-                                        class="badge badge-dot"></span></a>
+                                            class="badge badge-dot"></span></a>
                                     <a href="javascript:void(0)" class="dropdown-notifications-archive"><span
-                                        class="icon-base bx bx-x"></span></a>
+                                            class="icon-base bx bx-x"></span></a>
                                 </div>
                             </div>
                         </li>
@@ -102,9 +105,8 @@ use Illuminate\Support\Facades\Route;
                             <div class="d-flex">
                                 <div class="flex-shrink-0 me-3">
                                     <div class="avatar">
-                                        <img
-                                        src="https://demos.themeselection.com/sneat-bootstrap-html-laravel-admin-template/demo/assets/img/avatars/2.png"
-                                        alt="" class="rounded-circle">
+                                        <img src="https://demos.themeselection.com/sneat-bootstrap-html-laravel-admin-template/demo/assets/img/avatars/2.png"
+                                            alt="" class="rounded-circle">
                                     </div>
                                 </div>
                                 <div class="flex-grow-1">
@@ -133,7 +135,7 @@ use Illuminate\Support\Facades\Route;
                 <li class="border-top">
                     <div class="d-grid p-4">
                         <a class="btn btn-primary btn-sm d-flex" href="{{ route('notifikasi') }}">
-                        <small class="align-middle">Lihat Semua Notifikasi</small>
+                            <small class="align-middle">Lihat Semua Notifikasi</small>
                         </a>
                     </div>
                 </li>
@@ -154,7 +156,8 @@ use Illuminate\Support\Facades\Route;
                         <div class="d-flex">
                             <div class="shrink-0 me-3">
                                 <div class="avatar avatar-online">
-                                    <img src="{{ asset('assets/img/avatars/1.png') }}" alt class="w-px-40 h-auto rounded-circle">
+                                    <img src="{{ asset('assets/img/avatars/1.png') }}" alt
+                                        class="w-px-40 h-auto rounded-circle">
                                 </div>
                             </div>
                             <div class="grow">
@@ -181,9 +184,13 @@ use Illuminate\Support\Facades\Route;
                     <div class="dropdown-divider my-1"></div>
                 </li>
                 <li>
-                    <a class="dropdown-item" href="javascript:void(0);">
+                    <a class="dropdown-item" href="{{ route('logout') }}"
+                        onclick="event.preventDefault(); document.getElementById('logout-form').submit();">
                         <i class="icon-base bx bx-power-off icon-md me-3"></i><span>Log Out</span>
                     </a>
+                    <form id="logout-form" action="{{ route('logout') }}" method="POST" class="d-none">
+                        @csrf
+                    </form>
                 </li>
             </ul>
         </li>

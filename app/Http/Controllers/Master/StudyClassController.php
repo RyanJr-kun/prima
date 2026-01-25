@@ -18,7 +18,10 @@ class StudyClassController extends Controller
 {
     public function index(Request $request)
     {
-        $activePeriod = AcademicPeriod::where('is_active', true)->first();
+        $periods = AcademicPeriod::orderBy('name', 'desc')->get();
+        $activePeriod = $periods->where('is_active', true)->first();
+
+
         $prodis = \App\Models\Prodi::all();
         $dosens = User::role('dosen')->get();
         $kurikulums = Kurikulum::where('is_active', true)->get();
@@ -56,7 +59,7 @@ class StudyClassController extends Controller
         $angkatans = StudyClass::where('academic_period_id', $activePeriod->id ?? 0)
             ->select('angkatan')->distinct()->orderBy('angkatan', 'desc')->pluck('angkatan');
 
-        return view('content.master.classes.index', compact('classes', 'prodis', 'dosens', 'kurikulums', 'activePeriod', 'angkatans'));
+        return view('content.master.classes.index', compact('classes', 'prodis', 'dosens', 'kurikulums', 'activePeriod', 'periods', 'angkatans'));
     }
 
     public function create()
@@ -75,6 +78,7 @@ class StudyClassController extends Controller
             'kurikulum_id' => 'required|exists:kurikulums,id',
             'academic_advisor_id' => 'required|exists:users,id',
             'shift' => 'required|in:pagi,malam',
+            'is_active' => 'boolean'
         ]);
 
         $activePeriod = AcademicPeriod::where('is_active', true)->firstOrFail();
@@ -89,6 +93,7 @@ class StudyClassController extends Controller
             'kurikulum_id' => $request->kurikulum_id,
             'academic_advisor_id' => $request->academic_advisor_id,
             'shift' => $request->shift,
+            'is_active' => true,
         ]);
 
         return redirect()->route('master.kelas.index')->with('success', 'Kelas berhasil dibuat!');
@@ -112,6 +117,7 @@ class StudyClassController extends Controller
             'kurikulum_id' => 'required|exists:kurikulums,id',
             'academic_advisor_id' => 'required|exists:users,id',
             'shift' => 'required|in:pagi,malam',
+            'is_active' => 'boolean'
         ]);
 
         $data = $request->all();
@@ -209,5 +215,57 @@ class StudyClassController extends Controller
 
         Excel::import(new StudyClassImport($request->academic_period_id), $request->file('file'));
         return back()->with('success', 'Import Data Kelas Berhasil!');
+    }
+
+    public function copyFromPeriod(Request $request)
+    {
+        $request->validate([
+            'source_period_id' => 'required|exists:academic_periods,id',
+            'target_period_id' => 'required|exists:academic_periods,id',
+        ]);
+
+        $sourceId = $request->source_period_id;
+        $targetId = $request->target_period_id;
+
+        if ($sourceId == $targetId) {
+            return back()->with('error', 'Periode asal dan tujuan tidak boleh sama!');
+        }
+
+        // 1. Ambil semua kelas dari periode SUMBER
+        $sourceClasses = StudyClass::where('academic_period_id', $sourceId)->get();
+
+        if ($sourceClasses->isEmpty()) {
+            return back()->with('error', 'Tidak ada data kelas di periode sumber.');
+        }
+
+        DB::beginTransaction();
+        try {
+            $count = 0;
+            foreach ($sourceClasses as $oldClass) {
+                // 2. Cek Duplikasi (Agar tidak double jika tombol diklik 2x)
+                $exists = StudyClass::where('academic_period_id', $targetId)
+                    ->where('name', $oldClass->name)
+                    ->where('prodi_id', $oldClass->prodi_id)
+                    ->exists();
+
+                if (!$exists) {
+                    // 3. Replicate (Fitur Laravel untuk Clone Baris)
+                    $newClass = $oldClass->replicate();
+                    $newClass->academic_period_id = $targetId; // Ganti ID Periode
+
+                    // Opsional: Reset Total Mahasiswa jadi 0 (karena mhs belum tentu sama)
+                    // $newClass->total_students = 0; 
+
+                    $newClass->save();
+                    $count++;
+                }
+            }
+
+            DB::commit();
+            return back()->with('success', "Berhasil menyalin $count data kelas ke periode aktif.");
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return back()->with('error', 'Gagal menyalin: ' . $e->getMessage());
+        }
     }
 }

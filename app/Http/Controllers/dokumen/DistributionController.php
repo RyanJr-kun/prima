@@ -8,6 +8,7 @@ use App\Imports\DistributionUpdateImport;
 use App\Models\Prodi;
 use App\Models\Course;
 use App\Models\StudyClass;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Http\Request;
 use App\Models\AcademicPeriod;
 use App\Models\CourseDistribution;
@@ -16,23 +17,22 @@ use Maatwebsite\Excel\Facades\Excel;
 use Illuminate\Database\QueryException;
 use App\Imports\CourseDistributionImport;
 use App\Exports\CourseDistributionTemplateExport;
+use App\Models\AprovalDocument;
+use Illuminate\Support\Facades\Auth;
 
 
 class DistributionController extends Controller
 {
     public function index(Request $request)
     {
-        // 1. Ambil semua periode untuk dropdown filter
         $periods = AcademicPeriod::orderBy('name', 'desc')->get();
 
-        // 2. Tentukan periode aktif (dari request atau default is_active)
         if ($request->has('period_id')) {
             $activePeriod = $periods->where('id', $request->period_id)->first();
         } else {
             $activePeriod = $periods->where('is_active', true)->first();
         }
 
-        // Fallback jika tidak ada periode aktif sama sekali
         if (!$activePeriod) {
             $activePeriod = $periods->first();
         }
@@ -42,19 +42,21 @@ class DistributionController extends Controller
         }
 
         $prodis = Prodi::all();
-
-        // 3. Query Distribusi dengan Filter
-        $query = CourseDistribution::with(['studyClass.prodi', 'course', 'user'])
+        $query = CourseDistribution::with([
+            'studyClass.prodi',
+            'course',
+            'user',
+            'teachingLecturers',
+            'pddiktiLecturers'
+        ])
             ->where('academic_period_id', $activePeriod->id);
 
-        // Filter Prodi (via relasi studyClass)
         if ($request->filled('prodi_id')) {
             $query->whereHas('studyClass', function ($q) use ($request) {
                 $q->where('prodi_id', $request->prodi_id);
             });
         }
 
-        // Filter Semester (via relasi studyClass)
         if ($request->filled('semester')) {
             $query->whereHas('studyClass', function ($q) use ($request) {
                 $q->where('semester', $request->semester);
@@ -63,8 +65,6 @@ class DistributionController extends Controller
 
         $rawDistributions = $query->get();
 
-        // GROUPING BARU: Berdasarkan Prodi - Semester - Angkatan - Shift
-        // Ini akan menggabungkan Kelas A, B, C jika atribut di atas sama
         $distributions = $rawDistributions->groupBy(function ($item) {
             return $item->studyClass->prodi_id . '-' .
                 $item->studyClass->semester . '-' .
@@ -72,20 +72,40 @@ class DistributionController extends Controller
                 $item->studyClass->shift;
         });
 
-        // 4. Data untuk Modal Import (Study Classes pada periode terpilih)
         $study_classes = StudyClass::with('prodi')
             ->where('academic_period_id', $activePeriod->id)
             ->get();
+
         $activePeriod = $periods->firstwhere('is_active', true)->firstOrFail();
         $classes = StudyClass::where('academic_period_id', $activePeriod->id)->get();
-        $dosens = User::select('id', 'name')->orderBy('name')->get();
+        $dosens = User::role('dosen')->select('id', 'name')->orderBy('name')->get();
 
+        $documentStatus = null;
+        $documentData = null;
 
-        return view('content.distribution.index', compact('distributions', 'activePeriod', 'periods', 'study_classes', 'prodis', 'dosens', 'classes'));
+        if ($activePeriod && $request->filled('prodi_id')) {
+            $documentData = AprovalDocument::where([
+                'academic_period_id' => $activePeriod->id,
+                'prodi_id'           => $request->prodi_id,
+                'type'               => 'distribusi_matkul'
+            ])->first();
+
+            $documentStatus = $documentData ? $documentData->status : 'draft';
+        }
+
+        return view('content.distribution.index', compact(
+            'distributions',
+            'activePeriod',
+            'periods',
+            'study_classes',
+            'prodis',
+            'dosens',
+            'classes',
+            'documentData',
+            'documentStatus'
+        ));
     }
 
-
-    // 2. FORM INPUT
     public function create()
     {
         //
@@ -93,23 +113,19 @@ class DistributionController extends Controller
 
     public function store(Request $request)
     {
-        // 1. Validasi Input Dasar
         $request->validate([
             'study_class_id' => 'required|exists:study_classes,id',
             'course_id'      => 'required|exists:courses,id',
-            'user_id'        => 'required|exists:users,id', // Dosen Utama Wajib
-            'pddikti_user_id' => 'nullable|exists:users,id', // Dosen Tim Opsional
+            'user_id'        => 'required|exists:users,id',
             'referensi'      => 'nullable|string',
             'luaran'         => 'nullable|string',
         ]);
 
-        // 2. Cek Periode Aktif
         $activePeriod = AcademicPeriod::where('is_active', true)->first();
         if (!$activePeriod) {
             return back()->with('error', 'Gagal: Tidak ada Periode Akademik yang aktif.');
         }
 
-        // 3. Cek Duplikasi (Agar tidak ada matkul ganda di kelas yang sama pada periode ini)
         $exists = CourseDistribution::where([
             'academic_period_id' => $activePeriod->id,
             'study_class_id'     => $request->study_class_id,
@@ -121,19 +137,24 @@ class DistributionController extends Controller
         }
 
         try {
-            // 4. Simpan Data
-            CourseDistribution::create([
+            $dist = CourseDistribution::create([
                 'academic_period_id' => $activePeriod->id,
                 'study_class_id'     => $request->study_class_id,
                 'course_id'          => $request->course_id,
                 'user_id'            => $request->user_id,
-                'pddikti_user_id'    => $request->pddikti_user_id,
                 'referensi'          => $request->referensi,
                 'luaran'             => $request->luaran,
             ]);
+            $lecturerData = [
+                ['course_distribution_id' => $dist->id, 'user_id' => $request->user_id, 'category' => 'real_teaching'],
+                ['course_distribution_id' => $dist->id, 'user_id' => $request->user_id, 'category' => 'pddikti_reporting']
+            ];
 
+            DB::table('course_lecturers')->insert($lecturerData);
+            DB::commit();
             return redirect()->route('distribusi-mata-kuliah.index')->with('success', 'Distribusi berhasil ditambahkan!');
         } catch (\Exception $e) {
+            DB::rollBack();
             return back()->with('error', 'Terjadi kesalahan server: ' . $e->getMessage());
         }
     }
@@ -144,34 +165,65 @@ class DistributionController extends Controller
     }
     public function edit($id)
     {
-        //
+        $distribution = CourseDistribution::with(['teachingLecturers', 'pddiktiLecturers'])
+            ->findOrFail($id);
+        return response()->json($distribution);
     }
     public function update(Request $request, $id)
     {
         $request->validate([
-
-            'user_id'         => 'required|exists:users,id',
-            'pddikti_user_id' => 'nullable|exists:users,id',
-            'referensi'       => 'nullable|string',
-            'luaran'          => 'nullable|string',
+            'teaching_ids'   => 'array',
+            'pddikti_ids'    => 'array',
+            'teaching_ids.*' => 'exists:users,id',
+            'pddikti_ids.*'  => 'exists:users,id',
         ]);
 
         try {
             $distribution = CourseDistribution::findOrFail($id);
 
-            // 2. Update Data
             $distribution->update([
-                'user_id'         => $request->user_id,
-                'pddikti_user_id' => $request->pddikti_user_id,
-                'referensi'       => $request->referensi,
-                'luaran'          => $request->luaran,
+                'user_id'   => $request->user_id,
+                'referensi' => $request->referensi,
+                'luaran'    => $request->luaran,
             ]);
 
-            return back()->with('success', 'Data distribusi berhasil diperbarui!');
+            $pivotData = [];
+            if ($request->teaching_ids) {
+                foreach ($request->teaching_ids as $uid) {
+                    $pivotData[] = [
+                        'course_distribution_id' => $id,
+                        'user_id' => $uid,
+                        'category' => 'real_teaching',
+                        'created_at' => now(),
+                        'updated_at' => now()
+                    ];
+                }
+            }
+
+            if ($request->pddikti_ids) {
+                foreach ($request->pddikti_ids as $uid) {
+                    $pivotData[] = [
+                        'course_distribution_id' => $id,
+                        'user_id' => $uid,
+                        'category' => 'pddikti_reporting',
+                        'created_at' => now(),
+                        'updated_at' => now()
+                    ];
+                }
+            }
+            DB::table('course_lecturers')->where('course_distribution_id', $id)->delete();
+            if (!empty($pivotData)) {
+                DB::table('course_lecturers')->insert($pivotData);
+            }
+
+            DB::commit();
+
+            return back()->with('success', 'Data Tim Pengajar berhasil diperbarui!');
         } catch (\Exception $e) {
             return back()->with('error', 'Gagal update: ' . $e->getMessage());
         }
     }
+
     public function destroy($id)
     {
         try {
@@ -207,7 +259,6 @@ class DistributionController extends Controller
         return Excel::download(new CourseDistributionTemplateExport, 'template_distribusi.xlsx');
     }
 
-    // Method Proses Import
     public function import(Request $request)
     {
         $request->validate([
@@ -228,9 +279,6 @@ class DistributionController extends Controller
     public function generate(Request $request)
     {
         $request->validate(['period_id' => 'required|exists:academic_periods,id']);
-
-        // 1. Ambil semua kelas di periode ini
-        // Kita load relasi kurikulum agar tidak query ulang nanti (Eager Loading)
         $classes = StudyClass::where('academic_period_id', $request->period_id)->get();
 
         if ($classes->isEmpty()) {
@@ -240,36 +288,26 @@ class DistributionController extends Controller
         $createdCount = 0;
         $existingCount = 0;
 
-        // 2. Mulai Transaksi Database (Sekali di awal)
         \Illuminate\Support\Facades\DB::beginTransaction();
 
         try {
-            // --- OPTIMASI: GROUPING ---
-            // Kita kelompokkan kelas berdasarkan "Kurikulum & Semester" yang sama.
+            // kelompokkan kelas berdasarkan "Kurikulum & Semester" yang sama.
             // Tujuannya: Agar kita cukup query Mata Kuliah SEKALI saja per kelompok, 
             // bukan per kelas.
             $groupedClasses = $classes->groupBy(function ($item) {
                 return $item->kurikulum_id . '-' . $item->semester;
             });
 
-            // Loop per Kelompok (Misal: Kelompok TI-Smt1, Kelompok TI-Smt3)
             foreach ($groupedClasses as $groupKey => $classList) {
-
-                // Ambil sampel data untuk cari matkul (ambil kelas pertama di grup)
                 $sampleClass = $classList->first();
-
-                // Query Matkul cukup SEKALI per kelompok
                 $courses = Course::where('kurikulum_id', $sampleClass->kurikulum_id)
                     ->where('semester', $sampleClass->semester)
                     ->get();
 
-                if ($courses->isEmpty()) continue; // Skip jika tidak ada matkul
+                if ($courses->isEmpty()) continue;
 
-                // Loop Kelas di dalam kelompok ini (In-Memory, cepat)
                 foreach ($classList as $kelas) {
                     foreach ($courses as $course) {
-
-                        // Gunakan firstOrCreate untuk keamanan data
                         $distribution = CourseDistribution::firstOrCreate(
                             [
                                 'academic_period_id' => $request->period_id,
@@ -277,7 +315,7 @@ class DistributionController extends Controller
                                 'course_id'          => $course->id,
                             ],
                             [
-                                'user_id' => null, // Default value
+                                'user_id' => null,
                             ]
                         );
 
@@ -290,7 +328,6 @@ class DistributionController extends Controller
                 }
             }
 
-            // 3. Commit Transaksi (Sekali di akhir)
             \Illuminate\Support\Facades\DB::commit();
 
             $message = "Sinkronisasi selesai! $createdCount data baru ditambahkan.";
@@ -300,16 +337,13 @@ class DistributionController extends Controller
 
             return back()->with('success', $message);
         } catch (\Exception $e) {
-            // Jika error, batalkan SEMUA perubahan
             \Illuminate\Support\Facades\DB::rollBack();
             return back()->with('error', 'Gagal generate: ' . $e->getMessage());
         }
     }
 
-    // 2. FITUR EXPORT (Download Lembar Kerja)
     public function export(Request $request, $period_id)
     {
-        // Nama file: distribusi_20251.xlsx
         $prodiId = $request->query('prodi_id');
         $semester = $request->query('semester');
         return Excel::download(
@@ -318,7 +352,6 @@ class DistributionController extends Controller
         );
     }
 
-    // 3. FITUR IMPORT UPDATE (Upload Balik)
     public function importUpdate(Request $request)
     {
         $request->validate([
@@ -331,5 +364,28 @@ class DistributionController extends Controller
         } catch (\Exception $e) {
             return back()->with('error', 'Gagal Import: ' . $e->getMessage());
         }
+    }
+
+    public function submitToKaprodi(Request $request)
+    {
+        $request->validate([
+            'period_id' => 'required',
+            'prodi_id'  => 'required'
+        ]);
+
+        AprovalDocument::updateOrCreate(
+            [
+                'academic_period_id' => $request->period_id,
+                'prodi_id'           => $request->prodi_id,
+                'type'               => 'distribusi_matkul'
+            ],
+            [
+                'status'            => 'submitted',
+                'action_by_user_id' => Auth::id(),
+                'feedback_message'  => null
+            ]
+        );
+
+        return back()->with('success', 'Distribusi berhasil diajukan ke Kaprodi!');
     }
 }

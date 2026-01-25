@@ -78,7 +78,6 @@
     </div>
 
     <div class="card">
-        {{-- 2. CARD HEADER --}}
         <div class="card-header border-bottom">
             <div class="row">
                 <div class="col-6">
@@ -86,15 +85,26 @@
                     <small class="d-none d-md-block text-muted">Data kelas aktif berdasarkan Periode Akademik.</small>
                 </div>
                 <div class="col-6 text-end">
+
                     <button type="button" class="btn btn-success my-1" data-bs-toggle="modal"
                         data-bs-target="#importModal">
                         <i class="bx bx-spreadsheet me-1"></i> Import
                     </button>
-                    {{-- Tombol Tambah --}}
                     <button class="btn btn-primary add-new" type="button" data-bs-toggle="offcanvas"
                         data-bs-target="#offcanvasAddKelas" id="btnCreate">
                         <span><i class="bx bx-plus me-2"></i> Kelas</span>
                     </button>
+                    {{-- @if ($classes->isEmpty())
+                        <div class="alert alert-warning d-flex justify-content-between align-items-center">
+                            <span>
+                                <i class="bx bx-info-circle me-1"></i>
+                                Data kelas untuk periode <strong>{{ $activePeriod->name }}</strong> belum ada.
+                            </span>
+                            <button class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#copyClassModal">
+                                <i class="bx bx-copy me-1"></i> Salin dari Periode Lalu
+                            </button>
+                        </div>
+                    @endif --}}
 
                 </div>
             </div>
@@ -111,6 +121,7 @@
                         <th class="text-center">Periode</th>
                         <th class="text-center">Mhs</th>
                         <th>Wali Dosen</th>
+                        <th class="text-center">Status</th>
                         <th>Aksi</th>
                     </tr>
                 </thead>
@@ -148,6 +159,13 @@
                                     <span class="text-muted">-</span>
                                 @endif
                             </td>
+                            <td class="text-center">
+                                @if ($kelas->is_active == 1)
+                                    <span class="badge bg-label-success me-1">Active</span>
+                                @else
+                                    <span class="badge bg-label-secondary me-1">Offline</span>
+                                @endif
+                            </td>
 
                             <td>
                                 <div class="d-flex align-items-center">
@@ -160,6 +178,7 @@
                                         data-kurikulum-id="{{ $kelas->kurikulum_id }}"
                                         data-advisor-id="{{ $kelas->academic_advisor_id }}"
                                         data-academic-period-id="{{ $kelas->academic_period_id }}"
+                                        data-is-active="{{ $kelas->is_active }}"
                                         data-action="{{ route('master.kelas.update', $kelas->id) }}">
                                         <i class="bx bx-edit text-muted bx-sm"></i>
                                     </a>
@@ -182,148 +201,131 @@
                 </tbody>
             </table>
         </div>
+    </div>
+    <div class="offcanvas offcanvas-end" tabindex="-1" id="offcanvasAddKelas" aria-labelledby="offcanvasAddKelasLabel">
+        <div class="offcanvas-header border-bottom">
+            <h5 id="offcanvasAddKelasLabel" class="offcanvas-title">Tambah Kelas Baru</h5>
+            <button type="button" class="btn-close text-reset" data-bs-dismiss="offcanvas" aria-label="Close"></button>
+        </div>
 
-        <div class="offcanvas offcanvas-end" tabindex="-1" id="offcanvasAddKelas"
-            aria-labelledby="offcanvasAddKelasLabel">
-            <div class="offcanvas-header border-bottom">
-                <h5 id="offcanvasAddKelasLabel" class="offcanvas-title">Tambah Kelas Baru</h5>
-                <button type="button" class="btn-close text-reset" data-bs-dismiss="offcanvas"
-                    aria-label="Close"></button>
-            </div>
-
-            <div class="offcanvas-body mx-0 grow-0 p-6 h-100">
-                <form class="add-new-Kelas pt-0" id="addNewKelasForm" action="{{ route('master.kelas.store') }}"
-                    method="POST">
-                    @csrf
-
-                    {{-- Prodi --}}
-                    <div class="mb-3">
-                        <label class="form-label">Program Studi</label>
-                        <select name="prodi_id" id="prodi_id" class="form-select select2" required
-                            data-placeholder="Pilih Prodi">
+        <div class="offcanvas-body mx-0 grow-0 p-6 h-100">
+            <form class="add-new-Kelas pt-0" id="addNewKelasForm" action="{{ route('master.kelas.store') }}"
+                method="POST">
+                @csrf
+                <div class="mb-3">
+                    <label class="form-label">Program Studi</label>
+                    <select name="prodi_id" id="prodi_id" class="form-select select2" required
+                        data-placeholder="Pilih Prodi">
+                        <option value=""></option>
+                        @foreach ($prodis as $prodi)
+                            <option value="{{ $prodi->id }}">
+                                {{ $prodi->jenjang }} - {{ $prodi->name }}
+                            </option>
+                        @endforeach
+                    </select>
+                    @error('prodi_id')
+                        <div class="invalid-feedback d-block">{{ $message }}</div>
+                    @enderror
+                </div>
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label" for="add-name-class">Nama Kelas</label>
+                        <input type="text" class="form-control @error('name') is-invalid @enderror"
+                            id="add-name-class" placeholder="Contoh: A, B" name="name" value="{{ old('name') }}"
+                            required />
+                        @error('name')
+                            <div class="invalid-feedback">{{ $message }}</div>
+                        @enderror
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label" for="add-angkatan">Angkatan</label>
+                        <input type="number" class="form-control @error('angkatan') is-invalid @enderror"
+                            id="add-angkatan" placeholder="2024" name="angkatan" value="{{ old('angkatan') }}"
+                            required />
+                        @error('angkatan')
+                            <div class="invalid-feedback">{{ $message }}</div>
+                        @enderror
+                    </div>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">
+                        Shift Waktu Kuliah
+                        <i class="bx bx-help-circle text-muted ms-1" data-bs-toggle="popover" data-bs-placement="top"
+                            data-bs-trigger="hover" title="Catatan Bu Dewi"
+                            data-bs-content="- Karyawan baru (2024+) rata-rata ikut jadwal <b>Pagi</b> (gabung). <br> - Pilih <b>Malam</b> HANYA jika kelas tersebut adalah Reguler 2 atau Karyawan yang diminta dosen terpisah."></i>
+                    </label>
+                    <select name="shift" class="form-select select2" id="shift" required
+                        data-placeholder="Pilih Shift">
+                        <option value=""></option>
+                        <option value="pagi">Pagi (08.00 - 16.00) - Reguler 1</option>
+                        <option value="malam">Malam (17.00 - 20.00) - Reguler 2 & Karyawan</option>
+                    </select>
+                </div>
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label">Semester Saat Ini</label>
+                        <select name="semester" id="semester" class="form-select select2" required
+                            data-placeholder="Pilih Semester">
                             <option value=""></option>
-                            @foreach ($prodis as $prodi)
-                                <option value="{{ $prodi->id }}">
-                                    {{ $prodi->jenjang }} - {{ $prodi->name }}
-                                </option>
+                            @for ($i = 1; $i <= 8; $i++)
+                                <option value="{{ $i }}">Semester {{ $i }}</option>
+                            @endfor
+                        </select>
+                        @error('semester')
+                            <div class="invalid-feedback d-block">{{ $message }}</div>
+                        @enderror
+                    </div>
+
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label" for="add-total-students">Kapasitas (Mhs)</label>
+                        <input type="number" class="form-control @error('total_students') is-invalid @enderror"
+                            id="add-total-students" placeholder="30" name="total_students"
+                            value="{{ old('total_students') }}" required />
+                        @error('total_students')
+                            <div class="invalid-feedback">{{ $message }}</div>
+                        @enderror
+                    </div>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Kurikulum</label>
+                    <select name="kurikulum_id" id="kurikulum_id" class="form-select select2" required
+                        data-placeholder="Pilih Kurikulum">
+                        <option value=""></option>
+                        @if (isset($kurikulums))
+                            @foreach ($kurikulums as $kurikulum)
+                                <option value="{{ $kurikulum->id }}">{{ $kurikulum->name }}</option>
                             @endforeach
-                        </select>
-                        @error('prodi_id')
-                            <div class="invalid-feedback d-block">{{ $message }}</div>
-                        @enderror
-                    </div>
+                        @endif
+                    </select>
+                    @error('kurikulum_id')
+                        <div class="invalid-feedback d-block">{{ $message }}</div>
+                    @enderror
+                </div>
 
+                <div class="mb-3">
+                    <label class="form-label">Pembimbing Akademik</label>
+                    <select name="academic_advisor_id" id="academic_advisor_id" class="form-select select2" required
+                        data-placeholder="Pilih Pembimbing Akademik">
+                        <option value=""></option>
+                        @if (isset($dosens))
+                            @foreach ($dosens as $advisor)
+                                <option value="{{ $advisor->id }}">{{ $advisor->name }}</option>
+                            @endforeach
+                        @endif
+                    </select>
+                    @error('academic_advisor_id')
+                        <div class="invalid-feedback d-block">{{ $message }}</div>
+                    @enderror
+                </div>
+                <div class="form-check form-switch mb-3">
+                    <input type="hidden" name="is_active" value="0">
+                    <input class="form-check-input" type="checkbox" name="is_active" id="status" value="1">
+                    <label class="form-check-label" for="status">Active</label>
+                </div>
 
-                    {{-- Suffix Nama & Angkatan --}}
-                    <div class="row">
-                        <div class="col-md-6 mb-3">
-                            <label class="form-label" for="add-name-class">Nama Kelas</label>
-                            <input type="text" class="form-control @error('name') is-invalid @enderror"
-                                id="add-name-class" placeholder="Contoh: A, B" name="name"
-                                value="{{ old('name') }}" required />
-                            @error('name')
-                                <div class="invalid-feedback">{{ $message }}</div>
-                            @enderror
-                        </div>
-                        <div class="col-md-6 mb-3">
-                            <label class="form-label" for="add-angkatan">Angkatan</label>
-                            <input type="number" class="form-control @error('angkatan') is-invalid @enderror"
-                                id="add-angkatan" placeholder="2024" name="angkatan" value="{{ old('angkatan') }}"
-                                required />
-                            @error('angkatan')
-                                <div class="invalid-feedback">{{ $message }}</div>
-                            @enderror
-                        </div>
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label">
-                            Shift Waktu Kuliah
-                            <i class="bx bx-help-circle text-muted ms-1" data-bs-toggle="popover" data-bs-placement="top"
-                                data-bs-trigger="hover" title="Catatan Bu Dewi"
-                                data-bs-content="- Karyawan baru (2024+) rata-rata ikut jadwal <b>Pagi</b> (gabung). <br> - Pilih <b>Malam</b> HANYA jika kelas tersebut adalah Reguler 2 atau Karyawan yang diminta dosen terpisah."></i>
-                        </label>
-                        <select name="shift" class="form-select select2" id="shift" required
-                            data-placeholder="Pilih Shift">
-                            <option value=""></option>
-                            <option value="pagi">Pagi (08.00 - 16.00) - Reguler 1</option>
-                            <option value="malam">Malam (17.00 - 20.00) - Reguler 2 & Karyawan</option>
-                        </select>
-                    </div>
-
-                    {{-- Semester & Jumlah --}}
-                    <div class="row">
-                        <div class="col-md-6 mb-3">
-                            <label class="form-label">Semester Saat Ini</label>
-                            <select name="semester" id="semester" class="form-select select2" required
-                                data-placeholder="Pilih Semester">
-                                <option value=""></option>
-                                @for ($i = 1; $i <= 8; $i++)
-                                    <option value="{{ $i }}">Semester {{ $i }}</option>
-                                @endfor
-                            </select>
-                            @error('semester')
-                                <div class="invalid-feedback d-block">{{ $message }}</div>
-                            @enderror
-                        </div>
-
-                        <div class="col-md-6 mb-3">
-                            <label class="form-label" for="add-total-students">Kapasitas (Mhs)</label>
-                            <input type="number" class="form-control @error('total_students') is-invalid @enderror"
-                                id="add-total-students" placeholder="30" name="total_students"
-                                value="{{ old('total_students') }}" required />
-                            @error('total_students')
-                                <div class="invalid-feedback">{{ $message }}</div>
-                            @enderror
-                        </div>
-                    </div>
-
-                    {{-- Kurikulum --}}
-                    <div class="mb-3">
-                        <label class="form-label">Kurikulum</label>
-                        <select name="kurikulum_id" id="kurikulum_id" class="form-select select2" required
-                            data-placeholder="Pilih Kurikulum">
-                            <option value=""></option>
-                            @if (isset($kurikulums))
-                                @foreach ($kurikulums as $kurikulum)
-                                    <option value="{{ $kurikulum->id }}">{{ $kurikulum->name }}</option>
-                                @endforeach
-                            @endif
-                        </select>
-                        @error('kurikulum_id')
-                            <div class="invalid-feedback d-block">{{ $message }}</div>
-                        @enderror
-                    </div>
-
-                    <div class="mb-3">
-                        <label class="form-label">Pembimbing Akademik</label>
-                        <select name="academic_advisor_id" id="academic_advisor_id" class="form-select select2" required
-                            data-placeholder="Pilih Pembimbing Akademik">
-                            <option value=""></option>
-                            @if (isset($dosens))
-                                @foreach ($dosens as $advisor)
-                                    <option value="{{ $advisor->id }}">{{ $advisor->name }}</option>
-                                @endforeach
-                            @endif
-                        </select>
-                        @error('academic_advisor_id')
-                            <div class="invalid-feedback d-block">{{ $message }}</div>
-                        @enderror
-                    </div>
-
-
-                    {{-- <div class="mb-3">
-             <label class="form-label">Periode Akademik</label>
-             <select name="academic_period_id" id="academic_period_id" class="form-select select2">
-                 @foreach ($activePeriods as $p)
-                    <option value="{{ $p->id }}">{{ $p->name }}</option>
-                 @endforeach
-             </select>
-        </div>  --}}
-
-                    <button type="submit" class="btn btn-primary me-3" id="saveBtn">Simpan Data</button>
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="offcanvas">Batal</button>
-                </form>
-            </div>
+                <button type="submit" class="btn btn-primary me-3" id="saveBtn">Simpan Data</button>
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="offcanvas">Batal</button>
+            </form>
         </div>
     </div>
     <div class="modal fade" id="importModal" tabindex="-1">
@@ -353,6 +355,44 @@
                     </div>
                     <div class="modal-footer">
                         <button type="submit" class="btn btn-primary">Upload</button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+    <div class="modal fade" id="copyClassModal" tabindex="-1">
+        <div class="modal-dialog">
+            <form action="{{ route('study-classes.copy') }}" method="POST">
+                @csrf
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title">Salin Master Data Kelas</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body">
+                        <input type="hidden" name="target_period_id" value="{{ $activePeriod->id }}">
+
+                        <div class="mb-3">
+                            <label class="form-label">Salin dari Periode:</label>
+                            <select name="source_period_id" class="form-select select2"
+                                data-bs-placeholder="pilih periode" required>
+                                @foreach ($periods as $p)
+                                    {{-- Jangan tampilkan periode aktif saat ini --}}
+                                    @if ($p->id != $activePeriod->id)
+                                        <option value="{{ $p->id }}">{{ $p->name }}</option>
+                                    @endif
+                                @endforeach
+                            </select>
+                        </div>
+
+                        <div class="alert alert-info small">
+                            <i class="bx bx-bulb"></i> Tips: Sistem akan menduplikasi nama kelas, prodi, dan atribut
+                            lainnya. Mahasiswa tidak ikut disalin.
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Batal</button>
+                        <button type="submit" class="btn btn-primary">Mulai Salin</button>
                     </div>
                 </div>
             </form>
@@ -447,6 +487,7 @@
                     document.getElementById('add-name-class').value = d.name;
                     document.getElementById('add-angkatan').value = d.angkatan;
                     document.getElementById('add-total-students').value = d.totalStudents;
+                    document.getElementById('status').checked = d.isActive == '1';
 
 
                     if (window.$) {

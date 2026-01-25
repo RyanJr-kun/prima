@@ -12,17 +12,18 @@ return new class extends Migration
     public function up(): void
     {
         Schema::create('course_distributions', function (Blueprint $table) {
-            $table->id(); 
+            $table->id();
             $table->foreignId('academic_period_id')->constrained()->cascadeOnDelete();
             $table->foreignId('study_class_id')->constrained('study_classes')->cascadeOnDelete();
-            $table->foreignId('course_id')->constrained()->cascadeOnDelete();   
+            $table->foreignId('course_id')->constrained()->cascadeOnDelete();
             $table->foreignId('user_id')->nullable()->constrained('users')->onDelete('set null');
-            $table->foreignId('pddikti_user_id')->nullable()->constrained('users')->nullOnDelete();
-            $table->text('referensi')->nullable(); 
-            $table->text('luaran')->nullable();   
+
+            $table->text('referensi')->nullable();
+            $table->text('luaran')->nullable();
             $table->timestamps();
+
             $table->unique(
-                ['academic_period_id', 'study_class_id', 'course_id'], 
+                ['academic_period_id', 'study_class_id', 'course_id'],
                 'unique_dist_per_class'
             );
         });

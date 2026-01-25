@@ -8,14 +8,15 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 class StudyClass extends Model
 {
     protected $fillable = [
-        'academic_period_id', 
-        'name', 
-        'prodi_id', 
+        'academic_period_id',
+        'name',
+        'prodi_id',
         'kurikulum_id',
-        'angkatan', 
+        'angkatan',
         'semester',
-        'total_students', 
+        'total_students',
         'academic_advisor_id',
+        'is_active',
         'shift',
     ];
 
@@ -42,7 +43,7 @@ class StudyClass extends Model
         $jenjang = $this->prodi->jenjang ?? '';
         return "{$jenjang} {$kodeProdi} {$tahunDuaDigit}{$this->name}";
     }
-    
+
     public function getSemesterRomawiAttribute()
     {
         $map = [

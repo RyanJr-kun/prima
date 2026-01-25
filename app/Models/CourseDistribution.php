@@ -13,7 +13,6 @@ class CourseDistribution extends Model
         'study_class_id',
         'course_id',
         'user_id',
-        'pddikti_user_id',
         'referensi',
         'luaran',
     ];
@@ -48,8 +47,24 @@ class CourseDistribution extends Model
     }
 
 
-    public function pddiktiUser(): BelongsTo
+    public function teachingLecturers()
     {
-        return $this->belongsTo(User::class, 'pddikti_user_id');
+        return $this->belongsToMany(User::class, 'course_lecturers')
+            ->wherePivot('category', 'real_teaching')
+            ->withTimestamps();
+    }
+
+    public function pddiktiLecturers()
+    {
+        return $this->belongsToMany(User::class, 'course_lecturers')
+            ->wherePivot('category', 'pddikti_reporting')
+            ->withTimestamps();
+    }
+
+    public function allLecturers()
+    {
+        return $this->belongsToMany(User::class, 'course_lecturers')
+            ->withPivot('category')
+            ->withTimestamps();
     }
 }

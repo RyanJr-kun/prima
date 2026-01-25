@@ -7,10 +7,10 @@
             "slug": "dashboard"
         },
         {
-            "url": "/Dokumen",
+            "url": "/dokumen",
             "name": "Dokumen",
             "icon": "menu-icon icon-base bx bx-file",
-            "slug": "dokumen"
+            "slug": "dokumen.index"
         },
         {
         "menuHeader": "Akademik"

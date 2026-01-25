@@ -4,53 +4,92 @@ namespace App\Imports;
 
 use App\Models\CourseDistribution;
 use App\Models\User;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Collection;
 use Maatwebsite\Excel\Concerns\ToCollection;
 use Maatwebsite\Excel\Concerns\WithHeadingRow; // PENTING: Pakai Heading Row
 
 class DistributionUpdateImport implements ToCollection, WithHeadingRow
 {
+    private function findUserIds($nameString)
+    {
+        if (!$nameString) return [];
+        $names = explode(';', $nameString);
+        $ids = [];
+
+        foreach ($names as $name) {
+            $cleanName = trim($name);
+            if (empty($cleanName)) continue;
+
+            // 1. Coba cari match dengan string utuh (siapa tahu di DB namanya pakai gelar)
+            $user = User::where('name', 'LIKE', "%{$cleanName}%")->first();
+
+            // 2. Jika tidak ketemu dan ada koma (kemungkinan format "Nama, Gelar"), ambil nama depan saja
+            if (!$user && str_contains($cleanName, ',')) {
+                $parts = explode(',', $cleanName);
+                $nameOnly = trim($parts[0]);
+                if (!empty($nameOnly)) {
+                    $user = User::where('name', 'LIKE', "%{$nameOnly}%")->first();
+                }
+            }
+
+            if ($user) {
+                $ids[] = $user->id;
+            }
+        }
+
+        return array_unique($ids);
+    }
+
     public function collection(Collection $rows)
     {
         foreach ($rows as $row) {
-            // Ambil ID Distribusi (Kunci Utama)
-            // Pastikan penulisan key array sesuai dengan header excel (lowercase & snake_case)
-            // Header 'ID_DISTRIBUSI (JANGAN DIUBAH)' akan terbaca 'id_distribusi_jangan_diubah'
-
-            // Cara aman ambil ID (karena header bisa panjang): Ambil index pertama jika array numerik, 
-            // tapi karena WithHeadingRow, kita harus sesuaikan dengan slugnya.
-            // Lebih aman kita cek dulu rownya.
-
             $idDistribusi = $row['id_distribusi_jangan_diubah'] ?? null;
             if (!$idDistribusi) continue;
 
-            $namaDosenUtama = trim($row['dosen_utama'] ?? '');
-            $namaDosenTeam  = trim($row['dosen_pddikti'] ?? '');
-
-            // Cari ID Dosen berdasarkan Nama
-            $dosenUtamaId = null;
-            if ($namaDosenUtama) {
-                $user = User::where('name', 'LIKE', "%$namaDosenUtama%")->first();
-                if ($user) $dosenUtamaId = $user->id;
-            }
-
-            $dosenTeamId = null;
-            if ($namaDosenTeam) {
-                $user = User::where('name', 'LIKE', "%$namaDosenTeam%")->first();
-                if ($user) $dosenTeamId = $user->id;
-            }
-
-            // EKSEKUSI UPDATE
-            // Langsung tembak ID-nya, ga perlu cari matkul/kelas lagi. Cepat & Akurat.
             $distribusi = CourseDistribution::find($idDistribusi);
+            if (!$distribusi) continue;
 
-            if ($distribusi) {
-                $distribusi->update([
-                    'user_id'         => $dosenUtamaId,
-                    'pddikti_user_id' => $dosenTeamId,
-                    'referensi'       => $row['referensi'] ?? null,
-                    'luaran'          => $row['luaran'] ?? null,
-                ]);
+            $teachingIds = $this->findUserIds($row['dosen_utama'] ?? '');
+            $pddiktiIds  = $this->findUserIds($row['dosen_pddikti'] ?? '');
+
+            $coordinatorId = $teachingIds[0] ?? $distribusi->user_id;
+
+            $distribusi->update([
+                'user_id'   => $coordinatorId,
+                'referensi' => $row['referensi'] ?? $distribusi->referensi,
+                'luaran'    => $row['luaran'] ?? $distribusi->luaran,
+            ]);
+
+            DB::table('course_lecturers')
+                ->where('course_distribution_id', $idDistribusi)
+                ->delete();
+
+            $pivotData = [];
+            $now = now();
+
+            foreach ($teachingIds as $uid) {
+                $pivotData[] = [
+                    'course_distribution_id' => $idDistribusi,
+                    'user_id'  => $uid,
+                    'category' => 'real_teaching',
+                    'created_at' => $now,
+                    'updated_at' => $now,
+                ];
+            }
+
+            foreach ($pddiktiIds as $uid) {
+                $pivotData[] = [
+                    'course_distribution_id' => $idDistribusi,
+                    'user_id'  => $uid,
+                    'category' => 'pddikti_reporting',
+                    'created_at' => $now,
+                    'updated_at' => $now,
+                ];
+            }
+
+            if (!empty($pivotData)) {
+                DB::table('course_lecturers')->insertOrIgnore($pivotData);
             }
         }
     }

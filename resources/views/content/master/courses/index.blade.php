@@ -121,7 +121,7 @@
                             <td>{{ ++$key }}</td>
                             <td>{{ $matkul->code }}</td>
                             <td>
-                                <h6 class="mb-0">{{ $matkul->name }}</h6>
+                                <h6 class="mb-0">{{ \Illuminate\Support\Str::limit($matkul->name ?? '-', 35) }}</h6>
                             </td>
                             <td class="text-center border">{{ $matkul->sks_teori }}</td>
                             <td class="text-center border">{{ $matkul->sks_praktik }}</td>
