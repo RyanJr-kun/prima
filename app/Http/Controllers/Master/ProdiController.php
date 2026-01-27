@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Master;
 
+use App\Models\User;
 use App\Models\Prodi;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
@@ -12,8 +13,14 @@ class ProdiController extends Controller
 {
     public function index()
     {
-        $prodis = Prodi::all();
-        $dosens = \App\Models\User::role('kaprodi')->get(); 
+        $prodis = Prodi::with('kaprodi')
+            ->orderBy('code', 'asc')
+            ->get();
+
+        $dosens = User::role(['dosen', 'kaprodi'])
+            ->orderBy('name')
+            ->get();
+
         return view('content.master.prodi.index', compact('prodis', 'dosens'));
     }
 
@@ -24,22 +31,17 @@ class ProdiController extends Controller
 
     public function store(Request $request)
     {
-         $request->validate([
-            'code' => 'required|unique:prodis,code',
-            'name' => 'required',
-            'jenjang' => 'required',
-            'lama_studi' => 'required|numeric',
-            'kaprodi_id' => 'required|exists:users,id',
+        $request->validate([
+            'code'           => 'required|unique:prodis,code',
+            'name'           => 'required|string',
+            'jenjang'        => 'required|string',
+            'lama_studi'     => 'required|numeric',
+            'primary_campus' => 'required|in:kampus_1,kampus_2',
+            'kaprodi_id'     => 'nullable|exists:users,id',
         ]);
-        Prodi::create([
-            'code' => $request->code,
-            'name' => $request->name,
-            'jenjang' => $request->jenjang,
-            'kaprodi_id' => $request->kaprodi_id,
-            'lama_studi' => $request->lama_studi,
-        ]);        
-        return redirect()->route('master.program-studi.index')->with('success', 'Prodi berhasil disimpan!');
+        Prodi::create($request->all());
 
+        return redirect()->route('master.program-studi.index')->with('success', 'Prodi berhasil disimpan!');
     }
 
     public function show(string $id)
@@ -54,40 +56,39 @@ class ProdiController extends Controller
 
     public function update(Request $request, string $id)
     {
-        $prodis = Prodi::findOrFail($id);
+        $prodi = Prodi::findOrFail($id);
 
         $request->validate([
-            'code' => ['required', Rule::unique('prodis', 'code')->ignore($id)],
-            'name' => 'required',
-            'jenjang' => 'required',
-            'lama_studi' => 'required|numeric',
-            'kaprodi_id' => 'required|exists:users,id',
+            'code'           => ['required', Rule::unique('prodis', 'code')->ignore($id)],
+            'name'           => 'required|string',
+            'jenjang'        => 'required|string',
+            'lama_studi'     => 'required|numeric',
+            'primary_campus' => 'required|in:kampus_1,kampus_2',
+            'kaprodi_id'     => 'nullable|exists:users,id',
         ]);
 
-        $data = $request->all(); 
+        $prodi->update($request->all());
 
-        $prodis->update($data);
         return redirect()->route('master.program-studi.index')->with('success', 'Program Studi berhasil diperbarui');
     }
 
     public function destroy(string $id)
     {
-            try {
-                $prodis = Prodi::findOrFail($id);
+        try {
+            $prodis = Prodi::findOrFail($id);
+            $prodis->delete();
 
-                $prodis->delete();
+            return redirect()->route('master.program-studi.index')
+                ->with('success', 'Program Studi berhasil dihapus!');
+        } catch (QueryException $e) {
+
+            if ($e->errorInfo[1] == 1451) {
                 return redirect()->route('master.program-studi.index')
-                    ->with('success', 'Program Studi berhasil dihapus!');
-
-            } catch (QueryException $e) {
-            
-                if ($e->errorInfo[1] == 1451) {
-                    return redirect()->route('master.program-studi.index')
-                        ->with('error', 'Gagal menghapus: Data Program Studi');
-                }
-
-                return redirect()->route('master.program-studi.index')
-                    ->with('error', 'Terjadi kesalahan sistem saat menghapus data.');
+                    ->with('error', 'Gagal menghapus: Data Program Studi');
             }
+
+            return redirect()->route('master.program-studi.index')
+                ->with('error', 'Terjadi kesalahan sistem saat menghapus data.');
+        }
     }
 }

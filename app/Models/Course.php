@@ -15,37 +15,41 @@ class Course extends Model
         'sks_lapangan',
         'semester',
         'kurikulum_id',
-        'prodi_id',
-        'required_tag'
+        'required_tags'
     ];
 
-    /**
-     * Accessor untuk mengambil Total SKS (JML) secara otomatis.
-     * Cara panggil: $course->sks_total
-     */
+    protected $casts = [
+        'required_tags' => 'array',
+    ];
+
     protected function sksTotal(): Attribute
     {
         return Attribute::make(
-            get: fn (mixed $value, array $attributes) =>
-                ($attributes['sks_teori'] ?? 0) +
+            get: fn(mixed $value, array $attributes) => ($attributes['sks_teori'] ?? 0) +
                 ($attributes['sks_praktik'] ?? 0) +
                 ($attributes['sks_lapangan'] ?? 0)
         );
     }
-    // app/Models/Course.php
+
+    public function prodi()
+    {
+        return $this->hasOneThrough(
+            Prodi::class,
+            kurikulum::class,
+            'id',
+            'id',
+            'kurikulum_id',
+            'prodi_id'
+        );
+    }
+
     public function kurikulum()
     {
         return $this->belongsTo(Kurikulum::class);
     }
-    public function prodi()
-    { 
-        return $this->hasOneThrough(
-            Prodi::class,
-            kurikulum::class,
-            'id', 
-            'id', 
-            'kurikulum_id', 
-            'prodi_id'
-        );
+
+    public function getProdiAttribute()
+    {
+        return $this->kurikulum->prodi ?? null;
     }
 }

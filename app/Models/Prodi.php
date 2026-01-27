@@ -8,11 +8,13 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 class Prodi extends Model
 {
     protected $fillable = [
-        'code', 
-        'name', 
+        'code',
+        'name',
         'jenjang',
-        'lama_studi', 
-        'kaprodi_id'];
+        'lama_studi',
+        'kaprodi_id',
+        'primary_campus'
+    ];
 
     public function kaprodi(): BelongsTo
     {

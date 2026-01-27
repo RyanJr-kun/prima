@@ -18,13 +18,21 @@ class CourseController extends Controller
     public function index(Request $request)
     {
         $tags = [
-            'general' => 'Umum / Standar',
-            'computer' => 'Lab Komputer (PC)',
-            'network' => 'Lab Jaringan & IoT',
-            'resto' => 'Lab Restoran & Tata Hidang',
-            'automotive' => 'Bengkel Otomotif',
-            'hotel_fo' => 'Front Office Hotel',
+            'general'         => 'Umum (AC, Proyektor, Board)',
+            'computer'        => 'Komputer (PC / Lab Kom)',
+            'network_iot'     => 'Jaringan, Sensor & IoT',
+            'automotive'      => 'Mesin & Otomotif',
+            'broadcasting'    => 'Studio, Kamera & Audio',
+            'retail_sim'      => 'Simulasi Ritel & Kasir',
+            'kitchen_resto'   => 'Dapur, Bar & Resto',
+            'medical_record'  => 'Rekam Medis (Rak/Berkas)',
+            'microscope'      => 'Mikroskop & Biologi',
+            'chemistry'       => 'Kimia & Lemari Asam',
+            'bio_molecular'   => 'PCR & Molekuler',
+            'pharmacy_tool'   => 'Alat Farmasi & Cetak Tablet',
+            'anatomy_bed'     => 'Anatomi & Bed Pasien',
         ];
+
         $prodis = Prodi::all();
 
         $query = Course::with('kurikulum.prodi');
@@ -46,11 +54,14 @@ class CourseController extends Controller
             $query->where('semester', $request->semester);
         }
 
+        $query->orderBy('code', 'asc');
+
         $courses = $query->get();
 
         $kurikulums = Kurikulum::with('prodi')
             ->where('is_active', true)
             ->get();
+
         return view('content.master.courses.index', compact('courses', 'kurikulums', 'prodis', 'tags'));
     }
 
@@ -63,17 +74,25 @@ class CourseController extends Controller
     {
         // Validasi Input SKS Pecahan
         $request->validate([
-            'code' => 'required|unique:courses,code',
-            'name' => 'required',
-            'semester' => 'required|numeric',
-            'kurikulum_id' => 'required|exists:kurikulums,id',
-            'sks_teori' => 'required|numeric|min:0',
-            'sks_praktik' => 'required|numeric|min:0',
-            'sks_lapangan' => 'required|numeric|min:0',
-            'required_tag' => 'required|string',
+            'code'           => 'required|unique:courses,code',
+            'name'           => 'required',
+            'semester'       => 'required|numeric',
+            'kurikulum_id'   => 'required|exists:kurikulums,id',
+            'sks_teori'      => 'required|numeric|min:0',
+            'sks_praktik'    => 'required|numeric|min:0',
+            'sks_lapangan'   => 'required|numeric|min:0',
+
+            'required_tags'   => 'nullable|array',
+            'required_tags.*' => 'string',
         ]);
 
-        Course::create($request->all());
+        $data = $request->all();
+
+        if (empty($request->required_tags)) {
+            $data['required_tags'] = ['general'];
+        }
+
+        Course::create($data);
         return redirect()->route('master.mata-kuliah.index')->with('success', 'Mata Kuliah tersimpan!');
     }
 
@@ -84,22 +103,28 @@ class CourseController extends Controller
 
     public function update(Request $request, string $id)
     {
-        $courses = Course::findOrFail($id);
+        $course = Course::findOrFail($id);
 
         $request->validate([
-            'code' => ['required', Rule::unique('courses', 'code')->ignore($id)],
-            'name' => 'required|string',
-            'semester' => 'required|numeric',
-            'kurikulum_id' => 'required|exists:kurikulums,id',
-            'sks_teori' => 'nullable|numeric|min:0',
-            'sks_praktik' => 'nullable|numeric|min:0',
-            'sks_lapangan' => 'nullable|numeric|min:0',
-            'required_tag' => 'required|string',
+            'code'           => ['required', Rule::unique('courses', 'code')->ignore($id)],
+            'name'           => 'required|string',
+            'semester'       => 'required|numeric',
+            'kurikulum_id'   => 'required|exists:kurikulums,id',
+            'sks_teori'      => 'nullable|numeric|min:0',
+            'sks_praktik'    => 'nullable|numeric|min:0',
+            'sks_lapangan'   => 'nullable|numeric|min:0',
+
+            'required_tags'   => 'nullable|array',
+            'required_tags.*' => 'string',
         ]);
 
         $data = $request->all();
 
-        $courses->update($data);
+        if (empty($request->required_tags)) {
+            $data['required_tags'] = ['general'];
+        }
+
+        $course->update($data);
         return redirect()->route('master.mata-kuliah.index')->with('success', 'Mata Kuliah berhasil diperbarui!');
     }
 
@@ -108,6 +133,7 @@ class CourseController extends Controller
         try {
             $Courses = Course::findOrFail($id);
             $Courses->delete();
+
             return redirect()->route('master.mata-kuliah.index')->with('success', 'Mata Kuliah berhasil dihapus!');
         } catch (QueryException $e) {
 
@@ -126,7 +152,6 @@ class CourseController extends Controller
         return Excel::download(new CoursesTemplateExport, 'template_mata_kuliah.xlsx');
     }
 
-    // Method Proses Import
     public function import(Request $request)
     {
         $request->validate([
@@ -137,15 +162,19 @@ class CourseController extends Controller
 
         try {
             Excel::import(new CoursesImport, $request->file('file'));
+
             return back()->with('success', 'Import Berhasil!');
         } catch (\Maatwebsite\Excel\Validators\ValidationException $e) {
             $failures = $e->failures();
             $messages = '';
+
             foreach ($failures as $failure) {
                 $messages .= 'Baris ' . $failure->row() . ': ' . implode(', ', $failure->errors()) . '<br>';
             }
+
             return back()->with('error', 'Gagal Validasi: <br>' . $messages);
         } catch (\Exception $e) {
+
             return back()->with('error', 'Gagal: ' . $e->getMessage());
         }
     }

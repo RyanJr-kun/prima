@@ -2,13 +2,13 @@
 
 namespace App\Http\Controllers\dokumen;
 
-use App\Models\Prodi;
+
 use Illuminate\Http\Request;
 use App\Models\AcademicPeriod;
 use App\Models\AprovalDocument;
 use App\Http\Controllers\Controller;
 use Illuminate\Support\Facades\Auth;
-use PDF;
+use Barryvdh\DomPDF\Facade\Pdf as PDF;
 
 class AprovalDocumentController extends Controller
 {
@@ -170,16 +170,22 @@ class AprovalDocumentController extends Controller
         $tahunAkademik = $doc->academicPeriod->name;
         $tahunFile = str_replace(['/', '\\'], '-', $tahunAkademik);
 
-        $dataIsi = [];
-        if ($doc->type == 'distribusi_matkul') {
-            $dataIsi = \App\Models\CourseDistribution::with(['course', 'user', 'studyClass'])
-                ->where('academic_period_id', $doc->academic_period_id)
-                ->whereHas('studyClass', function ($q) use ($doc) {
-                    $q->where('prodi_id', $doc->prodi_id);
-                })
-                ->get()
-                ->groupBy('studyClass.semester');
-        }
+        $dataIsi = \App\Models\CourseDistribution::with([
+            'course',
+            'studyClass.academicAdvisor', // Untuk Info PA di header
+            'studyClass.prodi',
+            'user',               // Koordinator
+            'teachingLecturers',  // Pivot Real (PENTING)
+            'pddiktiLecturers'    // Pivot PDDIKTI (PENTING)
+        ])
+            ->where('academic_period_id', $doc->academic_period_id)
+            ->whereHas('studyClass', function ($q) use ($doc) {
+                $q->where('prodi_id', $doc->prodi_id);
+            })
+            ->get()
+            // KITA GROUP BY SEMESTER DULU UNTUK HALAMAN PDF
+            ->groupBy('studyClass.semester');
+
 
         $pdf = PDF::loadView('content.dokumen.print.distribusi_pdf', compact(
             'doc',

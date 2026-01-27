@@ -147,7 +147,8 @@
         <li class="nav-item navbar-dropdown dropdown-user dropdown">
             <a class="nav-link dropdown-toggle hide-arrow p-0" href="javascript:void(0);" data-bs-toggle="dropdown">
                 <div class="avatar avatar-online">
-                    <img src="{{ asset('assets/img/avatars/1.png') }}" alt class="w-px-40 h-auto rounded-circle">
+                    <span
+                        class="avatar-initial rounded-circle bg-label-primary">{{ substr(Auth::user()->name, 0, 2) }}</span>
                 </div>
             </a>
             <ul class="dropdown-menu dropdown-menu-end">
@@ -156,13 +157,32 @@
                         <div class="d-flex">
                             <div class="shrink-0 me-3">
                                 <div class="avatar avatar-online">
-                                    <img src="{{ asset('assets/img/avatars/1.png') }}" alt
-                                        class="w-px-40 h-auto rounded-circle">
+                                    <span
+                                        class="avatar-initial rounded-circle bg-label-primary">{{ substr(Auth::user()->name, 0, 2) }}</span>
                                 </div>
                             </div>
                             <div class="grow">
-                                <h6 class="mb-0">John Doe</h6>
-                                <small class="text-muted">Admin</small>
+                                <h6 class="mb-0">{{ Auth::user()->name ?? 'user' }}</h6>
+                                @php
+                                    $roleColors = [
+                                        'admin' => 'danger',
+                                        'baak' => 'secondary',
+                                        'dosen' => 'success',
+                                        'kaprodi' => 'primary',
+                                        'wadir1' => 'warning',
+                                        'wadir2' => 'warning',
+                                        'wadir3' => 'warning',
+                                        'direktur' => 'dark',
+                                    ];
+                                @endphp
+                                @forelse(Auth::user()->getRoleNames() as $role)
+                                    @php $colorClass = $roleColors[strtolower($role)] ?? 'primary'; @endphp
+                                    <small class="badge py-1 bg-label-{{ $colorClass }} me-1">{{ $role }}
+                                    </small>
+                                @empty
+                                    <span class="text-muted small">Tanpa Role</span>
+                                @endforelse
+
                             </div>
                         </div>
                     </a>
@@ -171,22 +191,14 @@
                     <div class="dropdown-divider my-1"></div>
                 </li>
                 <li>
-                    <a class="dropdown-item" href="javascript:void(0);">
-                        <i class="icon-base bx bx-user icon-md me-3"></i><span>My Profile</span>
-                    </a>
-                </li>
-                <li>
-                    <a class="dropdown-item" href="javascript:void(0);">
+                    <a class="dropdown-item" href="{{ route('setting') }}">
                         <i class="icon-base bx bx-cog icon-md me-3"></i><span>Settings</span>
                     </a>
                 </li>
                 <li>
-                    <div class="dropdown-divider my-1"></div>
-                </li>
-                <li>
-                    <a class="dropdown-item" href="{{ route('logout') }}"
+                    <a class="dropdown-item text-danger" href="{{ route('logout') }}"
                         onclick="event.preventDefault(); document.getElementById('logout-form').submit();">
-                        <i class="icon-base bx bx-power-off icon-md me-3"></i><span>Log Out</span>
+                        <i class="icon-base bx bx-power-off  icon-md me-3"></i><span>Log Out</span>
                     </a>
                     <form id="logout-form" action="{{ route('logout') }}" method="POST" class="d-none">
                         @csrf

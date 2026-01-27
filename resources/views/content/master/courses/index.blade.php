@@ -159,9 +159,11 @@
                                                     <span class='text-muted small'>Rincian (T/P/L)</span>
                                                     <span class='fw-medium small'>{{ $matkul->sks_teori }} / {{ $matkul->sks_praktik }} / {{ $matkul->sks_lapangan }}</span>
                                                 </div>
-                                                <div class='d-flex justify-content-between align-items-center border-bottom pb-1'>
+                                                <div class='align-items-center border-bottom pb-1'>
                                                     <span class='text-muted small'>Fasilitas</span>
-                                                    <span class='badge bg-label-warning'>{{ $tags[$matkul->required_tag] ?? 'Standar' }}</span>
+                                                   @foreach ($matkul->required_tags ?? [] as $tag)
+<span class='badge d-block bg-label-info'>{{ $tags[$tag] ?? $tag }}</span>
+@endforeach
                                                 </div>
                                                 <div>
                                                     <span class='text-muted small d-block mb-1'>Kurikulum:</span>
@@ -171,16 +173,15 @@
                                         ">
                                         <i class="bx bx-eye text-muted bx-sm"></i>
                                     </a>
-                                    <a href="javascript:;" class="text-body edit-record me-2"
-                                        class="text-body edit-record me-2" data-bs-toggle="offcanvas"
+                                    <a href="javascript:;" class="text-body edit-record me-2" data-bs-toggle="offcanvas"
                                         data-bs-target="#offcanvasAddCourse" data-id="{{ $matkul->id }}"
                                         data-code="{{ $matkul->code }}" data-name="{{ $matkul->name }}"
                                         data-semester="{{ $matkul->semester }}"
                                         data-kurikulum-id="{{ $matkul->kurikulum_id }}"
-                                        data-sks-teori ="{{ $matkul->sks_teori }}"
-                                        data-sks-praktik ="{{ $matkul->sks_praktik }}"
-                                        data-sks-lapangan ="{{ $matkul->sks_lapangan }}"
-                                        data-required-tag="{{ $matkul->required_tag }}"
+                                        data-sks-teori="{{ $matkul->sks_teori }}"
+                                        data-sks-praktik="{{ $matkul->sks_praktik }}"
+                                        data-sks-lapangan="{{ $matkul->sks_lapangan }}"
+                                        data-required-tags="{{ json_encode($matkul->required_tags ?? []) }}"
                                         data-action="{{ route('master.mata-kuliah.update', $matkul->id) }}">
                                         <i class="bx bx-edit text-muted bx-sm"></i>
                                     </a>
@@ -212,6 +213,8 @@
                 <form class="add-new-course pt-0" id="addNewCourseForm" action="{{ route('master.mata-kuliah.store') }}"
                     method="POST">
                     @csrf
+
+                    {{-- Input Kode, Nama, SKS (Sama Seperti Sebelumnya, Tidak Ada Perubahan) --}}
                     <div class="mb-3">
                         <label class="form-label" for="code">Kode</label>
                         <input type="text" class="form-control @error('code') is-invalid @enderror" id="code"
@@ -220,6 +223,7 @@
                             <div class="invalid-feedback">{{ $message }}</div>
                         @enderror
                     </div>
+
                     <div class="mb-3">
                         <label class="form-label" for="add-name-course">Nama Mata Kuliah</label>
                         <input type="text" class="form-control @error('name') is-invalid @enderror"
@@ -233,72 +237,59 @@
                     <div class="row">
                         <label class="form-label" for="#">Masukan Data SKS</label>
                         <div class="col-md-4 mb-3">
-                            <label class="form-label" for="add-sks-teori">Teori</label>
+                            <label class="form-label">Teori</label>
                             <input type="text" class="form-control @error('sks_teori') is-invalid @enderror"
-                                id="add-sks-teori" placeholder="3" name="sks_teori" value="{{ old('sks_teori') }}" />
-                            @error('sks_teori')
-                                <div class="invalid-feedback">{{ $message }}</div>
-                            @enderror
+                                id="add-sks-teori" name="sks_teori" value="{{ old('sks_teori', 0) }}" />
                         </div>
                         <div class="col-md-4 mb-3">
-                            <label class="form-label" for="add-sks-praktik">Praktik</label>
+                            <label class="form-label">Praktik</label>
                             <input type="number" class="form-control @error('sks_praktik') is-invalid @enderror"
-                                id="add-sks-praktik" placeholder="5" name="sks_praktik"
-                                value="{{ old('sks_praktik') }}" />
-                            @error('sks_praktik')
-                                <div class="invalid-feedback">{{ $message }}</div>
-                            @enderror
+                                id="add-sks-praktik" name="sks_praktik" value="{{ old('sks_praktik', 0) }}" />
                         </div>
                         <div class="col-md-4 mb-3">
-                            <label class="form-label" for="add-sks-lapangan">Lapangan</label>
+                            <label class="form-label">Lapangan</label>
                             <input type="number" class="form-control @error('sks_lapangan') is-invalid @enderror"
-                                id="add-sks-lapangan" placeholder="1" name="sks_lapangan"
-                                value="{{ old('sks_lapangan') }}" />
-                            @error('sks_lapangan')
-                                <div class="invalid-feedback">{{ $message }}</div>
-                            @enderror
+                                id="add-sks-lapangan" name="sks_lapangan" value="{{ old('sks_lapangan', 0) }}" />
                         </div>
                     </div>
+
                     <div class="mb-3">
                         <label class="form-label">
                             Kebutuhan Fasilitas (opsional)
                             <i class="bx bx-help-circle text-muted ms-1" data-bs-toggle="popover" data-bs-placement="top"
                                 data-bs-trigger="hover" title="Informasi"
-                                data-bs-content="Pilih jika mata kuliah ini WAJIB menggunakan alat tertentu (Misal: Matkul 'Web' wajib 'Lab Komputer')."></i>
+                                data-bs-content="Pilih jika mata kuliah ini WAJIB menggunakan alat tertentu (Bisa pilih lebih dari satu)."></i>
                         </label>
-                        <select name="required_tag" id="required_tag"
-                            class="form-select select2 @error('required_tag') is-invalid @enderror"
-                            data-placeholder="Pilih Fasilitas">
-                            <option value=""></option>
+                        <select name="required_tags[]" id="required_tags" class="form-select select2"
+                            multiple="multiple" data-placeholder="Pilih Fasilitas">
                             @foreach ($tags as $key => $label)
-                                @if ($key)
+                                @if ($key !== 'general')
                                     <option value="{{ $key }}">{{ $label }}</option>
                                 @endif
                             @endforeach
-                            @error('required_tag')
-                                <div class="invalid-feedback">{{ $message }}</div>
-                            @enderror
                         </select>
+                        @error('required_tags')
+                            <div class="invalid-feedback d-block">{{ $message }}</div>
+                        @enderror
                     </div>
+
                     <div class="mb-3">
                         <label class="form-label" for="semester">Semester</label>
-                        <select name="semester" id="semester"
-                            class="form-select select2 @error('semester') is-invalid @enderror" required
+                        <select name="semester" id="semester" class="form-select select2" required
                             data-placeholder="Pilih Semester">
                             <option value=""></option>
                             @for ($i = 1; $i <= 8; $i++)
                                 <option value="{{ $i }}">Semester {{ $i }}</option>
                             @endfor
-                            @error('semester')
-                                <div class="invalid-feedback">{{ $message }}</div>
-                            @enderror
                         </select>
+                        @error('semester')
+                            <div class="invalid-feedback d-block">{{ $message }}</div>
+                        @enderror
                     </div>
 
                     <div class="mb-3">
                         <label class="form-label" for="kurikulum_id">Kurikulum</label>
-                        <select name="kurikulum_id" id="kurikulum_id"
-                            class="form-select select2 @error('kurikulum_id') is-invalid @enderror"
+                        <select name="kurikulum_id" id="kurikulum_id" class="form-select select2"
                             data-placeholder="Pilih Kurikulum">
                             <option value=""></option>
                             @if (isset($kurikulums))
@@ -317,63 +308,59 @@
                 </form>
             </div>
         </div>
-    </div>
-    <div class="modal fade" id="importModal" tabindex="-1">
-        <div class="modal-dialog">
-            <form action="{{ route('mata-kuliah.import') }}" method="POST" enctype="multipart/form-data">
-                @csrf
-                <div class="modal-content">
-                    <div class="modal-header">
-                        <h5 class="modal-title">Import Data</h5>
-                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                    </div>
-                    <div class="modal-body">
-                        <div class="alert alert-info">
-                            <small>Download format excel: <a href="{{ route('mata-kuliah.template') }}"
-                                    class="fw-bold">Klik Disini</a></small>
+        <div class="modal fade" id="importModal" tabindex="-1">
+            <div class="modal-dialog">
+                <form action="{{ route('mata-kuliah.import') }}" method="POST" enctype="multipart/form-data">
+                    @csrf
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h5 class="modal-title">Import Data</h5>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                         </div>
+                        <div class="modal-body">
+                            <div class="alert alert-info">
+                                <small>Download format excel: <a href="{{ route('mata-kuliah.template') }}"
+                                        class="fw-bold">Klik Disini</a></small>
+                            </div>
 
-                        <div class="mb-3">
-                            <label class="form-label">File Excel</label>
-                            <input type="file" name="file" class="form-control" required>
+                            <div class="mb-3">
+                                <label class="form-label">File Excel</label>
+                                <input type="file" name="file" class="form-control" required>
+                            </div>
+                        </div>
+                        <div class="modal-footer">
+                            <button type="submit" class="btn btn-primary">Upload</button>
                         </div>
                     </div>
-                    <div class="modal-footer">
-                        <button type="submit" class="btn btn-primary">Upload</button>
-                    </div>
-                </div>
-            </form>
+                </form>
+            </div>
         </div>
     </div>
 @endsection
 
 @section('page-script')
     <script type="module">
-        // Fungsi inisialisasi
         const initSelect2 = () => {
-            // Cek apakah jQuery dan Select2 sudah siap
             if (typeof $ !== 'undefined' && $.fn.select2) {
 
-                // Init Select2 untuk Filter di halaman utama
                 $('.card-body .select2').select2({
                     width: '100%',
                     allowClear: true,
                     placeholder: 'Pilih...'
                 });
 
-                // Targetkan select2 di dalam Offcanvas secara spesifik
                 $('#offcanvasAddCourse .select2').each(function() {
                     const $this = $(this);
                     $this.select2({
                         placeholder: $this.data('placeholder') || "Pilih...",
                         allowClear: true,
-                        dropdownParent: $('#offcanvasAddCourse'), // <--- INI KUNCINYA
-                        width: '100%', // Paksa lebar agar tidak menyempit
+                        dropdownParent: $('#offcanvasAddCourse'),
+                        width: '100%',
                         templateSelection: function(data) {
                             if (!data.id) {
                                 return data.text;
                             }
-                            // Gunakan data-code jika ada (untuk prodi), jika tidak gunakan text biasa
+
                             const code = $(data.element).data('code');
                             return code ? code : data.text;
                         }
@@ -381,15 +368,14 @@
                 });
 
             } else {
-                // Jika belum siap, coba lagi dalam 100ms
+
                 setTimeout(initSelect2, 100);
             }
         };
 
-        // Jalankan saat script dimuat
+
         initSelect2();
 
-        // PENTING: Jalankan ulang saat Offcanvas dibuka (untuk jaga-jaga rendering error)
         const offcanvasElement = document.getElementById('offcanvasAddCourse');
         offcanvasElement.addEventListener('shown.bs.offcanvas', function() {
             initSelect2();
@@ -403,6 +389,7 @@
             const saveBtn = document.getElementById('saveBtn');
             const defaultAction = form.action;
             const popoverTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="popover"]'));
+
             const popoverList = popoverTriggerList.map(function(popoverTriggerEl) {
                 return new bootstrap.Popover(popoverTriggerEl, {
                     html: true,
@@ -436,25 +423,34 @@
                     document.getElementById('add-sks-lapangan').value = d.sksLapangan;
 
                     if (window.$) {
-                        $('#required_tag').val(d.requiredTag).trigger('change');
+                        //single select
                         $('#semester').val(d.semester).trigger('change');
                         $('#kurikulum_id').val(d.kurikulumId).trigger('change');
+
+                        //multi select
+                        try {
+                            let tagsArray = JSON.parse(d.requiredTags);
+
+                            $('#required_tags').val(tagsArray).trigger('change');
+                        } catch (error) {
+                            console.error("Gagal parsing tags:", error);
+                            $('#required_tags').val([]).trigger('change');
+                        }
+
                     } else {
-                        document.getElementById('required_tag').value = d.requiredTag;
-                        document.getElementById('semester').value = d.semester;
-                        document.getElementById('kurikulum_id').value = d.kurikulumId;
+
+                        console.warn("jQuery tidak terdeteksi, Select2 mungkin error");
                     }
                 }
             });
 
-            // Reset form kembali ke Mode Create saat offcanvas ditutup
+
             offcanvasEl.addEventListener('hidden.bs.offcanvas', function() {
                 offcanvasTitle.textContent = 'Tambah Kurikulum';
                 saveBtn.textContent = 'Submit';
                 form.action = defaultAction;
                 form.reset();
 
-                // Hapus method PUT agar kembali menjadi POST
                 const methodInput = form.querySelector('input[name="_method"]');
                 if (methodInput) methodInput.remove();
 
@@ -462,7 +458,7 @@
                 if (window.$) {
                     $('#semester').val('').trigger('change');
                     $('#kurikulum_id').val('').trigger('change');
-                    $('#required_tag').val('').trigger('change');
+                    $('#required_tags').val([]).trigger('change');
                 }
             });
 

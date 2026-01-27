@@ -114,12 +114,12 @@ class UserController extends Controller
 
     public function syncSiakad()
     {
-
         try {
             $response = Http::withHeaders([
                 'Authorization' => 'Bearer TOKEN_RAHASIA_DARI_MAS_ANDRE',
             ])->get('#link_api');
 
+            /** @var \Illuminate\Http\Client\Response $response */
             if ($response->failed()) {
                 return back()->with('error', 'Gagal koneksi ke SIAKAD.');
             }

@@ -18,7 +18,7 @@ return new class extends Migration
             $table->integer('sks_teori')->default(0);
             $table->integer('sks_praktik')->default(0);
             $table->integer('sks_lapangan')->default(0);
-            $table->string('required_tag')->nullable();
+            $table->json('required_tags')->nullable();
             $table->integer('semester');
             $table->foreignId('kurikulum_id')->constrained()->cascadeOnDelete();
             $table->timestamps();

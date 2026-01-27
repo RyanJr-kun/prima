@@ -13,13 +13,18 @@ return new class extends Migration
     {
         Schema::create('rooms', function (Blueprint $table) {
             $table->id();
-            $table->string('code')->unique(); 
-            $table->string('name');           
-            $table->integer('capacity');  
-            $table->enum('type', ['teori', 'laboratorium'])->default('teori'); 
-            $table->string('location')->index();
-            $table->string('facility_tag')->nullable()->default('general');    
-             
+            $table->string('code')->unique();
+            $table->string('name');
+
+            $table->enum('location', ['kampus_1', 'kampus_2']);
+            $table->string('building')->nullable();
+            $table->integer('floor')->default(1);
+
+            $table->integer('capacity');
+            $table->enum('type', ['teori', 'laboratorium', 'aula'])->default('teori');
+            $table->json('facility_tags')->nullable()->default('general');
+            $table->boolean('is_active')->default(true);
+
             $table->timestamps();
         });
     }

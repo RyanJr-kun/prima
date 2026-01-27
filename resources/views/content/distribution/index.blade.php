@@ -235,7 +235,7 @@
             <div class="d-flex justify-content-between align-items-center">
                 <div>
                     <h5 class="fw-bold mb-0">Distribusi Perkuliahan</h5>
-                    <small class="d-block mb-3 border-bottom border-1">Management Distribusi Mata Kuliah</small>
+                    <small class="d-block mb-3 border-bottom">Management Distribusi Mata Kuliah</small>
                     <span class="badge bg-label-primary"><i class="bx bx-calendar"></i> Periode:
                         {{ $activePeriod->name ?? 'Belum Ada' }}</span>
                 </div>

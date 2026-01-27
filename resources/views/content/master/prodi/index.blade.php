@@ -93,7 +93,8 @@
                                         data-bs-target="#offcanvasAddProdi" data-id="{{ $prodi->id }}"
                                         data-code="{{ $prodi->code }}" data-name="{{ $prodi->name }}"
                                         data-jenjang="{{ $prodi->jenjang }}" data-lama-studi="{{ $prodi->lama_studi }}"
-                                        data-kaprodi-id="{{ $prodi->kaprodi_id }}"
+                                        data-kaprodi-id="{{ $prodi->kaprodi_id }}" {{-- TAMBAHAN: Data Primary Campus --}}
+                                        data-primary-campus="{{ $prodi->primary_campus }}"
                                         data-action="{{ route('master.program-studi.update', $prodi->id) }}">
                                         <i class="bx bx-edit text-muted bx-sm"></i>
                                     </a>
@@ -139,6 +140,18 @@
                             id="add-name-prodi" placeholder="Teknologi Rekayasa Perangkat Lunak" name="name"
                             value="{{ old('name') }}" />
                         @error('name')
+                            <div class="invalid-feedback">{{ $message }}</div>
+                        @enderror
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Homebase Kampus (Prioritas Jadwal)</label>
+                        <select name="primary_campus" id="primary_campus"
+                            class="form-select @error('primary_campus') is-invalid @enderror" required>
+                            <option value="">-- Pilih Kampus Utama --</option>
+                            <option value="kampus_1">Kampus 1 (Pusat/Teknik)</option>
+                            <option value="kampus_2">Kampus 2 (Kesehatan)</option>
+                        </select>
+                        @error('primary_campus')
                             <div class="invalid-feedback">{{ $message }}</div>
                         @enderror
                     </div>
@@ -258,7 +271,8 @@
 
                     document.getElementById('code').value = d.code;
                     document.getElementById('add-name-prodi').value = d.name;
-                    document.getElementById('lamaStudi').value = d.lamaStudi
+                    document.getElementById('lamaStudi').value = d.lamaStudi;
+                    document.getElementById('primary_campus').value = d.primaryCampus;
                     if (window.$) {
                         $('#kaprodi_id').val(d.kaprodiId).trigger('change');
                         $('#jenjang').val(d.jenjang).trigger('change');

@@ -4,201 +4,474 @@ namespace Database\Seeders;
 
 use App\Models\Room;
 use App\Models\Prodi;
-use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
 
 class RoomSeeder extends Seeder
 {
-    /**
-     * Run the database seeds.
-     */
     public function run(): void
     {
         $prodis = Prodi::pluck('id', 'code');
-        $location = [
-            'Kampus 1 - Gd. A - Lantai 1', // 0
-            'Kampus 1 - Gd. A - Lantai 2', // 1
-            'Kampus 1 - Gd. A - Lantai 3', // 2
-            'Kampus 1 - Gd. B - Lantai 1', // 3
-            'Kampus 1 - Gd. B - Lantai 2', // 4
-            'Kampus 1 - Gd. C - Lantai 1', // 5
-            'Kampus 1 - Gd. C - Lantai 2', // 6
-            'Kampus 1 - Gd. D - Lantai 1', // 7
-            'Kampus 1 - Gd. D - Lantai 2', // 8
-            'Kampus 2 - Gd. A - Lantai 1', // 9 
-            'Kampus 2 - Gd. A - Lantai 2', // 10
-            'Kampus 2 - Gd. A - Lantai 3', // 11
-        ];
-        $tags =[
-            ['general', 'Umum / Standar'],
-            ['computer', 'Komputer (PC)'],
-            ['network', 'Alat Jaringan & IoT'],
-            ['resto', 'Dapur, Resto, & Kamar'],
-            ['automotive', 'Bengkel Otomotif']
-        ];
 
         $rooms = [
-            [ 
-                'code' => 'A-L3-R1',
-                'name' => 'Ruang A.1',
+            // KAMPUS 1
+            // --- GEDUNG A (TEORI & LAB KOM) ---
+
+            [
+                'code' => 'K1-A-L3-R1',
+                'name' => 'Ruang Teori A.1',
+                'location' => 'kampus_1',
+                'building' => 'Gedung A',
+                'floor' => 3,
                 'capacity' => 25,
                 'type' => 'teori',
-                'location' => $location[2],
-                'for_prodis' => ['TRPL', 'TRO', 'HT', 'BMR', 'PM', 'AP'],
-                'facility_tag' => $tags[0],
+                'facility_tags' => ['general'],
+                'for_prodis' => ['BMR', 'PM', 'TRPL', 'TRO', 'HT', 'AP',]
             ],
             [
-                'code' => 'A-L3-R2',
-                'name' => 'Ruang A.2',
-                'capacity' => 60,
+                'code' => 'K1-A-L3-R2',
+                'name' => 'Ruang Teori A.2',
+                'location' => 'kampus_1',
+                'building' => 'Gedung A',
+                'floor' => 3,
+                'capacity' => 25,
                 'type' => 'teori',
-                'location' => $location[2],
-                'for_prodis' => ['TRPL', 'TRO', 'HT', 'BMR', 'PM', 'AP'],
-                'facility_tag' => $tags[0],
-
+                'facility_tags' => ['general'],
+                'for_prodis' => ['BMR', 'PM', 'TRPL', 'TRO', 'HT', 'AP']
             ],
-            
-            // --- GEDUNG A (LAB KOMPUTER) ---
             [
-                'code' => 'LAB-KOM-1',
+                'code' => 'K1-A-L2-LAB1',
                 'name' => 'Lab Komputer 1',
+                'location' => 'kampus_1',
+                'building' => 'Gedung A',
+                'floor' => 2,
                 'capacity' => 30,
                 'type' => 'laboratorium',
-                'location' => $location[1],
-                'for_prodis' => ['TRPL', 'TRO', 'HT', 'BMR', 'PM', 'AP'],
-                'facility_tag' => $tags[1],
+                'facility_tags' => ['computer'],
+                'for_prodis' => ['TRPL', 'TRO', 'MIK']
             ],
             [
-                'code' => 'LAB-KOM-2',
+                'code' => 'K1-A-L2-LAB2',
                 'name' => 'Lab Komputer 2',
+                'location' => 'kampus_1',
+                'building' => 'Gedung A',
+                'floor' => 2,
                 'capacity' => 25,
                 'type' => 'laboratorium',
-                'location' => $location[1],
-                'for_prodis' => ['TRPL', 'TRO', 'HT', 'BMR', 'PM', 'AP'], 
-                'facility_tag' => $tags[1],
+                'facility_tags' => ['computer'],
+                'for_prodis' => ['TRPL', 'TRO']
             ],
             [
-                'code' => 'LAB-KOM-3',
+                'code' => 'K1-A-L3-LAB3',
                 'name' => 'Lab Komputer 3',
+                'location' => 'kampus_1',
+                'building' => 'Gedung A',
+                'floor' => 3,
                 'capacity' => 30,
                 'type' => 'laboratorium',
-                'location' => $location[2],
-                'for_prodis' => ['TRPL', 'TRO', 'HT', 'BMR', 'PM', 'AP'],
-                'facility_tag' => $tags[1],
+                'facility_tags' => ['computer'],
+                'for_prodis' => ['TRPL']
+            ],
+            [
+                'code' => 'K1-A-L3-BC',
+                'name' => 'Lab Broadcasting',
+                'location' => 'kampus_1',
+                'building' => 'Gedung A',
+                'floor' => 3,
+                'capacity' => 20,
+                'type' => 'laboratorium',
+                'facility_tags' => ['broadcasting'], // Kamera, Green Screen
+                'for_prodis' => ['PM']
             ],
 
-            // --- GEDUNG B (TEORI) ---
-            [
-                'code' => 'B-L2-R1',
-                'name' => 'Ruang B.1',
-                'capacity' => 35,
-                'type' => 'teori',
-                'location' => $location[4],
-                'for_prodis' => ['TRPL', 'TRO', 'HT', 'BMR', 'PM', 'AP'],
-                'facility_tag' => $tags[0],
-            ],
-            [
-                'code' => 'B-L2-R2',
-                'name' => 'Ruang B.2',
-                'capacity' => 35,
-                'type' => 'teori',
-                'location' => $location[4],
-                'for_prodis' => ['TRPL', 'TRO', 'HT', 'BMR', 'PM', 'AP'],
-                'facility_tag' => $tags[0]
-            ],
-            [
-                'code' => 'B-L2-R3',
-                'name' => 'Ruang B.3',
-                'capacity' => 50,
-                'type' => 'teori',
-                'location' => $location[4],
-                'for_prodis' => ['TRPL', 'TRO', 'HT', 'BMR', 'PM', 'AP'],
-                'facility_tag' => $tags[0]
-            ],
+            // --- GEDUNG B (Jaringan, Resto BMR/HT) ---
 
-            // --- GEDUNG B (LAB KHUSUS) ---
             [
-                'code' => 'LAB-RESTO',
-                'name' => 'Lab Restoran & Tata Hidang',
-                'capacity' => 30,
-                'type' => 'laboratorium', 
-                'location' => $location[3],
-                'for_prodis' => ['HT'],
-                'facility_tag' => $tags[3]
+                'code' => 'K1-B-L2-R1',
+                'name' => 'Ruang Teori B.1',
+                'location' => 'kampus_1',
+                'building' => 'Gedung B',
+                'floor' => 2,
+                'capacity' => 35,
+                'type' => 'teori',
+                'facility_tags' => ['general'],
+                'for_prodis' => ['BMR', 'PM', 'TRPL', 'TRO', 'HT', 'AP']
             ],
             [
-                'code' => 'LAB-IOT',
+                'code' => 'K1-B-L2-R2',
+                'name' => 'Ruang Teori B.2',
+                'location' => 'kampus_1',
+                'building' => 'Gedung B',
+                'floor' => 2,
+                'capacity' => 35,
+                'type' => 'teori',
+                'facility_tags' => ['general'],
+                'for_prodis' => ['BMR', 'PM', 'TRPL', 'TRO', 'HT', 'AP']
+            ],
+            [
+                'code' => 'K1-B-L2-R3',
+                'name' => 'Ruang Teori B.3',
+                'location' => 'kampus_1',
+                'building' => 'Gedung B',
+                'floor' => 2,
+                'capacity' => 35,
+                'type' => 'teori',
+                'facility_tags' => ['general'],
+                'for_prodis' => ['BMR', 'PM', 'TRPL', 'TRO', 'HT', 'AP']
+            ],
+            [
+                'code' => 'K1-B-L2-IOT',
                 'name' => 'Lab Jaringan & IoT',
+                'location' => 'kampus_1',
+                'building' => 'Gedung B',
+                'floor' => 2,
                 'capacity' => 30,
                 'type' => 'laboratorium',
-                'location' => $location[4],
-                'for_prodis' => ['TRPL'],
-                'facility_tag' => $tags[2]
-
-            ], 
-
-            // --- GEDUNG C & D ---
+                'facility_tags' => ['network_iot'],
+                'for_prodis' => ['TRPL']
+            ],
             [
-                'code' => 'LAB-OTO',
+                'code' => 'K1-B-L1-RESTO',
+                'name' => 'Lab Restoran & Bar',
+                'location' => 'kampus_1',
+                'building' => 'Gedung B',
+                'floor' => 1,
+                'capacity' => 25,
+                'type' => 'laboratorium',
+                'facility_tags' => ['kitchen_resto'],
+                'for_prodis' => ['HT']
+            ],
+            [
+                'code' => 'K1-B-L1-RITEL',
+                'name' => 'Lab Simulasi Ritel',
+                'location' => 'kampus_1',
+                'building' => 'Gedung B',
+                'floor' => 1,
+                'capacity' => 25,
+                'type' => 'laboratorium',
+                'facility_tags' => ['retail_sim'], // Kasir, Display Produk
+                'for_prodis' => ['BMR']
+            ],
+
+
+            // --- GEDUNG C (OTOMOTIF) & D ---
+
+            [
+                'code' => 'K1-D-L2-R1',
+                'name' => 'Ruang Teori D.1',
+                'location' => 'kampus_1',
+                'building' => 'Gedung D',
+                'floor' => 2,
+                'capacity' => 25,
+                'type' => 'teori',
+                'facility_tags' => ['general'],
+                'for_prodis' => ['BMR', 'PM', 'TRPL', 'TRO', 'HT', 'AP']
+            ],
+            [
+                'code' => 'K1-D-L2-R2',
+                'name' => 'Ruang Teori D.2',
+                'location' => 'kampus_1',
+                'building' => 'Gedung D',
+                'floor' => 2,
+                'capacity' => 25,
+                'type' => 'teori',
+                'facility_tags' => ['general'],
+                'for_prodis' => ['BMR', 'PM', 'TRPL', 'TRO', 'HT', 'AP']
+            ],
+            [
+                'code' => 'K1-D-L2-R3',
+                'name' => 'Ruang Teori D.3',
+                'location' => 'kampus_1',
+                'building' => 'Gedung D',
+                'floor' => 2,
+                'capacity' => 25,
+                'type' => 'teori',
+                'facility_tags' => ['general'],
+                'for_prodis' => ['BMR', 'PM', 'TRPL', 'TRO', 'HT', 'AP']
+            ],
+            [
+                'code' => 'K1-C-L1-OTO',
                 'name' => 'Bengkel Otomotif',
+                'location' => 'kampus_1',
+                'building' => 'Gedung C',
+                'floor' => 1,
                 'capacity' => 40,
                 'type' => 'laboratorium',
-                'location' => $location[5],
-                'for_prodis' => ['TRO'],
-                'facility_tag' => $tags[4]
-            ],
-            [
-                'code' => 'D-L2-R1',
-                'name' => 'Ruang D.1',
-                'capacity' => 25,
-                'type' => 'teori',
-                'location' => $location[8],
-                'for_prodis' => ['TRPL', 'TRO', 'HT', 'BMR', 'PM', 'AP'],
-                'facility_tag' => $tags[0]
-            ],
-            [
-                'code' => 'D-L2-R2',
-                'name' => 'Ruang D.2',
-                'capacity' => 25,
-                'type' => 'teori',
-                'location' => $location[8],
-                'for_prodis' => ['TRPL', 'TRO', 'HT', 'BMR', 'PM', 'AP'],
-                'facility_tag' => $tags[0]
-            ],
-            [
-                'code' => 'D-L2-R3',
-                'name' => 'Ruang D.3',
-                'capacity' => 25,
-                'type' => 'teori',
-                'location' => $location[8],
-                'for_prodis' => ['TRPL', 'TRO', 'HT', 'BMR', 'PM', 'AP'],
-                'facility_tag' => $tags[0],
+                'facility_tags' => ['automotive'],
+                'for_prodis' => ['TRO']
             ],
 
-            // Kampus 2 Ged.A
+
+            // KAMPUS 2 (FARMASI, TLM, MIK) - Gedung Utama
+            // --- FARMASI ---
             [
-                'code' => 'LAB-AK',
-                'name' => 'Lab. Audit Klinis',
-                'capacity' => 30,
+                'code' => 'K2-L2-KIMIA',
+                'name' => 'Lab Kimia (Farmasi)',
+                'location' => 'kampus_2',
+                'building' => 'Gedung Utama',
+                'floor' => 2,
+                'capacity' => 50,
                 'type' => 'laboratorium',
-                'location' => $location[9],
-                'for_prodis' => [],
-                'facility_tag' => $tags[0], 
+                'facility_tags' => ['chemistry'], // Lemari Asam, Autoklaf
+                'for_prodis' => ['FARM', 'TLM']
+            ],
+            [
+                'code' => 'K2-L2-TEKFAR',
+                'name' => 'Lab Teknologi Farmasi',
+                'location' => 'kampus_2',
+                'building' => 'Gedung Utama',
+                'floor' => 2,
+                'capacity' => 50,
+                'type' => 'laboratorium',
+                'facility_tags' => ['pharmacy_tool', 'chemistry'], // Cetak Tablet, Hardness Tester
+                'for_prodis' => ['FARM']
+            ],
+            [
+                'code' => 'K2-L2-BIO',
+                'name' => 'Lab Biologi Dasar',
+                'location' => 'kampus_2',
+                'building' => 'Gedung Utama',
+                'floor' => 2,
+                'capacity' => 50,
+                'type' => 'laboratorium',
+                'facility_tags' => ['microscope'], // Mikroskop, Oven
+                'for_prodis' => ['FARM', 'TLM']
+            ],
+            [
+                'code' => 'K2-L1-FARMASET',
+                'name' => 'Lab Farmasetika',
+                'location' => 'kampus_2',
+                'building' => 'Gedung Utama',
+                'floor' => 1,
+                'capacity' => 35,
+                'type' => 'laboratorium',
+                'facility_tags' => ['pharmacy_tool'], // Apotek Simulasi, Blender
+                'for_prodis' => ['FARM']
+            ],
+            [
+                'code' => 'K2-L1-FARMAKOLOGI',
+                'name' => 'Lab Farmakologi',
+                'location' => 'kampus_2',
+                'building' => 'Gedung Utama',
+                'floor' => 1,
+                'capacity' => 40,
+                'type' => 'laboratorium',
+                'facility_tags' => ['pharmacy_tool', 'anatomy_bed'], // Terarium, Bed
+                'for_prodis' => ['FARM']
+            ],
+
+            // --- TLM (Teknologi Laboratorium Medis) ---
+            [
+                'code' => 'K2-L2-PATOLOGI',
+                'name' => 'Lab Patologi Klinik',
+                'location' => 'kampus_2',
+                'building' => 'Gedung Utama',
+                'floor' => 2,
+                'capacity' => 25,
+                'type' => 'laboratorium',
+                'facility_tags' => ['microscope', 'medkit'], // Hematology Analyzer
+                'for_prodis' => ['TLM']
+            ],
+            [
+                'code' => 'K2-L2-SITO',
+                'name' => 'Lab Sitohistoteknologi',
+                'location' => 'kampus_2',
+                'building' => 'Gedung Utama',
+                'floor' => 2,
+                'capacity' => 25,
+                'type' => 'laboratorium',
+                'facility_tags' => ['microscope'], // Microtome
+                'for_prodis' => ['TLM']
+            ],
+            [
+                'code' => 'K2-L2-BIOMOL',
+                'name' => 'Lab Biologi Molekuler',
+                'location' => 'kampus_2',
+                'building' => 'Gedung Utama',
+                'floor' => 2,
+                'capacity' => 20,
+                'type' => 'laboratorium',
+                'facility_tags' => ['bio_molecular'], // PCR, Biosafety Cabinet
+                'for_prodis' => ['TLM']
+            ],
+
+            // --- MIK (Manajemen Informasi Kesehatan) ---
+            [
+                'code' => 'K2-L1-RM-MANUAL',
+                'name' => 'Lab Rekam Medis Manual',
+                'location' => 'kampus_2',
+                'building' => 'Gedung Utama',
+                'floor' => 1,
+                'capacity' => 20,
+                'type' => 'laboratorium',
+                'facility_tags' => ['medical_record'], // Rak Berkas
+                'for_prodis' => ['MIK']
+            ],
+            [
+                'code' => 'K2-L1-RM-ELEK',
+                'name' => 'Lab R.M Elektronik & Statistik',
+                'location' => 'kampus_2',
+                'building' => 'Gedung Utama',
+                'floor' => 1,
+                'capacity' => 25,
+                'type' => 'laboratorium',
+                'facility_tags' => ['computer', 'medical_record'], // PC + Software RS
+                'for_prodis' => ['MIK']
+            ],
+            [
+                'code' => 'K2-L1-KODING',
+                'name' => 'Lab Koding (ICD-10)',
+                'location' => 'kampus_2',
+                'building' => 'Gedung Utama',
+                'floor' => 1,
+                'capacity' => 25,
+                'type' => 'laboratorium',
+                'facility_tags' => ['computer', 'medical_record'],
+                'for_prodis' => ['MIK']
+            ],
+            [
+                'code' => 'K2-L3-ANATOMI',
+                'name' => 'Lab Anatomi',
+                'location' => 'kampus_2',
+                'building' => 'Gedung Utama',
+                'floor' => 3,
+                'capacity' => 25,
+                'type' => 'laboratorium',
+                'facility_tags' => ['anatomy_bed'], // Manekin, Poster
+                'for_prodis' => ['MIK']
+            ],
+            [
+                'code' => 'K2-L3-OSCE',
+                'name' => 'Ruang OSCE',
+                'location' => 'kampus_2',
+                'building' => 'Gedung Utama',
+                'floor' => 3,
+                'capacity' => 6,
+                'type' => 'laboratorium',
+                'facility_tags' => ['anatomy_bed', 'medkit'], // Bed Periksa
+                'for_prodis' => ['MIK', 'FARM']
+            ],
+
+            // --- RUANG TEORI KAMPUS 2 (SHARED) ---
+            [
+                'code' => 'K2-L2-R1',
+                'name' => 'Ruang Teori 1 (K2)',
+                'location' => 'kampus_2',
+                'building' => 'Gedung Utama',
+                'floor' => 2,
+                'capacity' => 25,
+                'type' => 'teori',
+                'facility_tags' => ['general'],
+                'for_prodis' => ['FARM', 'TLM', 'MIK']
+            ],
+            [
+                'code' => 'K2-L2-R2',
+                'name' => 'Ruang Teori 2 (K2)',
+                'location' => 'kampus_2',
+                'building' => 'Gedung Utama',
+                'floor' => 2,
+                'capacity' => 25,
+                'type' => 'teori',
+                'facility_tags' => ['general'],
+                'for_prodis' => ['FARM', 'TLM', 'MIK']
+            ],
+            [
+                'code' => 'K2-L2-R3',
+                'name' => 'Ruang Teori 3 (K2)',
+                'location' => 'kampus_2',
+                'building' => 'Gedung Utama',
+                'floor' => 3,
+                'capacity' => 30,
+                'type' => 'teori',
+                'facility_tags' => ['general'],
+                'for_prodis' => ['FARM', 'TLM', 'MIK']
+            ],
+            [
+                'code' => 'K2-L2-R4',
+                'name' => 'Ruang Teori 4 (K2)',
+                'location' => 'kampus_2',
+                'building' => 'Gedung Utama',
+                'floor' => 3,
+                'capacity' => 30,
+                'type' => 'teori',
+                'facility_tags' => ['general'],
+                'for_prodis' => ['FARM', 'TLM', 'MIK']
+            ],
+
+            [
+                'code' => 'K2-L3-R5',
+                'name' => 'Ruang Teori 5 (K2)',
+                'location' => 'kampus_2',
+                'building' => 'Gedung Utama',
+                'floor' => 3,
+                'capacity' => 50,
+                'type' => 'teori',
+                'facility_tags' => ['general'],
+                'for_prodis' => ['FARM', 'TLM', 'MIK']
+            ],
+            [
+                'code' => 'K2-L3-R6',
+                'name' => 'Ruang Teori 6 (K2)',
+                'location' => 'kampus_2',
+                'building' => 'Gedung Utama',
+                'floor' => 3,
+                'capacity' => 50,
+                'type' => 'teori',
+                'facility_tags' => ['general'],
+                'for_prodis' => ['FARM', 'TLM', 'MIK']
+            ],
+            [
+                'code' => 'K2-L3-R7',
+                'name' => 'Ruang Teori 7 (K2)',
+                'location' => 'kampus_2',
+                'building' => 'Gedung Utama',
+                'floor' => 3,
+                'capacity' => 25,
+                'type' => 'teori',
+                'facility_tags' => ['general'],
+                'for_prodis' => ['FARM', 'TLM', 'MIK']
+            ],
+            [
+                'code' => 'K2-L3-R8',
+                'name' => 'Ruang Teori 8 (K2)',
+                'location' => 'kampus_2',
+                'building' => 'Gedung Utama',
+                'floor' => 3,
+                'capacity' => 25,
+                'type' => 'teori',
+                'facility_tags' => ['general'],
+                'for_prodis' => ['FARM', 'TLM', 'MIK']
+            ],
+            [
+                'code' => 'K2-L3-R9',
+                'name' => 'Ruang Teori 9 (K2)',
+                'location' => 'kampus_2',
+                'building' => 'Gedung Utama',
+                'floor' => 3,
+                'capacity' => 25,
+                'type' => 'teori',
+                'facility_tags' => ['general'],
+                'for_prodis' => ['FARM', 'TLM', 'MIK']
             ],
         ];
 
         foreach ($rooms as $roomData) {
-            $room = Room::firstOrCreate(
-                ['code' => $roomData['code']],
+            // Gunakan updateOrCreate agar tidak duplikat saat di-seed ulang
+            $room = Room::updateOrCreate(
+                ['code' => $roomData['code']], // Kunci pencarian
                 [
-                    'name' => $roomData['name'],
-                    'capacity' => $roomData['capacity'],
-                    'type' => $roomData['type'],
-                    'location' => $roomData['location'],
-                    'facility_tag' => $roomData['facility_tag'][0],
+                    'name'          => $roomData['name'],
+                    'location'      => $roomData['location'],
+                    'building'      => $roomData['building'],
+                    'floor'         => $roomData['floor'],
+                    'capacity'      => $roomData['capacity'],
+                    'type'          => $roomData['type'],
+                    // JSON Array (Cast di model akan otomatis handle ini)
+                    'facility_tags' => $roomData['facility_tags'],
+                    'is_active'     => true,
                 ]
             );
 
+            // Sync Pivot Prodi
             if (!empty($roomData['for_prodis'])) {
                 $prodiIds = [];
                 foreach ($roomData['for_prodis'] as $prodiCode) {
@@ -211,53 +484,3 @@ class RoomSeeder extends Seeder
         }
     }
 }
-
-// R1
-// R2
-
-
-// R5 
-// R6
-// R7
-// R8
-// R9
-// Lab. Audit Klinis 
-// Lab. Anatomi Fisiologi
-// Lab. Koding & Rembuirsement
-// Lab. Statistik &  Pelaporan
-// Lab. Patologi Klinik 
-// Lab. Biologi Molekuler 
-// Lab. Sitohistoteknologi 
-// Lantai 1 - Lab Farmasetika
-// Lantai 1 - Lab Farmakologi
-// Lantai 2 - Lab Kimia
-// Lantai 2 - Lab Bilogi
-// Lantai 2 - Lab. Teknologi Farmasi
-// Lantai 3 - Lab. Komputer
-
-// Prodi Farmasi
-// Lantai 1 - Lab Farmasetika
-// Lantai 1 - Lab Farmakologi
-// Lantai 2 - Lab. Teknologi Farmasi 
-// Lantai 2 - Lab Kimia
-// Lantai 2 - Lab Bilogi
-// R1
-// R2
-// R5 
-// R9
-
-// Prodi TLM
-// Lab. Patologi Klinik 
-// Lab. Biologi Molekuler 
-// Lab. Sitohistoteknologi
-// R7
-// R8
-
-// Prodi MIK
-// R6
-// R7
-// Lab. Audit Klinis 
-// Lab. Anatomi Fisiologi
-// Lab. Komputer = lt 3
-// Lab. Koding & Rembuirsement
-// Lab. Statistik &  Pelaporan

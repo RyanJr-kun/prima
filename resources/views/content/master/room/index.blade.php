@@ -30,6 +30,43 @@
         @endif
     </div>
 
+    <div class="card mb-4">
+        <div class="card-body">
+            <form action="{{ route('master.ruangan.index') }}" method="GET">
+                <div class="row g-3">
+                    <div class="col-md-4">
+                        <label class="form-label">Cari Ruangan / Kode</label>
+                        <input type="text" name="q" class="form-control" placeholder="Nama atau Kode Ruangan"
+                            value="{{ request('q') }}">
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label">Lokasi Kampus</label>
+                        <select name="location" class="form-select select2">
+                            <option value="">Semua Kampus</option>
+                            <option value="kampus_1" {{ request('location') == 'kampus_1' ? 'selected' : '' }}>Kampus 1
+                            </option>
+                            <option value="kampus_2" {{ request('location') == 'kampus_2' ? 'selected' : '' }}>Kampus 2
+                            </option>
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label">Tipe Ruangan</label>
+                        <select name="type" class="form-select select2">
+                            <option value="">Semua Tipe</option>
+                            <option value="teori" {{ request('type') == 'teori' ? 'selected' : '' }}>Teori</option>
+                            <option value="laboratorium" {{ request('type') == 'laboratorium' ? 'selected' : '' }}>
+                                Laboratorium</option>
+                        </select>
+                    </div>
+                    <div class="col-md-2 d-flex align-items-end">
+                        <button type="submit" class="btn btn-primary w-100"><i class="bx bx-filter-alt me-1"></i>
+                            Filter</button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+
     <div class="card">
         <div class="card-header border-bottom">
             <div class="row">
@@ -88,9 +125,11 @@
                                                     <span class='text-muted small'>Kapasitas</span>
                                                     <span class='text-muted small fw-bold'>{{ $room->capacity }} Kursi</span>
                                                 </div>
-                                                <div class='d-flex justify-content-between align-items-center border-bottom pb-1'>
-                                                    <span class='text-muted small'>Fasilitas</span>
-                                                    <span class='badge bg-label-primary fw-bold'>{{ $tags[$room->facility_tag] ?? $room->facility_tag }}</span>
+                                                <div class='align-items-center border-bottom'>
+                                                    <span class='text-muted d-block small'>Fasilitas</span>
+                                                    @foreach ($room->facility_tags ?? [] as $tag)
+<span class='badge d-block bg-label-info'>{{ $tags[$tag] ?? $tag }}</span>
+@endforeach
                                                 </div>
                                                 <div class='d-flex justify-content-between align-items-center border-bottom pb-1'>
                                                     <span class='text-muted small me-9'>Lokasi</span>
@@ -137,10 +176,12 @@
             </table>
         </div>
 
-        <div class="offcanvas offcanvas-end" tabindex="-1" id="offcanvasAddRoom" aria-labelledby="offcanvasAddRoomLabel">
+        <div class="offcanvas offcanvas-end" tabindex="-1" id="offcanvasAddRoom"
+            aria-labelledby="offcanvasAddRoomLabel">
             <div class="offcanvas-header border-bottom">
                 <h5 id="offcanvasAddRoomLabel" class="offcanvas-title">Tambah Ruangan Baru</h5>
-                <button type="button" class="btn-close text-reset" data-bs-dismiss="offcanvas" aria-label="Close"></button>
+                <button type="button" class="btn-close text-reset" data-bs-dismiss="offcanvas"
+                    aria-label="Close"></button>
             </div>
 
             <div class="offcanvas-body mx-0 grow-0 p-6 h-100">
@@ -180,6 +221,57 @@
 
                     <div class="row">
                         <div class="col-md-6 mb-3">
+                            <label class="form-label" for="location">Lokasi Kampus</label>
+                            <select name="location" id="location"
+                                class="form-select select2 @error('location') is-invalid @enderror"
+                                value="{{ old('location') }}" data-placeholder="Pilih Lokasi">
+                                @foreach (['Kampus 1', 'Kampus 2'] as $campus)
+                                    <option value="{{ $campus }}">{{ $campus }}</option>
+                                @endforeach
+                            </select>
+                            @error('location')
+                                <div class="invalid-feedback">{{ $message }}</div>
+                            @enderror
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label" for="building">Gedung</label>
+                            <select name="building" id="building"
+                                class="form-select select2 @error('building') is-invalid @enderror"
+                                value="{{ old('building') }}" data-placeholder="Pilih Gedung">
+                                @foreach (['Gedung A', 'Gedung B', 'Gedung C', 'Gedung D'] as $building)
+                                    <option value="{{ $building }}">{{ $building }}</option>
+                                @endforeach
+                            </select>
+                            @error('building')
+                                <div class="invalid-feedback">{{ $message }}</div>
+                            @enderror
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label" for="lantai">Lantai</label>
+                            <select name="lantai" id="lantai"
+                                class="form-select select2 @error('lantai') is-invalid @enderror"
+                                value="{{ old('lantai') }}" data-placeholder="Pilih Lantai">
+                                <option value="1">1</option>
+                                <option value="2">2</option>
+                                <option value="3">3</option>
+                                <option value="4">4</option>
+                            </select>
+                            @error('lantai')
+                                <div class="invalid-feedback">{{ $message }}</div>
+                            @enderror
+                        </div>
+
+
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label" for="capacity">Kapasitas (Mhs)</label>
+                            <input type="number" class="form-control @error('capacity') is-invalid @enderror"
+                                id="capacity" placeholder="30" name="capacity" value="{{ old('capacity') }}"
+                                required />
+                            @error('capacity')
+                                <div class="invalid-feedback">{{ $message }}</div>
+                            @enderror
+                        </div>
+                        <div class="col-md-12 mb-3">
                             <label class="form-label">Tipe Ruangan</label>
                             <select name="type" id="type"
                                 class="form-select select2 @error('type') is-invalid @enderror" required
@@ -190,16 +282,6 @@
                             </select>
                             @error('type')
                                 <div class="invalid-feedback d-block">{{ $message }}</div>
-                            @enderror
-                        </div>
-
-                        <div class="col-md-6 mb-3">
-                            <label class="form-label" for="capacity">Kapasitas (Mhs)</label>
-                            <input type="number" class="form-control @error('capacity') is-invalid @enderror"
-                                id="capacity" placeholder="30" name="capacity" value="{{ old('capacity') }}"
-                                required />
-                            @error('capacity')
-                                <div class="invalid-feedback">{{ $message }}</div>
                             @enderror
                         </div>
 
@@ -215,29 +297,8 @@
                             <div class="form-text">Pilih 'Umum' jika tidak ada alat khusus.</div>
                         </div>
 
-                        <div class="col-md-12 mb-3">
-                            <label class="form-label" for="location">Lokasi Ruangan</label>
-                            <select name="location" id="location"
-                                class="form-select select2 @error('location') is-invalid @enderror"
-                                value="{{ old('location') }}" data-placeholder="Pilih Lokasi">
-                                <option value="">Pilih Lokasi</option>
-                                <option value="Kampus 1 - Gd. A - Lantai 1">Kampus 1 - Gedung A - Lantai 1</option>
-                                <option value="Kampus 1 - Gd. A - Lantai 2">Kampus 1 - Gedung A - Lantai 2</option>
-                                <option value="Kampus 1 - Gd. A - Lantai 3">Kampus 1 - Gedung A - Lantai 3</option>
-                                <option value="Kampus 1 - Gd. B - Lantai 1">Kampus 1 - Gedung B - Lantai 1</option>
-                                <option value="Kampus 1 - Gd. B - Lantai 2">Kampus 1 - Gedung B - Lantai 2</option>
-                                <option value="Kampus 1 - Gd. C - Lantai 1">Kampus 1 - Gedung C - Lantai 1</option>
-                                <option value="Kampus 1 - Gd. C - Lantai 2">Kampus 1 - Gedung C - Lantai 2</option>
-                                <option value="Kampus 1 - Gd. D - Lantai 1">Kampus 1 - Gedung D - Lantai 1</option>
-                                <option value="Kampus 1 - Gd. D - Lantai 2">Kampus 1 - Gedung D - Lantai 2</option>
-                                <option value="Kampus 2 - Gd. A - Lantai 1">Kampus 2 - Gedung A - Lantai 1</option>
-                                <option value="Kampus 2 - Gd. A - Lantai 2">Kampus 2 - Gedung A - Lantai 2</option>
-                                <option value="Kampus 2 - Gd. A - Lantai 3">Kampus 2 - Gedung A - Lantai 3</option>
-                            </select>
-                            @error('location')
-                                <div class="invalid-feedback">{{ $message }}</div>
-                            @enderror
-                        </div>
+
+
                     </div>
 
                     <button type="submit" class="btn btn-primary me-3" id="saveBtn">Simpan Data</button>
