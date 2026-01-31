@@ -11,10 +11,13 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('academic_periods', function (Blueprint $table) {
+        Schema::create('time_slots', function (Blueprint $table) {
             $table->id();
             $table->string('name');
-            $table->boolean('is_active')->default(false);
+            $table->time('start_time');
+            $table->time('end_time');
+            $table->enum('shift', ['pagi', 'malam']);
+            $table->enum('day_group', ['senin_kamis', 'jumat', 'senin_jumat', 'sabtu']);
             $table->timestamps();
         });
     }
@@ -24,6 +27,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('academic_periods');
+        Schema::dropIfExists('time_slots');
     }
 };

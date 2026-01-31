@@ -15,6 +15,8 @@ return new class extends Migration
             $table->id();
             $table->foreignId('academic_period_id')->constrained()->cascadeOnDelete();
             $table->foreignId('prodi_id')->nullable()->constrained()->cascadeOnDelete();
+            $table->enum('campus', ['kampus_1', 'kampus_2'])->nullable();
+            $table->enum('shift', ['pagi', 'malam'])->nullable();
             $table->enum('type', [
                 'distribusi_matkul',
                 'jadwal_perkuliahan',
@@ -33,7 +35,7 @@ return new class extends Migration
             $table->text('feedback_message')->nullable();
             $table->foreignId('action_by_user_id')->nullable()->constrained('users');
             $table->timestamps();
-            $table->unique(['academic_period_id', 'prodi_id', 'type'], 'unique_doc_per_period');
+            $table->unique(['academic_period_id', 'prodi_id', 'campus', 'shift', 'type'], 'unique_doc_per_period');
         });
     }
 

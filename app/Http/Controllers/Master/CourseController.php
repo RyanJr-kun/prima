@@ -2,16 +2,17 @@
 
 namespace App\Http\Controllers\Master;
 
-use App\Exports\CoursesTemplateExport;
 use App\Models\Prodi;
 use App\Models\Course;
 use App\Models\Kurikulum;
 use Illuminate\Http\Request;
-use Illuminate\Validation\Rule;
-use App\Http\Controllers\Controller;
 use App\Imports\CoursesImport;
-use Illuminate\Database\QueryException;
+use Illuminate\Validation\Rule;
+use App\Services\SiakadSyncService;
+use App\Http\Controllers\Controller;
 use Maatwebsite\Excel\Facades\Excel;
+use App\Exports\CoursesTemplateExport;
+use Illuminate\Database\QueryException;
 
 class CourseController extends Controller
 {
@@ -81,7 +82,6 @@ class CourseController extends Controller
             'sks_teori'      => 'required|numeric|min:0',
             'sks_praktik'    => 'required|numeric|min:0',
             'sks_lapangan'   => 'required|numeric|min:0',
-
             'required_tags'   => 'nullable|array',
             'required_tags.*' => 'string',
         ]);
@@ -176,6 +176,17 @@ class CourseController extends Controller
         } catch (\Exception $e) {
 
             return back()->with('error', 'Gagal: ' . $e->getMessage());
+        }
+    }
+
+    public function syncSiakad(SiakadSyncService $service)
+    {
+        $result = $service->syncCourses(); // Panggil method courses
+
+        if ($result['status']) {
+            return back()->with('success', $result['message']);
+        } else {
+            return back()->with('error', $result['message']);
         }
     }
 }

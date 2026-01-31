@@ -19,6 +19,7 @@ use App\Imports\CourseDistributionImport;
 use App\Exports\CourseDistributionTemplateExport;
 use App\Models\AprovalDocument;
 use Illuminate\Support\Facades\Auth;
+use Barryvdh\DomPDF\Facade\Pdf as PDF;
 
 
 class DistributionController extends Controller
@@ -45,7 +46,6 @@ class DistributionController extends Controller
         $query = CourseDistribution::with([
             'studyClass.prodi',
             'course',
-            'user',
             'teachingLecturers',
             'pddiktiLecturers'
         ])
@@ -159,10 +159,22 @@ class DistributionController extends Controller
         }
     }
 
-    public function show(Request $request)
+    public function show($id)
     {
-        // 
+        $doc = AprovalDocument::with(['academicPeriod', 'prodi', 'lastActionUser'])->findOrFail($id);
+
+        $distributions = CourseDistribution::with(['course', 'studyClass'])
+            ->where('academic_period_id', $doc->academic_period_id)
+            ->whereHas('studyClass', function ($q) use ($doc) {
+                $q->where('prodi_id', $doc->prodi_id);
+            })
+            ->orderBy('study_class_id')
+            ->get()
+            ->groupBy('study_class_id');
+
+        return view('content.distribution.show', compact('doc', 'distributions'));
     }
+
     public function edit($id)
     {
         $distribution = CourseDistribution::with(['teachingLecturers', 'pddiktiLecturers'])
@@ -176,17 +188,18 @@ class DistributionController extends Controller
             'pddikti_ids'    => 'array',
             'teaching_ids.*' => 'exists:users,id',
             'pddikti_ids.*'  => 'exists:users,id',
+
         ]);
 
         try {
             $distribution = CourseDistribution::findOrFail($id);
 
             $distribution->update([
-                'user_id'   => $request->user_id,
                 'referensi' => $request->referensi,
                 'luaran'    => $request->luaran,
             ]);
 
+            DB::table('course_lecturers')->where('course_distribution_id', $id)->delete();
             $pivotData = [];
             if ($request->teaching_ids) {
                 foreach ($request->teaching_ids as $uid) {
@@ -200,6 +213,7 @@ class DistributionController extends Controller
                 }
             }
 
+            // 4. Masukkan Pelapor PDDIKTI
             if ($request->pddikti_ids) {
                 foreach ($request->pddikti_ids as $uid) {
                     $pivotData[] = [
@@ -211,15 +225,15 @@ class DistributionController extends Controller
                     ];
                 }
             }
-            DB::table('course_lecturers')->where('course_distribution_id', $id)->delete();
+
             if (!empty($pivotData)) {
                 DB::table('course_lecturers')->insert($pivotData);
             }
 
             DB::commit();
-
             return back()->with('success', 'Data Tim Pengajar berhasil diperbarui!');
         } catch (\Exception $e) {
+            DB::rollBack();
             return back()->with('error', 'Gagal update: ' . $e->getMessage());
         }
     }
@@ -315,7 +329,7 @@ class DistributionController extends Controller
                                 'course_id'          => $course->id,
                             ],
                             [
-                                'user_id' => null,
+                                //
                             ]
                         );
 
@@ -387,5 +401,48 @@ class DistributionController extends Controller
         );
 
         return back()->with('success', 'Distribusi berhasil diajukan ke Kaprodi!');
+    }
+
+    public function printPdf($id)
+    {
+        $doc = AprovalDocument::with(['prodi', 'academicPeriod'])->findOrFail($id);
+
+        if ($doc->status != 'approved_direktur') {
+            return back()->with('error', 'Dokumen belum final, tidak bisa dicetak.');
+        }
+
+        $periodName = $doc->academicPeriod->name;
+        $semesterLabel = str_contains(strtolower($periodName), 'ganjil') || str_ends_with($periodName, '1') ? 'Ganjil' : 'Genap';
+
+        $tahunAkademik = $doc->academicPeriod->name;
+        $tahunFile = str_replace(['/', '\\'], '-', $tahunAkademik);
+
+        $dataIsi = \App\Models\CourseDistribution::with([
+            'course',
+            'studyClass.academicAdvisor', // Untuk Info PA di header
+            'studyClass.prodi',
+            // Koordinator
+            'teachingLecturers',  // Pivot Real (PENTING)
+            'pddiktiLecturers'    // Pivot PDDIKTI (PENTING)
+        ])
+            ->where('academic_period_id', $doc->academic_period_id)
+            ->whereHas('studyClass', function ($q) use ($doc) {
+                $q->where('prodi_id', $doc->prodi_id);
+            })
+            ->get()
+            // KITA GROUP BY SEMESTER DULU UNTUK HALAMAN PDF
+            ->groupBy('studyClass.semester');
+
+
+        $pdf = PDF::loadView('content.dokumen.print.distribusi_pdf', compact(
+            'doc',
+            'semesterLabel',
+            'tahunAkademik',
+            'dataIsi'
+        ));
+
+        $pdf->setPaper('legal', 'landscape');
+
+        return $pdf->download('Distribusi_Matkul_' . $doc->prodi->code . '_' . $tahunFile . '.pdf');
     }
 }

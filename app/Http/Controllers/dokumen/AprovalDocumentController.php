@@ -8,7 +8,7 @@ use App\Models\AcademicPeriod;
 use App\Models\AprovalDocument;
 use App\Http\Controllers\Controller;
 use Illuminate\Support\Facades\Auth;
-use Barryvdh\DomPDF\Facade\Pdf as PDF;
+
 
 class AprovalDocumentController extends Controller
 {
@@ -39,7 +39,10 @@ class AprovalDocumentController extends Controller
 
         if ($user->hasRole('kaprodi')) {
             $prodiId = $user->managedProdi->id ?? 0;
-            $query->where('prodi_id', $prodiId);
+            $query->where(function ($q) use ($prodiId) {
+                $q->where('prodi_id', $prodiId)
+                    ->orWhereNull('prodi_id'); // Dokumen Global (Kalender Akademik)
+            });
         } elseif ($user->hasRole(['wadir1', 'wadir2', 'direktur'])) {
             $query->where('status', '!=', 'draft');
         } else {
@@ -93,6 +96,25 @@ class AprovalDocumentController extends Controller
 
         /** @var \App\Models\User $user */
         $user = Auth::user();
+
+        if ($doc->type == 'kalender_akademik') {
+            if ($user->hasRole('wadir1') && $doc->status == 'submitted') {
+                $doc->update([
+                    'status' => 'approved_wadir1',
+                    'action_by_user_id' => $user->id,
+                    'feedback_message' => null
+                ]);
+                return back()->with('success', 'Kalender Akademik disetujui Wadir 1. Menunggu Direktur.');
+            }
+
+            if ($user->hasRole('direktur') && $doc->status == 'approved_wadir1') {
+                $doc->update([
+                    'status' => 'approved_direktur',
+                    'action_by_user_id' => $user->id
+                ]);
+                return back()->with('success', 'Kalender Akademik Disahkan!');
+            }
+        }
 
         $nextStatus = null;
 
@@ -153,49 +175,5 @@ class AprovalDocumentController extends Controller
         ]);
 
         return back()->with('success', 'Dokumen berhasil diajukan ulang.');
-    }
-
-
-    public function printPdf($id)
-    {
-        $doc = AprovalDocument::with(['prodi', 'academicPeriod'])->findOrFail($id);
-
-        if ($doc->status != 'approved_direktur') {
-            return back()->with('error', 'Dokumen belum final, tidak bisa dicetak.');
-        }
-
-        $periodName = $doc->academicPeriod->name;
-        $semesterLabel = str_contains(strtolower($periodName), 'ganjil') || str_ends_with($periodName, '1') ? 'Ganjil' : 'Genap';
-
-        $tahunAkademik = $doc->academicPeriod->name;
-        $tahunFile = str_replace(['/', '\\'], '-', $tahunAkademik);
-
-        $dataIsi = \App\Models\CourseDistribution::with([
-            'course',
-            'studyClass.academicAdvisor', // Untuk Info PA di header
-            'studyClass.prodi',
-            'user',               // Koordinator
-            'teachingLecturers',  // Pivot Real (PENTING)
-            'pddiktiLecturers'    // Pivot PDDIKTI (PENTING)
-        ])
-            ->where('academic_period_id', $doc->academic_period_id)
-            ->whereHas('studyClass', function ($q) use ($doc) {
-                $q->where('prodi_id', $doc->prodi_id);
-            })
-            ->get()
-            // KITA GROUP BY SEMESTER DULU UNTUK HALAMAN PDF
-            ->groupBy('studyClass.semester');
-
-
-        $pdf = PDF::loadView('content.dokumen.print.distribusi_pdf', compact(
-            'doc',
-            'semesterLabel',
-            'tahunAkademik',
-            'dataIsi'
-        ));
-
-        $pdf->setPaper('legal', 'landscape');
-
-        return $pdf->download('Distribusi_Matkul_' . $doc->prodi->code . '_' . $tahunFile . '.pdf');
     }
 }

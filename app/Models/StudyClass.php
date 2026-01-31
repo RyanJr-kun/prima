@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Casts\Attribute;
 
 class StudyClass extends Model
 {
@@ -32,6 +33,7 @@ class StudyClass extends Model
     {
         return $this->belongsTo(Kurikulum::class);
     }
+
     public function prodi()
     {
         return $this->belongsTo(Prodi::class);
@@ -59,5 +61,28 @@ class StudyClass extends Model
 
         // Kembalikan romawi jika ada, jika tidak kembalikan angka aslinya
         return $map[$this->semester] ?? $this->semester;
+    }
+
+    protected function campusLocation(): Attribute
+    {
+        return Attribute::make(
+            get: fn() => $this->prodi->primary_campus ?? 'kampus_1'
+        );
+    }
+
+    /**
+     * Helper untuk mengecek apakah ini Kelas Karyawan/Malam?
+     * Digunakan untuk mengizinkan slot Sabtu/Malam.
+     */
+    protected function isKaryawan(): Attribute
+    {
+        return Attribute::make(
+            get: fn() => $this->shift === 'malam'
+        );
+    }
+
+    public function schedule()
+    {
+        return $this->hasOne(Schedule::class);
     }
 }

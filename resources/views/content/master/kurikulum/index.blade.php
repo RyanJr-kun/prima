@@ -37,15 +37,23 @@
         <div class="card-header border-bottom">
             <div class="row">
 
-                <div class="col-6">
+                <div class="col-md-6">
                     <h5 class="card-title fw-bold mb-0">Data Kurikulum</h5>
                     <small class="d-none d-md-block text-muted">Management Data Kurikulum Disini.</small>
                 </div>
-                <div class="col-6 text-end">
-                    <button class="btn btn-primary add-new" type="button" data-bs-toggle="offcanvas"
-                        data-bs-target="#offcanvasAddKurikulum" id="btnCreate">
-                        <span><i class="bx bx-plus me-2"></i>Kurikulum</span>
-                    </button>
+                <div class="col-md-6">
+                    <div class="d-flex justify-content-end align-items-center">
+                        <form id="syncKurikulumForm" action="{{ route('kurikulums.sync-siakad') }}" method="POST">
+                            @csrf
+                            <button type="button" class="btn btn-outline-success me-3" id="btnSyncKurikulum">
+                                <i class="bx bx-refresh me-1"></i> Sync
+                            </button>
+                        </form>
+                        <button class="btn btn-primary add-new" type="button" data-bs-toggle="offcanvas"
+                            data-bs-target="#offcanvasAddKurikulum" id="btnCreate">
+                            <span><i class="bx bx-plus me-1"></i>Kurikulum</span>
+                        </button>
+                    </div>
                 </div>
             </div>
         </div>
@@ -339,6 +347,28 @@
                 const offcanvasError = new bootstrap.Offcanvas(offcanvasEl);
                 offcanvasError.show();
             @endif
+
+            const btn = document.getElementById('btnSyncKurikulum');
+            const form = document.getElementById('syncKurikulumForm');
+
+            if (btn) {
+                btn.addEventListener('click', function() {
+                    Swal.fire({
+                        title: 'Sync Kurikulum?',
+                        text: "Pastikan Kode Prodi di lokal sama dengan di Siakad.",
+                        icon: 'info',
+                        showCancelButton: true,
+                        confirmButtonText: 'Ya, Proses',
+                        showLoaderOnConfirm: true,
+                        allowOutsideClick: () => !Swal.isLoading(),
+                        preConfirm: () => {
+                            return new Promise((resolve) => {
+                                form.submit();
+                            });
+                        }
+                    });
+                });
+            }
         });
     </script>
 @endsection

@@ -12,7 +12,6 @@ class CourseDistribution extends Model
         'academic_period_id',
         'study_class_id',
         'course_id',
-        'user_id',
         'referensi',
         'luaran',
     ];
@@ -34,11 +33,6 @@ class CourseDistribution extends Model
     public function studyClass()
     {
         return $this->belongsTo(StudyClass::class, 'study_class_id');
-    }
-
-    public function user(): BelongsTo
-    {
-        return $this->belongsTo(User::class);
     }
 
     public function academicPeriod(): BelongsTo
@@ -66,5 +60,12 @@ class CourseDistribution extends Model
         return $this->belongsToMany(User::class, 'course_lecturers')
             ->withPivot('category')
             ->withTimestamps();
+    }
+
+    public function schedule()
+    {
+        // Kita asumsikan 1 Distribusi = 1 Jadwal Utama
+        return $this->hasOne(Schedule::class, 'course_id', 'course_id')
+            ->whereColumn('study_class_id', 'course_distributions.study_class_id');
     }
 }

@@ -80,32 +80,30 @@
     <div class="card">
         <div class="card-header border-bottom">
             <div class="row">
-                <div class="col-6">
+                <div class="col-md-6">
                     <h5 class="card-title fw-bold mb-0">Kelas Perkuliahan</h5>
                     <small class="d-none d-md-block text-muted">Data kelas aktif berdasarkan Periode Akademik.</small>
                 </div>
-                <div class="col-6 text-end">
-
-                    <button type="button" class="btn btn-success my-1" data-bs-toggle="modal"
-                        data-bs-target="#importModal">
-                        <i class="bx bx-spreadsheet me-1"></i> Import
-                    </button>
-                    <button class="btn btn-primary add-new" type="button" data-bs-toggle="offcanvas"
-                        data-bs-target="#offcanvasAddKelas" id="btnCreate">
-                        <span><i class="bx bx-plus me-2"></i> Kelas</span>
-                    </button>
-                    {{-- @if ($classes->isEmpty())
-                        <div class="alert alert-warning d-flex justify-content-between align-items-center">
-                            <span>
-                                <i class="bx bx-info-circle me-1"></i>
-                                Data kelas untuk periode <strong>{{ $activePeriod->name }}</strong> belum ada.
-                            </span>
-                            <button class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#copyClassModal">
-                                <i class="bx bx-copy me-1"></i> Salin dari Periode Lalu
+                <div class="col-md-6">
+                    <div class="d-flex justify-content-end align-items-center">
+                        <form id="syncKelas" action="{{ route('kelas-perkuliahan.sync-siakad') }}" method="POST">
+                            @csrf
+                            <button type="button" class="btn btn-outline-danger" id="btnSync">
+                                <i class="bx bx-refresh me-1"></i>
+                                <span>Sync</span>
                             </button>
-                        </div>
-                    @endif --}}
-
+                        </form>
+                        <button type="button" class="btn btn-success mx-3" data-bs-toggle="modal"
+                            data-bs-target="#importModal">
+                            <i class="bx bx-spreadsheet me-1"></i>
+                            <span>Import</span>
+                        </button>
+                        <button class="btn btn-primary add-new" type="button" data-bs-toggle="offcanvas"
+                            data-bs-target="#offcanvasAddKelas" id="btnCreate">
+                            <i class="bx bx-plus me-2"></i>
+                            <span>Kelas</span>
+                        </button>
+                    </div>
                 </div>
             </div>
         </div>
@@ -555,6 +553,62 @@
                     });
                 }
             });
+
+
+            const syncForm = document.getElementById('syncKelas');
+            const syncButton = document.getElementById('btnSync');
+
+            if (syncButton) {
+                syncButton.addEventListener('click', function() {
+                    Swal.fire({
+                        title: 'Sinkronisasi Data Siakad?',
+                        text: "Mohon tunggu, proses ini mungkin memakan waktu...",
+                        icon: 'warning',
+                        showCancelButton: true,
+                        confirmButtonText: 'Ya, Sinkronkan!',
+                        showLoaderOnConfirm: true,
+                        preConfirm: async () => {
+                            try {
+                                // Gunakan Fetch API untuk kirim request di background
+                                const response = await fetch(syncForm.action, {
+                                    method: 'POST',
+                                    headers: {
+                                        'X-CSRF-TOKEN': document
+                                            .querySelector(
+                                                'input[name="_token"]')
+                                            .value
+                                    },
+                                    body: new FormData(syncForm)
+                                });
+
+                                if (!response.ok) {
+                                    throw new Error(response.statusText);
+                                }
+
+                                return await response
+                                    .json(); // Asumsi controller return JSON
+                            } catch (error) {
+                                Swal.showValidationMessage(
+                                    `Request gagal: ${error}`
+                                );
+                            }
+                        },
+                        allowOutsideClick: () => !Swal.isLoading()
+                    }).then((result) => {
+                        if (result.isConfirmed) {
+                            // Tampilkan pesan sukses setelah selesai
+                            Swal.fire({
+                                title: 'Berhasil!',
+                                text: 'Data kelas berhasil disinkronisasi.',
+                                icon: 'success'
+                            }).then(() => {
+                                location
+                                    .reload(); // Reload manual jika perlu update tabel
+                            });
+                        }
+                    });
+                });
+            }
 
             // Toast Notification Logic
             const successToast = document.getElementById('successToast');

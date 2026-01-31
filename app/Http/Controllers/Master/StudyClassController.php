@@ -2,17 +2,18 @@
 
 namespace App\Http\Controllers\Master;
 
-use App\Exports\StudyClassTemplateExport;
 use App\Models\User;
 use App\Models\Kurikulum;
 use App\Models\StudyClass;
 use Illuminate\Http\Request;
 use App\Models\AcademicPeriod;
-use Illuminate\Support\Facades\DB;
-use App\Http\Controllers\Controller;
 use App\Imports\StudyClassImport;
-use Illuminate\Database\QueryException;
+use Illuminate\Support\Facades\DB;
+use App\Services\SiakadSyncService;
+use App\Http\Controllers\Controller;
 use Maatwebsite\Excel\Facades\Excel;
+use Illuminate\Database\QueryException;
+use App\Exports\StudyClassTemplateExport;
 
 class StudyClassController extends Controller
 {
@@ -266,6 +267,18 @@ class StudyClassController extends Controller
         } catch (\Exception $e) {
             DB::rollBack();
             return back()->with('error', 'Gagal menyalin: ' . $e->getMessage());
+        }
+    }
+
+    public function syncDataKelas(SiakadSyncService $service)
+    {
+        // Panggil fungsi di service
+        $result = $service->syncClasses();
+
+        if ($result['status']) {
+            return back()->with('success', $result['message']);
+        } else {
+            return back()->with('error', $result['message']);
         }
     }
 }

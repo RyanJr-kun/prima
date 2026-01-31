@@ -77,20 +77,27 @@
         <div class="card-header border-bottom">
             <div class="row">
 
-                <div class="col-6">
+                <div class="col-md-6">
                     <h5 class="card-title fw-bold mb-0">Mata Kuliah</h5>
                     <small class="d-none d-md-block text-muted">Management Data Matkul Disini.</small>
                 </div>
-                <div class="col-6 text-end">
-                    <button type="button" class="btn btn-success my-1" data-bs-toggle="modal"
-                        data-bs-target="#importModal">
-                        <i class="bx bx-spreadsheet me-1"></i> Import
-                    </button>
-                    <button class="btn btn-primary add-new" type="button" data-bs-toggle="offcanvas"
-                        data-bs-target="#offcanvasAddCourse" id="btnCreate">
-                        <span><i class="bx bx-plus me-2"></i>Matkul</span>
-                    </button>
-
+                <div class="col-md-6">
+                    <div class="d-flex justify-content-end align-items-center">
+                        <form id="syncCourseForm" action="{{ route('mata-kuliah.sync-siakad') }}" method="POST">
+                            @csrf
+                            <button type="button" class="btn btn-outline-danger" id="btnSyncCourse">
+                                <i class="bx bx-refresh me-1"></i> Sync
+                            </button>
+                        </form>
+                        <button type="button" class="btn btn-success mx-2" data-bs-toggle="modal"
+                            data-bs-target="#importModal">
+                            <i class="bx bx-spreadsheet me-1"></i> Import
+                        </button>
+                        <button class="btn btn-primary add-new" type="button" data-bs-toggle="offcanvas"
+                            data-bs-target="#offcanvasAddCourse" id="btnCreate">
+                            <span><i class="bx bx-plus me-1"></i> Matkul</span>
+                        </button>
+                    </div>
                 </div>
             </div>
         </div>
@@ -383,6 +390,32 @@
     </script>
     <script>
         document.addEventListener('DOMContentLoaded', function() {
+            const syncBtn = document.getElementById('btnSyncCourse');
+            const syncForm = document.getElementById('syncCourseForm');
+
+            if (syncBtn) {
+                syncBtn.addEventListener('click', function() {
+                    Swal.fire({
+                        title: 'Sync Mata Kuliah?',
+                        text: "Data SKS dan Kurikulum akan diperbarui dari Siakad.",
+                        icon: 'question',
+                        showCancelButton: true,
+                        confirmButtonText: 'Ya, Sync!',
+                        showLoaderOnConfirm: true,
+                        allowOutsideClick: () => !Swal.isLoading(),
+                        preConfirm: () => {
+                            return new Promise((resolve) => {
+                                syncForm.submit();
+                                // Promise gantung agar loading terus berputar sampai reload
+                            });
+                        }
+                    });
+                });
+            }
+        });
+    </script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
             const form = document.getElementById('addNewCourseForm');
             const offcanvasEl = document.getElementById('offcanvasAddCourse');
             const offcanvasTitle = document.getElementById('offcanvasAddCourseLabel');
@@ -510,6 +543,8 @@
                 const offcanvasError = new bootstrap.Offcanvas(offcanvasEl);
                 offcanvasError.show();
             @endif
+
+
         });
     </script>
 @endsection

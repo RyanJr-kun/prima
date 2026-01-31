@@ -151,10 +151,12 @@
                                     </a>
                                     <a href="javascript:;" class="text-body edit-record me-2" data-bs-toggle="offcanvas"
                                         data-bs-target="#offcanvasAddRoom" data-id="{{ $room->id }}"
-                                        data-name="{{ $room->name }}" data-location="{{ $room->location }}"
+                                        data-name="{{ $room->name }}" data-code="{{ $room->code }}"
                                         data-capacity="{{ $room->capacity }}" data-type="{{ $room->type }}"
-                                        data-code="{{ $room->code }}" data-laboratory-tag="{{ $room->facility_tag }}"
-                                        data-prodi-ids="{{ $room->prodis->pluck('id') }}"
+                                        data-location="{{ $room->location }}" data-building="{{ $room->building }}"
+                                        data-floor="{{ $room->floor }}"
+                                        data-prodi-ids="{{ json_encode($room->prodis->pluck('id')) }}"
+                                        data-facility-tags="{{ json_encode($room->facility_tags ?? []) }}"
                                         data-action="{{ route('master.ruangan.update', $room->id) }}">
                                         <i class="bx bx-edit text-muted bx-sm"></i>
                                     </a>
@@ -221,86 +223,69 @@
 
                     <div class="row">
                         <div class="col-md-6 mb-3">
-                            <label class="form-label" for="location">Lokasi Kampus</label>
-                            <select name="location" id="location"
-                                class="form-select select2 @error('location') is-invalid @enderror"
-                                value="{{ old('location') }}" data-placeholder="Pilih Lokasi">
-                                @foreach (['Kampus 1', 'Kampus 2'] as $campus)
-                                    <option value="{{ $campus }}">{{ $campus }}</option>
-                                @endforeach
+                            <label class="form-label">Lokasi Kampus</label>
+                            <select name="location" id="location" class="form-select select2" required>
+                                <option value="kampus_1">Kampus 1</option>
+                                <option value="kampus_2">Kampus 2</option>
                             </select>
-                            @error('location')
-                                <div class="invalid-feedback">{{ $message }}</div>
-                            @enderror
                         </div>
                         <div class="col-md-6 mb-3">
-                            <label class="form-label" for="building">Gedung</label>
-                            <select name="building" id="building"
-                                class="form-select select2 @error('building') is-invalid @enderror"
-                                value="{{ old('building') }}" data-placeholder="Pilih Gedung">
-                                @foreach (['Gedung A', 'Gedung B', 'Gedung C', 'Gedung D'] as $building)
-                                    <option value="{{ $building }}">{{ $building }}</option>
+                            <label class="form-label">Gedung</label>
+                            <select name="building" id="building" class="form-select select2" data-tags="true">
+                                @foreach (['Gedung A', 'Gedung B', 'Gedung C', 'Gedung D', 'Gedung Utama'] as $b)
+                                    <option value="{{ $b }}">{{ $b }}</option>
                                 @endforeach
                             </select>
-                            @error('building')
-                                <div class="invalid-feedback">{{ $message }}</div>
-                            @enderror
                         </div>
                         <div class="col-md-6 mb-3">
-                            <label class="form-label" for="lantai">Lantai</label>
-                            <select name="lantai" id="lantai"
-                                class="form-select select2 @error('lantai') is-invalid @enderror"
-                                value="{{ old('lantai') }}" data-placeholder="Pilih Lantai">
-                                <option value="1">1</option>
-                                <option value="2">2</option>
-                                <option value="3">3</option>
-                                <option value="4">4</option>
-                            </select>
-                            @error('lantai')
-                                <div class="invalid-feedback">{{ $message }}</div>
-                            @enderror
+                            <label class="form-label">Lantai</label>
+                            <input type="number" name="floor" id="floor" class="form-control" value="1"
+                                min="1" required>
                         </div>
-
-
                         <div class="col-md-6 mb-3">
-                            <label class="form-label" for="capacity">Kapasitas (Mhs)</label>
-                            <input type="number" class="form-control @error('capacity') is-invalid @enderror"
-                                id="capacity" placeholder="30" name="capacity" value="{{ old('capacity') }}"
-                                required />
-                            @error('capacity')
-                                <div class="invalid-feedback">{{ $message }}</div>
-                            @enderror
+                            <label class="form-label">Kapasitas</label>
+                            <input type="number" name="capacity" id="capacity" class="form-control" value="30"
+                                required>
                         </div>
-                        <div class="col-md-12 mb-3">
-                            <label class="form-label">Tipe Ruangan</label>
-                            <select name="type" id="type"
-                                class="form-select select2 @error('type') is-invalid @enderror" required
-                                data-placeholder="Pilih Tipe Ruangan">
-                                <option value="">Pilih </option>
-                                <option value="teori">Teori</option>
-                                <option value="laboratorium">Laboratorium</option>
-                            </select>
-                            @error('type')
-                                <div class="invalid-feedback d-block">{{ $message }}</div>
-                            @enderror
-                        </div>
-
-                        <div class="col-md-12 mb-3" id="divTags">
-                            <label class="form-label">Spesifikasi Fasilitas Utama</label>
-                            <select name="facility_tag" id="facility_tag" class="form-select select2"
-                                data-placeholder="Pilih Fasilitas">
-                                <option value=""></option>
-                                @foreach ($tags as $key => $label)
-                                    <option value="{{ $key }}">{{ $label }}</option>
-                                @endforeach
-                            </select>
-                            <div class="form-text">Pilih 'Umum' jika tidak ada alat khusus.</div>
-                        </div>
-
-
-
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Tipe Ruangan</label>
+                        <select name="type" id="type"
+                            class="form-select select2 @error('type') is-invalid @enderror" required
+                            data-placeholder="Pilih Tipe Ruangan">
+                            <option value="">Pilih </option>
+                            <option value="teori">Teori</option>
+                            <option value="laboratorium">Laboratorium</option>
+                        </select>
+                        @error('type')
+                            <div class="invalid-feedback d-block">{{ $message }}</div>
+                        @enderror
                     </div>
 
+                    {{-- <div class="mb-3" id="divTags">
+                        <label class="form-label">Spesifikasi Fasilitas Utama</label>
+                        <select name="facility_tag" id="facility_tag" class="form-select select2"
+                            data-placeholder="Pilih Fasilitas">
+                            <option value=""></option>
+                            @foreach ($tags as $key => $label)
+                                <option value="{{ $key }}">{{ $label }}</option>
+                            @endforeach
+                        </select>
+                        <div class="form-text">Pilih 'Umum' jika tidak ada alat khusus.</div>
+                    </div> --}}
+                    <div class="mb-3" id="divTags">
+                        <label class="form-label">Fasilitas Utama (Bisa pilih banyak)</label>
+                        <select name="facility_tags[]" id="facility_tags" class="form-select select2"
+                            multiple="multiple" data-placeholder="Pilih Fasilitas...">
+                            @foreach ($tags as $key => $label)
+                                {{-- Sembunyikan 'general' agar user fokus ke alat khusus --}}
+                                @if ($key !== 'general')
+                                    <option value="{{ $key }}">{{ $label }}</option>
+                                @endif
+                            @endforeach
+                        </select>
+                        <div class="form-text">Untuk Kelas Teori standar, kosongkan saja (Otomatis set 'General').</div>
+                    </div>
                     <button type="submit" class="btn btn-primary me-3" id="saveBtn">Simpan Data</button>
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="offcanvas">Batal</button>
                 </form>
@@ -371,7 +356,7 @@
             });
 
             const typeSelect = document.getElementById('type');
-            const tagsSelect = document.getElementById('facility_tag');
+            const tagsSelect = document.getElementById('facility_tags');
 
             function toggleTags() {
                 const isTeori = typeSelect.value === 'teori';
@@ -415,19 +400,30 @@
 
                     document.getElementById('code').value = d.code;
                     document.getElementById('add-name-room').value = d.name;
+                    document.getElementById('capacity').value = d.capacity;
+                    document.getElementById('floor').value = d.floor;
 
                     if (window.$) {
-                        // Parsing JSON array untuk select multiple prodi
-                        $('#prodis').val(JSON.parse(d.prodiIds || '[]')).trigger('change');
                         $('#location').val(d.location).trigger('change');
+                        $('#building').val(d.building).trigger('change');
                         $('#type').val(d.type).trigger('change');
-                        $('#facility_tag').val(d.laboratoryTag).trigger('change');
-                        $('#capacity').val(d.capacity);
-                    } else {
-                        document.getElementById('location').value = d.location;
-                        document.getElementById('type').value = d.type;
-                        document.getElementById('facility_tag').value = d.laboratoryTag;
-                        document.getElementById('capacity').value = d.capacity;
+
+                        // 1. PARSING PRODI IDS (JSON)
+                        try {
+                            const prodiIds = JSON.parse(d.prodiIds);
+                            $('#prodis').val(prodiIds).trigger('change');
+                        } catch (e) {
+                            console.error('Error parse prodis', e);
+                        }
+
+                        // 2. PARSING FACILITY TAGS (JSON)
+                        try {
+                            const tags = JSON.parse(d.facilityTags);
+                            $('#facility_tags').val(tags).trigger('change');
+                        } catch (e) {
+                            console.error('Error parse tags', e);
+                            $('#facility_tags').val([]).trigger('change');
+                        }
                     }
                 }
             });
@@ -443,10 +439,10 @@
                 if (methodInput) methodInput.remove();
 
                 if (window.$) {
-                    $('#prodis').val('').trigger('change');
-                    $('#type').val('').trigger('change');
-                    $('#facility_tag').val('').trigger('change');
-                    $('#capacity').val('');
+                    $('.select2').val([]).trigger('change'); // Reset semua select2
+                    $('#location').val('kampus_1').trigger('change'); // Default value
+                    $('#floor').val('1');
+
                 }
             });
 

@@ -71,6 +71,22 @@ class AprovalDocument extends Model
         );
     }
 
+    protected function statusPendek(): Attribute
+    {
+        return Attribute::make(
+            get: function ($value, $attributes) {
+                return match ($attributes['status']) {
+                    'draft'             => 'Draft (Belum Diajukan)',
+                    'submitted'         => 'Menunggu Review Wadir 1',
+                    'approved_wadir1'   => 'Menunggu Pengesahan Direktur',
+                    'approved_direktur' => 'FINAL / DISETUJUI',
+                    'rejected'          => 'DIKEMBALIKAN (REVISI)',
+                    default             => 'Status Tidak Dikenal',
+                };
+            }
+        );
+    }
+
     /**
      * Menentukan warna badge Bootstrap berdasarkan status
      * Cara Pakai di Blade: <span class="badge bg-{{ $doc->status_color }}">

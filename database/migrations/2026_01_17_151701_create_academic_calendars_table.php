@@ -14,14 +14,11 @@ return new class extends Migration
         Schema::create('academic_calendars', function (Blueprint $table) {
             $table->id();
             $table->foreignId('academic_period_id')->constrained()->cascadeOnDelete();
-            $table->string('type')->default('Reguler 1');
-            $table->string('activity_name');
+            $table->json('target_semesters')->nullable();
             $table->date('start_date');
             $table->date('end_date')->nullable();
-            $table->json('target_semesters')->nullable();
+            $table->string('name');
             $table->text('description')->nullable();
-            $table->boolean('is_approved')->default(false);
-            $table->foreignId('approved_by')->nullable()->constrained('users'); 
             $table->timestamps();
         });
     }

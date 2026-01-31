@@ -9,30 +9,21 @@ class AcademicCalendar extends Model
 {
     protected $fillable = [
         'academic_period_id',
-        'type', // Reguler 1, Reguler 2
-        'activity_name',
+        'target_semesters',
         'start_date',
         'end_date',
-        'target_semesters',
+        'name',
         'description',
-        'is_approved',
-        'approved_by'
     ];
 
     protected $casts = [
         'start_date' => 'date',
         'end_date' => 'date',
-        'is_approved' => 'boolean',
-        'target_semesters' => 'array', // PENTING: Otomatis convert JSON <-> Array
+        'target_semesters' => 'array',
     ];
 
     public function period(): BelongsTo
     {
         return $this->belongsTo(AcademicPeriod::class, 'academic_period_id');
-    }
-
-    public function approver(): BelongsTo
-    {
-        return $this->belongsTo(User::class, 'approved_by');
     }
 }

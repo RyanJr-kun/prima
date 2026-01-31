@@ -43,18 +43,18 @@
         }
 
         .sk-text {
-            font-size: 10px;
+            font-size: 12px;
         }
 
         .alamat {
-            font-size: 9px;
+            font-size: 12px;
         }
 
         /* INFO TABLE */
         .info-table {
             width: 100%;
             margin-bottom: 10px;
-            font-size: 11px;
+            font-size: 12px;
         }
 
         .info-table td {
@@ -139,9 +139,9 @@
         </table>
     </div>
 
-    <div style="text-align: center; margin-bottom: 15px;">
+    <div style="text-align: center; margin-bottom: 16px;">
         <h3 style="margin:0; text-decoration: underline; text-transform: uppercase;">{{ $doc->type_label }}</h3>
-        <span style="font-size: 11px;">Tahun Akademik {{ $tahunAkademik }}</span>
+        <span style="font-size: 12px;">Tahun Akademik {{ $tahunAkademik }}</span>
     </div>
 
     {{-- LOOP 1: PER SEMESTER --}}
