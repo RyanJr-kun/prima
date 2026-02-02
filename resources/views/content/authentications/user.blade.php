@@ -37,25 +37,28 @@
     </div>
 
     <div class="card">
-
         <div class="card-header border-bottom">
             <div class="row">
-
-                <div class="col-6">
-                    <h4 class="card-title mb-0">Pengguna</h4>
+                <div class="col-md-6">
+                    <h5 class="card-title fw-bold mb-0">Pengguna</h5>
                     <small>Management Data Penggunamu Disini.</small>
+                    <div class="d-flex justify-content-start align-items-center">
+
+                    </div>
                 </div>
-                <div class="col-6 text-end">
-                    <form action="{{ route('users.sync-siakad') }}" method="POST" class="d-inline" id="formSyncSiakad">
-                        @csrf
-                        <button type="button" class="btn btn-info text-white" id="btnSyncSiakad">
-                            <i class="bx bx-refresh me-1"></i> Sync SIAKAD
+                <div class="col-md-6">
+                    <div class="d-flex justify-content-end align-items-center">
+                        <form action="{{ route('users.sync-siakad') }}" method="POST" class="d-inline" id="formSyncSiakad">
+                            @csrf
+                            <button type="button" class="btn btn-outline-success me-3" id="btnSyncSiakad">
+                                <i class="bx bx-refresh me-1"></i> Sync
+                            </button>
+                        </form>
+                        <button class="btn btn-primary add-new" type="button" data-bs-toggle="offcanvas"
+                            data-bs-target="#offcanvasAddUser" id="btnCreate">
+                            <span><i class="bx bx-plus me-1"></i>User</span>
                         </button>
-                    </form>
-                    <button class="btn btn-primary add-new" type="button" data-bs-toggle="offcanvas"
-                        data-bs-target="#offcanvasAddUser" id="btnCreate">
-                        <span><i class="bx bx-plus me-2"></i>Penggguna</span>
-                    </button>
+                    </div>
                 </div>
             </div>
         </div>

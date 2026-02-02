@@ -113,7 +113,8 @@
                     @endphp
 
                     @if (!$isLocked)
-                        <form action="{{ route('distribusi.submit') }}" method="POST" id="submitDistribusiForm">
+                        <form action="{{ route('distribusi-mata-kuliah.submit') }}" method="POST"
+                            id="submitDistribusiForm">
                             @csrf
                             <input type="hidden" name="period_id" value="{{ $activePeriod->id }}">
                             <input type="hidden" name="prodi_id" value="{{ request('prodi_id') }}">
@@ -185,7 +186,8 @@
                 @endphp
 
                 @if (!$isLocked)
-                    <form action="{{ route('distribusi.submit') }}" method="POST" id="submitDistribusiFormMobile">
+                    <form action="{{ route('distribusi-mata-kuliah.submit') }}" method="POST"
+                        id="submitDistribusiFormMobile">
                         @csrf
                         <input type="hidden" name="period_id" value="{{ $activePeriod->id }}">
                         <input type="hidden" name="prodi_id" value="{{ request('prodi_id') }}">
@@ -337,10 +339,16 @@
                 <table class="table table-hover">
                     <thead>
                         <tr>
+                            @if (!$isLocked)
+                                <th width="5%" class="text-center py-0 border-none">
+                                    <input type="checkbox" class="form-check-input select-all-group"
+                                        data-bs-toggle="tooltip" title="Pilih semua di kelas ini">
+                                </th>
+                            @endif
                             <th rowspan="2" class="text-center fw-bold" width="5%">No</th>
                             <th rowspan="2" class="fw-bold">Kode</th>
                             <th rowspan="2" class="fw-bold">Mata Kuliah</th>
-                            <th colspan="4" class="text-center border py-0 fw-bold">SKS</th>
+                            <th colspan="4" class="text-center border-start border-end py-0 fw-bold">SKS</th>
                             <th rowspan="2" class="fw-bold">Dosen Pengampu</th>
                             <th rowspan="2" class="fw-bold">Dosen Team / PDDIKTI</th>
                             <th rowspan="2" class="fw-bold">Referensi</th>
@@ -350,7 +358,10 @@
                             @endif
                         </tr>
                         <tr>
-                            <th class="text-center border py-0" width="5%"><small>T</small></th>
+                            @if (!$isLocked)
+                                <th class="py-0 border-none"></th>
+                            @endif
+                            <th class="text-center border-start border-top py-0" width="5%"><small>T</small></th>
                             <th class="text-center border py-0" width="5%"><small>P</small></th>
                             <th class="text-center border py-0" width="5%"><small>L</small></th>
                             <th class="text-center border py-0" width="5%"><small>JML</small></th>
@@ -363,6 +374,12 @@
                                 $dist = $dists->first();
                             @endphp
                             <tr>
+                                @if (!$isLocked)
+                                    <td class="text-center">
+                                        <input type="checkbox" class="form-check-input item-checkbox"
+                                            value="{{ $dist->id }}">
+                                    </td>
+                                @endif
                                 <td class="text-center">{{ $loop->iteration }}</td>
                                 <td><span class="badge bg-label-dark">{{ $dist->course->code ?? '-' }}</span></td>
                                 <td>
@@ -375,10 +392,7 @@
                                 <td class="text-center fw-bold border">{{ $dist->course->sksTotal }}</td>
                                 <td>
                                     @if ($dist->user)
-                                        <div class="mb-1 text-primary">
-                                            <i class="bx bx-star"></i> <strong>{{ $dist->user->name }}</strong>
-                                            <small>(Koord)</small>
-                                        </div>
+                                        <small>{{ $dist->user->name }}</small>
                                     @endif
                                     @if ($dist->teachingLecturers->count() > 0)
                                         <ul class="list-unstyled mb-0 small">
@@ -389,7 +403,7 @@
                                             @endforeach
                                         </ul>
                                     @else
-                                        <span class="text-muted small">- Tidak ada anggota -</span>
+                                        <span class="text-danger small">- Belum Ada Pengajar -</span>
                                     @endif
                                 </td>
                                 <td>
@@ -397,15 +411,17 @@
                                         <ul class="list-unstyled mb-0 small text-secondary">
                                             @foreach ($dist->pddiktiLecturers as $dosen)
                                                 <li><i class="bx bx-check-circle text-success"
-                                                        style="font-size: 0.8rem"></i> {{ $dosen->name }}</li>
+                                                        style="font-size: 0.8rem"></i> {{ $dosen->name }}
+                                                </li>
                                             @endforeach
                                         </ul>
                                     @else
                                         <span class="badge bg-label-warning">Belum Lapor</span>
                                     @endif
                                 </td>
-                                <td>{{ $dist->referensi }}</td>
-                                <td>{{ $dist->luaran }}</td>
+
+                                <td>{{ $dist->referensi ?? '-' }}</td>
+                                <td>{{ $dist->luaran ?? '-' }}</td>
 
                                 @if (!$isLocked)
                                     <td>
@@ -416,6 +432,9 @@
                                                 data-study-class-id="{{ $dist->study_class_id }}"
                                                 data-course-id="{{ $dist->course_id }}"
                                                 data-referensi="{{ $dist->referensi }}"
+                                                data-luaran="{{ $dist->luaran }}"
+                                                data-teaching-ids="{{ $dist->teachingLecturers->pluck('id') }}"
+                                                data-pddikti-ids="{{ $dist->pddiktiLecturers->pluck('id') }}"
                                                 data-url="{{ route('distribusi-mata-kuliah.edit', $dist->id) }}"
                                                 data-action="{{ route('distribusi-mata-kuliah.update', $dist->id) }}">
                                                 <i class="bx bx-edit"></i>
@@ -447,6 +466,31 @@
         </div>
     @endforelse
 
+    {{-- FLOATING ACTION BAR FOR MASS DELETE --}}
+    <div id="bulkDeleteBar"
+        class="card position-fixed bottom-0 start-50 translate-middle-x mb-4 shadow-lg border-primary d-none"
+        style="z-index: 1050; width: 90%; max-width: 600px; border-top: 5px solid #696cff;">
+        <div class="card-body d-flex justify-content-between align-items-center p-3">
+            <div>
+                <span class="fw-bold text-primary"><span id="selectedCount">0</span> Item Dipilih</span>
+                <small class="text-muted d-block">Siap untuk dihapus</small>
+            </div>
+            <div>
+                <form action="{{ route('distribusi-mata-kuliah.bulk-destroy') }}" method="POST" id="bulkDeleteForm">
+                    @csrf
+                    @method('DELETE')
+                    {{-- Input hidden ini akan diisi via JS --}}
+                    <div id="bulkDeleteInputs"></div>
+
+                    <button type="button" class="btn btn-label-secondary me-2" id="btnCancelBulk">Batal</button>
+                    <button type="button" class="btn btn-danger" id="btnConfirmBulk">
+                        <i class="bx bx-trash me-1"></i> Hapus Terpilih
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+
     {{-- edit manual --}}
     <div class="offcanvas offcanvas-end" tabindex="-1" id="offcanvasAddDistribusi"
         aria-labelledby="offcanvasAddDistribusiLabel">
@@ -456,11 +500,12 @@
         </div>
         <div class="offcanvas-body mx-0 grow-0 p-6 h-100">
             <form class="add-new-distribusi pt-0" id="addNewDistribusiForm"
-                action="{{ route('distribusi-mata-kuliah.create') }}" method="POST">
+                action="{{ route('distribusi-mata-kuliah.store') }}" method="POST">
                 @csrf
                 <div class="mb-3">
                     <label class="form-label">Kelas</label>
-                    <select name="study_class_id" id="selectKelas" class="form-select select2" required>
+                    <select name="study_class_id" id="selectKelas" class="form-select select2-edit"
+                        aria-placeholder="pilih kelas" required>
                         <option value="">Pilih Kelas</option>
                         @foreach ($classes as $kelas)
                             <option value="{{ $kelas->id }}">
@@ -471,7 +516,7 @@
                 </div>
                 <div class="mb-3">
                     <label class="form-label">Mata Kuliah</label>
-                    <select name="course_id" id="selectMatkul" class="form-select select2" required>
+                    <select name="course_id" id="selectMatkul" class="form-select select2-edit" required>
                         <option value=""> Pilih Kelas Terlebih Dahulu </option>
                     </select>
                     <small class="text-muted">Mata kuliah otomatis muncul sesuai kurikulum kelas yang dipilih.</small>
@@ -519,7 +564,7 @@
     {{-- modal import data biasa --}}
     {{-- <div class="modal fade" id="importModal" tabindex="-1">
         <div class="modal-dialog">
-            <form action="{{ route('distribusi-matkul.import') }}" method="POST" enctype="multipart/form-data">
+            <form action="{{ route('distribusi-mata-kuliah.import') }}" method="POST" enctype="multipart/form-data">
                 @csrf
                 <div class="modal-content">
                     <div class="modal-header">
@@ -528,7 +573,7 @@
                     </div>
                     <div class="modal-body">
                         <div class="alert alert-info">
-                            <small>Download format excel: <a href="{{ route('distribusi-matkul.template') }}"
+                            <small>Download format excel: <a href="{{ route('distribusi-mata-kuliah.template') }}"
                                     class="fw-bold">Klik Disini</a></small>
                         </div>
 
@@ -742,8 +787,16 @@
                     if (window.$) {
                         $('#selectKelas').val(d.studyClassId).trigger('change');
                         loadCourses(d.studyClassId, d.courseId);
-                        $('#edit_pddikti_ids').val(d.userId).trigger('change');
-                        $('#edit_teaching_ids').val(d.pddiktiUserId).trigger('change');
+
+                        if (d.teachingIds) {
+                            var teachingIds = JSON.parse(d.teachingIds);
+                            $('#edit_teaching_ids').val(teachingIds).trigger('change');
+                        }
+
+                        if (d.pddiktiIds) {
+                            var pddiktiIds = JSON.parse(d.pddiktiIds);
+                            $('#edit_pddikti_ids').val(pddiktiIds).trigger('change');
+                        }
                     }
                 }
             });
@@ -904,6 +957,106 @@
             //         wheelPropagation: false
             //     });
             // });
+        });
+    </script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const bulkDeleteBar = document.getElementById('bulkDeleteBar');
+            const selectedCountSpan = document.getElementById('selectedCount');
+            const bulkDeleteInputs = document.getElementById('bulkDeleteInputs');
+            const bulkDeleteForm = document.getElementById('bulkDeleteForm');
+            let selectedIds = new Set();
+
+            // 1. Handle Select All per Group (Per Kelas)
+            document.querySelectorAll('.select-all-group').forEach(headerCheckbox => {
+                headerCheckbox.addEventListener('change', function() {
+                    const table = this.closest('table');
+                    const checkboxes = table.querySelectorAll('.item-checkbox');
+
+                    checkboxes.forEach(cb => {
+                        cb.checked = this.checked;
+                        updateSelection(cb.value, this.checked);
+                    });
+                    updateUI();
+                });
+            });
+
+            // 2. Handle Individual Checkbox
+            document.body.addEventListener('change', function(e) {
+                if (e.target.classList.contains('item-checkbox')) {
+                    updateSelection(e.target.value, e.target.checked);
+                    updateUI();
+
+                    // Uncheck header "Select All" jika ada satu item diuncheck
+                    const table = e.target.closest('table');
+                    const headerCheckbox = table.querySelector('.select-all-group');
+                    if (!e.target.checked && headerCheckbox) {
+                        headerCheckbox.checked = false;
+                    }
+                }
+            });
+
+            // Helper: Update Set ID
+            function updateSelection(id, isSelected) {
+                if (isSelected) {
+                    selectedIds.add(id);
+                } else {
+                    selectedIds.delete(id);
+                }
+            }
+
+            // Helper: Update Tampilan Bar
+            function updateUI() {
+                selectedCountSpan.textContent = selectedIds.size;
+
+                if (selectedIds.size > 0) {
+                    bulkDeleteBar.classList.remove('d-none');
+                    bulkDeleteBar.classList.add('d-flex'); // Supaya flexbox jalan
+                } else {
+                    bulkDeleteBar.classList.add('d-none');
+                    bulkDeleteBar.classList.remove('d-flex');
+                }
+            }
+
+            // 3. Tombol Batal
+            document.getElementById('btnCancelBulk').addEventListener('click', function() {
+                selectedIds.clear();
+                document.querySelectorAll('.item-checkbox, .select-all-group').forEach(cb => cb.checked =
+                    false);
+                updateUI();
+            });
+
+            // 4. Tombol Konfirmasi Hapus (SweetAlert)
+            document.getElementById('btnConfirmBulk').addEventListener('click', function() {
+                Swal.fire({
+                    title: 'Hapus ' + selectedIds.size + ' Data?',
+                    text: "Anda akan menghapus distribusi mata kuliah yang dipilih. Data yang sudah ada jadwalnya mungkin tidak akan terhapus.",
+                    icon: 'warning',
+                    showCancelButton: true,
+                    confirmButtonText: 'Ya, Hapus Semua!',
+                    cancelButtonText: 'Batal',
+                    customClass: {
+                        confirmButton: 'btn btn-danger me-3',
+                        cancelButton: 'btn btn-secondary'
+                    },
+                    buttonsStyling: false
+                }).then((result) => {
+                    if (result.isConfirmed) {
+                        // Masukkan ID ke form
+                        bulkDeleteInputs.innerHTML = '';
+                        selectedIds.forEach(id => {
+                            const input = document.createElement('input');
+                            input.type = 'hidden';
+                            input.name = 'ids[]';
+                            input.value = id;
+                            bulkDeleteInputs.appendChild(input);
+                        });
+
+                        // Submit
+                        bulkDeleteForm.submit();
+                    }
+                });
+            });
         });
     </script>
 @endsection

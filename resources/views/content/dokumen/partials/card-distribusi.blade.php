@@ -85,7 +85,7 @@
                 // Arahkan ke halaman index masing-masing fitur dengan filter yang sesuai
                 switch ($doc->type) {
                     case 'distribusi_matkul':
-                        $urlDetail = route('distribusi-matkul.show-doc', $doc->id);
+                        $urlDetail = route('distribusi-mata-kuliah.show-doc', $doc->id);
                         break;
                     // case 'beban_kerja_dosen':
                     //     $urlDetail = route('beban-kerja-dosen.show-doc', $doc->id);
@@ -137,7 +137,7 @@
                     // Arahkan ke halaman index masing-masing fitur dengan filter yang sesuai
                     switch ($doc->type) {
                         case 'distribusi_matkul':
-                            $urlPrint = route('distribusi-matkul.print', $doc->id);
+                            $urlPrint = route('distribusi-mata-kuliah.print', $doc->id);
                             break;
                         // case 'beban_kerja_dosen':
                         //     $urlPrint = route('beban-kerja-dosen.print', $doc->id);

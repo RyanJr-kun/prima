@@ -54,4 +54,63 @@ class Room extends Model
 
         return $this->prodis()->where('prodis.id', $prodiId)->exists();
     }
+
+    const TAG_LABELS = [
+        // UMUM
+        'general'        => 'Umum (AC, Proyektor)',
+
+        // IT & TEKNIK (Biru)
+        'computer'       => 'Lab Komputer',
+        'network_iot'    => 'Jaringan & IoT',
+        'automotive'     => 'Mesin & Otomotif',
+        'broadcasting'   => 'Broadcasting',
+
+        // BISNIS (Ungu)
+        'retail_sim'     => 'Simulasi Ritel',
+        'kitchen_resto'  => 'Kitchen & Resto',
+
+        // KESEHATAN (Hijau)
+        'medical_record' => 'Rekam Medis',
+        'microscope'     => 'Mikroskop/Bio',
+        'chemistry'      => 'Lab Kimia',
+        'bio_molecular'  => 'Bio Molekuler',
+        'pharmacy_tool'  => 'Alat Farmasi',
+        'anatomy_bed'    => 'Anatomi/Bed',
+    ];
+
+    /**
+     * Helper untuk mendapatkan Label Warna Badge
+     */
+    public static function getTagColor($key)
+    {
+        $colors = [
+            'general'        => 'secondary', // Abu-abu
+
+            'computer'       => 'info',      // Biru Muda
+            'network_iot'    => 'info',
+            'automotive'     => 'warning',   // Kuning/Oranye
+            'broadcasting'   => 'warning',
+
+            'retail_sim'     => 'primary',   // Ungu/Biru Tua
+            'kitchen_resto'  => 'danger',    // Merah
+
+            // Default Kesehatan = Hijau
+            'medical_record' => 'success',
+            'microscope'     => 'success',
+            'chemistry'      => 'success',
+            'bio_molecular'  => 'success',
+            'pharmacy_tool'  => 'success',
+            'anatomy_bed'    => 'success',
+        ];
+
+        return $colors[$key] ?? 'dark'; // Default hitam jika tidak dikenal
+    }
+
+    /**
+     * Helper ambil nama text
+     */
+    public static function getTagName($key)
+    {
+        return self::TAG_LABELS[$key] ?? ucfirst($key);
+    }
 }

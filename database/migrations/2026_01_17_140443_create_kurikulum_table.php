@@ -13,6 +13,7 @@ return new class extends Migration
     {
         Schema::create('kurikulums', function (Blueprint $table) {
             $table->id();
+            $table->string('code')->nullable()->index();
             $table->string('name');
             $table->date('tanggal')->nullable();
             $table->foreignId('prodi_id')->constrained('prodis');

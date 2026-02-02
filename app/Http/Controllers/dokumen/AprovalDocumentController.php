@@ -93,11 +93,30 @@ class AprovalDocumentController extends Controller
     public function approve(Request $request, $id)
     {
         $doc = AprovalDocument::findOrFail($id);
-
         /** @var \App\Models\User $user */
         $user = Auth::user();
 
+
         if ($doc->type == 'kalender_akademik') {
+            if ($user->hasRole('wadir1') && $doc->status == 'submitted') {
+                $doc->update([
+                    'status' => 'approved_wadir1',
+                    'action_by_user_id' => $user->id,
+                    'feedback_message' => null
+                ]);
+                return back()->with('success', 'Kalender Akademik disetujui Wadir 1. Menunggu Direktur.');
+            }
+
+            if ($user->hasRole('direktur') && $doc->status == 'approved_wadir1') {
+                $doc->update([
+                    'status' => 'approved_direktur',
+                    'action_by_user_id' => $user->id
+                ]);
+                return back()->with('success', 'Kalender Akademik Disahkan!');
+            }
+        }
+
+        if ($doc->type == 'jadwal_perkuliahan') {
             if ($user->hasRole('wadir1') && $doc->status == 'submitted') {
                 $doc->update([
                     'status' => 'approved_wadir1',
@@ -135,6 +154,7 @@ class AprovalDocumentController extends Controller
             'action_by_user_id' => $user->id,
             'feedback_message' => null
         ]);
+
 
         return back()->with('success', 'Dokumen berhasil disetujui dan diteruskan.');
     }

@@ -70,6 +70,18 @@ class TimeSlotSeeder extends Seeder
         // Tapi day_group 'malam_senin_jumat' untuk membedakan pola jamnya
         $this->insertSlots($slotsKaryawanWeekday, 'malam', 'senin_jumat');
 
+        $slotsPagiSabtu = [
+            ['08:00', '08:50'], // 1
+            ['08:50', '09:40'], // 2
+            ['09:40', '10:30'], // 3
+            ['10:30', '11:20'], // 4
+            ['11:20', '12:10'], // 5
+            // Istirahat 12:10 - 13:00
+            ['13:00', '13:50'], // 6
+        ];
+        // Perhatikan parameter ke-2 adalah 'pagi'
+        $this->insertSlots($slotsPagiSabtu, 'pagi', 'sabtu');
+
 
         // D. Sabtu (08:00 - 15:30) - Full Day 50 Menit
         $slotsKaryawanSabtu = [

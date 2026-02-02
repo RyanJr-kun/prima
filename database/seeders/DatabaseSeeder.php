@@ -14,12 +14,12 @@ class DatabaseSeeder extends Seeder
             ProdiSeeder::class,
             KurikulumSeeder::class,
             RoomSeeder::class,
+            TimeSlotSeeder::class,
         ]);
 
         \App\Models\AcademicPeriod::create([
             'name' => 'Ganjil 2025/2026',
             'is_active' => true,
-            'distribution_status' => \App\Enums\DistributionStatus::DRAFT,
         ]);
     }
 }

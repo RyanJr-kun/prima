@@ -19,6 +19,7 @@ class UserController extends Controller
 {
     public function index()
     {
+
         $data = User::with('roles')->orderBy('id', 'DESC')->get();
         $roles = Role::pluck('name', 'name')->all();
         return view('content.authentications.user', compact('data', 'roles'));

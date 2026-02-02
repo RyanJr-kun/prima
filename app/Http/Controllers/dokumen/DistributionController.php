@@ -111,12 +111,13 @@ class DistributionController extends Controller
         //
     }
 
+
     public function store(Request $request)
     {
         $request->validate([
             'study_class_id' => 'required|exists:study_classes,id',
             'course_id'      => 'required|exists:courses,id',
-            'user_id'        => 'required|exists:users,id',
+            'user_id'        => 'nullable|exists:users,id',
             'referensi'      => 'nullable|string',
             'luaran'         => 'nullable|string',
         ]);
@@ -136,26 +137,37 @@ class DistributionController extends Controller
             return back()->with('error', 'Mata kuliah ini sudah didistribusikan di kelas tersebut!');
         }
 
+        DB::beginTransaction();
+
         try {
             $dist = CourseDistribution::create([
                 'academic_period_id' => $activePeriod->id,
                 'study_class_id'     => $request->study_class_id,
                 'course_id'          => $request->course_id,
-                'user_id'            => $request->user_id,
                 'referensi'          => $request->referensi,
                 'luaran'             => $request->luaran,
             ]);
-            $lecturerData = [
-                ['course_distribution_id' => $dist->id, 'user_id' => $request->user_id, 'category' => 'real_teaching'],
-                ['course_distribution_id' => $dist->id, 'user_id' => $request->user_id, 'category' => 'pddikti_reporting']
-            ];
 
-            DB::table('course_lecturers')->insert($lecturerData);
+            if ($request->filled('user_id')) {
+                $dist->teachingLecturers()->attach($request->user_id, [
+                    'category' => 'real_teaching'
+                ]);
+
+                $dist->pddiktiLecturers()->attach($request->user_id, [
+                    'category' => 'pddikti_reporting'
+                ]);
+            }
+
             DB::commit();
-            return redirect()->route('distribusi-mata-kuliah.index')->with('success', 'Distribusi berhasil ditambahkan!');
+
+            return redirect()
+                ->route('distribusi-mata-kuliah.index')
+                ->with('success', 'Distribusi berhasil ditambahkan!');
         } catch (\Exception $e) {
             DB::rollBack();
-            return back()->with('error', 'Terjadi kesalahan server: ' . $e->getMessage());
+            return back()
+                ->withInput()
+                ->with('error', 'Terjadi kesalahan server: ' . $e->getMessage());
         }
     }
 
@@ -257,6 +269,41 @@ class DistributionController extends Controller
         }
     }
 
+    public function bulkDestroy(Request $request)
+    {
+        $request->validate([
+            'ids' => 'required|array',
+            'ids.*' => 'exists:course_distributions,id',
+        ]);
+
+        $ids = $request->ids;
+        $successCount = 0;
+        $failCount = 0;
+
+        foreach ($ids as $id) {
+            try {
+                $dist = CourseDistribution::findOrFail($id);
+                $dist->delete();
+                $successCount++;
+            } catch (\Illuminate\Database\QueryException $e) {
+                // Error 1451: Constraint Fails (Data sedang digunakan di Jadwal/Nilai)
+                if ($e->errorInfo[1] == 1451) {
+                    $failCount++;
+                }
+            } catch (\Exception $e) {
+                $failCount++;
+            }
+        }
+
+        $message = "Berhasil menghapus $successCount data.";
+        if ($failCount > 0) {
+            $message .= " ($failCount data gagal dihapus karena sedang digunakan).";
+            return redirect()->back()->with('warning', $message);
+        }
+
+        return redirect()->back()->with('success', $message);
+    }
+
     public function getCoursesByClass($classId)
     {
         $kelas = StudyClass::with('kurikulum')->find($classId);
@@ -305,11 +352,8 @@ class DistributionController extends Controller
         \Illuminate\Support\Facades\DB::beginTransaction();
 
         try {
-            // kelompokkan kelas berdasarkan "Kurikulum & Semester" yang sama.
-            // Tujuannya: Agar kita cukup query Mata Kuliah SEKALI saja per kelompok, 
-            // bukan per kelas.
             $groupedClasses = $classes->groupBy(function ($item) {
-                return $item->kurikulum_id . '-' . $item->semester;
+                return $item->kurikulum_id . '-' . $item->semester . '-' . $item->prodi_id;
             });
 
             foreach ($groupedClasses as $groupKey => $classList) {

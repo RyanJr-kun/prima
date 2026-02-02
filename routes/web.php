@@ -68,19 +68,22 @@ Route::middleware('auth')->group(function () {
 
     // Route Distribusi Matkul
     Route::resource('distribusi-mata-kuliah', DistributionController::class)->except('show');
+    Route::prefix('distribusi-mata-kuliah')->name('distribusi-mata-kuliah.')->group(function () {
+        Route::delete('bulk-destroy', [DistributionController::class, 'bulkDestroy'])->name('bulk-destroy');
+        Route::get('template', [DistributionController::class, 'downloadTemplate'])->name('template');
+        Route::post('import', [DistributionController::class, 'import'])->name('import');
+        Route::post('submit', [DistributionController::class, 'submitToKaprodi'])->name('submit');
+        Route::get('doc/{document}', [DistributionController::class, 'show'])->name('show-doc');
+        Route::get('{id}/print', [DistributionController::class, 'printPDF'])->name('print');
+    });
     Route::prefix('distributions')->name('distributions.')->group(function () {
         Route::post('/generate', [DistributionController::class, 'generate'])->name('generate');
         Route::get('/export/{period_id}', [DistributionController::class, 'export'])->name('export');
         Route::post('/import-update', [DistributionController::class, 'importUpdate'])->name('import-update');
     });
-    Route::get('distribusi-matkul/template', [DistributionController::class, 'downloadTemplate'])->name('distribusi-matkul.template');
-    Route::post('distribusi-matkul/import', [DistributionController::class, 'import'])->name('distribusi-matkul.import');
-    Route::post('/distribusi/submit', [DistributionController::class, 'submitToKaprodi'])->name('distribusi.submit');
-    Route::get('distribusi-matkul/doc/{document}', [DistributionController::class, 'show'])->name('distribusi-matkul.show-doc');
-    Route::get('distribusi-matkul/{id}/print', [DistributionController::class, 'printPDF'])->name('distribusi-matkul.print');
 
     // Beban kerja dosen
-    Route::resource('/beban-kerja-dosen', WorkloadController::class);
+    Route::resource('beban-kerja-dosen', WorkloadController::class);
     Route::prefix('beban-kerja-dosen')->name('beban-kerja-dosen.')->group(function () {
         // Route::get('/doc/{document}', [WorkloadController::class, 'show'])->name('beban-kerja-dosen.show-doc');
         // Route::post('/submit', [WorkloadController::class, 'submitValidation'])->name('beban-kerja-dosen.submit');
@@ -98,18 +101,22 @@ Route::middleware('auth')->group(function () {
         Route::patch('/{id}/resize', [ScheduleController::class, 'resize'])->name('resize');
         Route::delete('/{id}', [ScheduleController::class, 'destroy'])->name('destroy');
         Route::get('/doc', [ScheduleController::class, 'show'])->name('show');
+        Route::post('/auto-generate', [ScheduleController::class, 'autoGenerate'])->name('auto-generate');
+        Route::get('{id}/print', [ScheduleController::class, 'printPDF'])->name('print');
     });
 
     // Route Kalender Akademik
-    Route::get('kalender-akademik/doc/{document}', [AcademicCalendarController::class, 'show'])->name('kalender-akademik.show-doc');
-    Route::post('kalender-akademik/submit', [AcademicCalendarController::class, 'submitValidation'])->name('kalender-akademik.submit');
-    Route::get('kalender-akademik/events', [AcademicCalendarController::class, 'getEvents'])->name('kalender-akademik.events');
-    Route::get('kalender-akademik/{id}/print', [AcademicCalendarController::class, 'printPdf'])->name('kalender-akademik.print');
     Route::resource('kalender-akademik', AcademicCalendarController::class)->except('show', 'edit', 'create');
+    Route::prefix('kalender-akademik')->name('kalender-akademik.')->group(function () {
+        Route::get('doc/{document}', [AcademicCalendarController::class, 'show'])->name('show-doc');
+        Route::post('submit', [AcademicCalendarController::class, 'submitValidation'])->name('submit');
+        Route::get('events', [AcademicCalendarController::class, 'getEvents'])->name('events');
+        Route::get('{id}/print', [AcademicCalendarController::class, 'printPdf'])->name('print');
+    });
 
     //dokumen aproval
+    Route::resource('documents', AprovalDocumentController::class)->only(['index', 'show', 'destroy']);
     Route::prefix('documents')->name('documents.')->group(function () {
-        Route::resource('/', AprovalDocumentController::class)->only(['index', 'show', 'destroy']);
         Route::post('/{id}/approve', [AprovalDocumentController::class, 'approve'])->name('approve');
         Route::post('/{id}/reject', [AprovalDocumentController::class, 'reject'])->name('reject');
         Route::post('/submit', [AprovalDocumentController::class, 'submit'])->name('submit');

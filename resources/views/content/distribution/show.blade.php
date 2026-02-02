@@ -82,7 +82,7 @@
                                             @endforeach
                                         </ul>
                                     @else
-                                        <span class="text-muted small">- Tidak ada anggota -</span>
+                                        <span class="text-danger small ">- Belum ada Pengajar -</span>
                                     @endif
                                 </td>
                                 <td>

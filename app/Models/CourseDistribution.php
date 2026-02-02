@@ -12,6 +12,7 @@ class CourseDistribution extends Model
         'academic_period_id',
         'study_class_id',
         'course_id',
+        'user_id',
         'referensi',
         'luaran',
     ];

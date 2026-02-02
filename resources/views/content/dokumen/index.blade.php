@@ -30,14 +30,23 @@
                 <div class="toast-body">{{ session('error') }}</div>
             </div>
         @endif
+
+        <div id="jsToast" class="bs-toast toast fade hide" role="alert" aria-live="assertive" aria-atomic="true">
+            <div class="toast-header">
+                <i class="icon-base bx bx-bell icon-xs me-2"></i>
+                <span class="fw-medium me-auto" id="jsToastTitle">Notifikasi</span>
+                <button type="button" class="btn-close" data-bs-dismiss="toast" aria-label="Close"></button>
+            </div>
+            <div class="toast-body" id="jsToastBody"></div>
+        </div>
     </div>
 
     <div class="card mb-4 ">
         @php
             $tabs = [
                 'distribusi_matkul' => ['icon' => 'bx-file', 'label' => 'Distribusi Matkul'],
+                'beban_kerja_dosen' => ['icon' => 'bx-user-check', 'label' => 'Laporan BKD'],
                 'jadwal_perkuliahan' => ['icon' => 'bx-calendar', 'label' => 'Jadwal Kuliah'],
-                'bkd' => ['icon' => 'bx-user-check', 'label' => 'Laporan BKD'],
                 'kalender_akademik' => ['icon' => 'bx-calendar-event', 'label' => 'Kalender Akademik'],
             ];
         @endphp
@@ -121,8 +130,30 @@
                         <div class="row g-4">
                             @foreach ($groupedDocs[$key] as $doc)
                                 <div class="col-md-6 col-lg-4">
-                                    {{-- COMPONENT CARD DOKUMEN --}}
-                                    @include('content.dokumen.partials.document-card', ['doc' => $doc])
+
+                                    {{-- LOGIKA PEMILIHAN PARTIAL --}}
+                                    @if ($key == 'kalender_akademik')
+                                        {{-- wadir 1 -> direktur --}}
+                                        @include('content.dokumen.partials.card-kalender', ['doc' => $doc])
+                                    @elseif($key == 'distribusi_matkul')
+                                        {{-- kaprodi -> wadir1 -> wadir2 -> direktur --}}
+                                        @include('content.dokumen.partials.card-distribusi', [
+                                            'doc' => $doc,
+                                        ])
+                                    @elseif ($key == 'beban_kerja_dosen')
+                                        @include('content.dokumen.partials.card-bkd', [
+                                            'doc' => $doc,
+                                        ])
+                                    @elseif ($key == 'jadwal_perkuliahan')
+                                        @include('content.dokumen.partials.card-jadwal', [
+                                            'doc' => $doc,
+                                        ])
+                                    @else
+                                        @include('content.dokumen.partials.card-distribusi', [
+                                            'doc' => $doc,
+                                        ])
+                                    @endif
+
                                 </div>
                             @endforeach
                         </div>
@@ -172,7 +203,28 @@
 @endsection
 
 @section('page-script')
+
     <script>
+        function showJsToast(type, message) {
+            const toastEl = document.getElementById('jsToast');
+            const toastTitle = document.getElementById('jsToastTitle');
+            const toastBody = document.getElementById('jsToastBody');
+
+            // Reset kelas warna
+            toastEl.classList.remove('bg-primary', 'bg-danger');
+
+            if (type === 'success') {
+                toastEl.classList.add('bg-primary');
+                toastTitle.textContent = 'Berhasil';
+            } else {
+                toastEl.classList.add('bg-danger');
+                toastTitle.textContent = 'Error';
+            }
+
+            toastBody.textContent = message;
+            const toast = new bootstrap.Toast(toastEl);
+            toast.show();
+        }
         document.addEventListener('DOMContentLoaded', function() {
             // Handle Tombol Reject agar URL form dinamis sesuai ID Dokumen
             var rejectModal = document.getElementById('rejectModal');
@@ -245,6 +297,19 @@
                     });
                 }
             });
+
+            const successToast = document.getElementById('successToast');
+            if (successToast) {
+                new bootstrap.Toast(successToast, {
+                    delay: 5000
+                }).show();
+            }
+            const errorToast = document.getElementById('errorToast');
+            if (errorToast) {
+                new bootstrap.Toast(errorToast, {
+                    delay: 5000
+                }).show();
+            }
         });
     </script>
 @endsection

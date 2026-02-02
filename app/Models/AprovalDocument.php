@@ -13,6 +13,8 @@ class AprovalDocument extends Model
     protected $fillable = [
         'academic_period_id',
         'prodi_id',
+        'campus',
+        'shift',
         'type',
         'status',
         'feedback_message',
