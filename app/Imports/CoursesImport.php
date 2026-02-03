@@ -37,7 +37,7 @@ class CoursesImport implements OnEachRow, WithHeadingRow, WithChunkReading
 
         // 3. LOGIC PARSING TAGS (PENTING!)
         // Excel Input: "computer, network" -> PHP Array: ['computer', 'network']
-        $rawTags = $row['fasilitas'] ?? '';
+        $rawTags = $row['fasilitas_lihat_tab_sebelah'] ?? $row['fasilitas'] ?? '';
         $tagsArray = [];
 
         if (!empty($rawTags)) {
@@ -60,8 +60,6 @@ class CoursesImport implements OnEachRow, WithHeadingRow, WithChunkReading
                 'sks_teori'     => $row['sks_teori'] ?? 0,
                 'sks_praktik'   => $row['sks_praktik'] ?? 0,
                 'sks_lapangan'  => $row['sks_lapangan'] ?? 0,
-
-                // Masukkan array, Model Casting akan mengubahnya jadi JSON otomatis
                 'required_tags' => $tagsArray,
             ]
         );

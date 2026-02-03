@@ -39,54 +39,53 @@
         @endif
     </div>
 
-    @if (!$isLocked)
-        <div class="card mb-4">
-            <div class="card-body">
-                <form action="{{ route('distribusi-mata-kuliah.index') }}" method="GET">
-                    <div class="row g-3">
-                        <div class="col-md-4">
-                            <label class="form-label">Periode Akademik</label>
-                            <select name="period_id" class="form-select select2">
-                                @foreach ($periods as $p)
-                                    <option value="{{ $p->id }}"
-                                        {{ request('period_id', $activePeriod->id) == $p->id ? 'selected' : '' }}>
-                                        {{ $p->name }}
-                                    </option>
-                                @endforeach
-                            </select>
-                        </div>
-                        <div class="col-md-4">
-                            <label class="form-label">Program Studi</label>
-                            <select name="prodi_id" class="form-select select2">
-                                <option value="">Semua Program Studi</option>
-                                @foreach ($prodis as $prodi)
-                                    <option value="{{ $prodi->id }}"
-                                        {{ request('prodi_id') == $prodi->id ? 'selected' : '' }}>
-                                        {{ $prodi->jenjang }} - {{ $prodi->name }}
-                                    </option>
-                                @endforeach
-                            </select>
-                        </div>
-                        <div class="col-md-3">
-                            <label class="form-label">Semester</label>
-                            <select name="semester" class="form-select select2">
-                                <option value="">Semua Semester</option>
-                                @for ($i = 1; $i <= 8; $i++)
-                                    <option value="{{ $i }}" {{ request('semester') == $i ? 'selected' : '' }}>
-                                        Semester {{ $i }}
-                                    </option>
-                                @endfor
-                            </select>
-                        </div>
-                        <div class="col-md-1 d-flex align-items-end">
-                            <button type="submit" class="btn btn-primary w-100" title="Filter Data"><i
-                                    class='bx bx-filter-alt'></i>&nbsp;Filter</button>
-                        </div>
+
+    <div class="card mb-4">
+        <div class="card-body">
+            <form action="{{ route('distribusi-mata-kuliah.index') }}" method="GET">
+                <div class="row g-3">
+                    <div class="col-md-4">
+                        <label class="form-label">Periode Akademik</label>
+                        <select name="period_id" class="form-select select2">
+                            @foreach ($periods as $p)
+                                <option value="{{ $p->id }}"
+                                    {{ request('period_id', $activePeriod->id) == $p->id ? 'selected' : '' }}>
+                                    {{ $p->name }}
+                                </option>
+                            @endforeach
+                        </select>
                     </div>
-                </form>
-            </div>
+                    <div class="col-md-4">
+                        <label class="form-label">Program Studi</label>
+                        <select name="prodi_id" class="form-select select2">
+                            <option value="">Semua Program Studi</option>
+                            @foreach ($prodis as $prodi)
+                                <option value="{{ $prodi->id }}"
+                                    {{ request('prodi_id') == $prodi->id ? 'selected' : '' }}>
+                                    {{ $prodi->jenjang }} - {{ $prodi->name }}
+                                </option>
+                            @endforeach
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label">Semester</label>
+                        <select name="semester" class="form-select select2">
+                            <option value="">Semua Semester</option>
+                            @for ($i = 1; $i <= 8; $i++)
+                                <option value="{{ $i }}" {{ request('semester') == $i ? 'selected' : '' }}>
+                                    Semester {{ $i }}
+                                </option>
+                            @endfor
+                        </select>
+                    </div>
+                    <div class="col-md-1 d-flex align-items-end">
+                        <button type="submit" class="btn btn-primary w-100" title="Filter Data"><i
+                                class='bx bx-filter-alt'></i>&nbsp;Filter</button>
+                    </div>
+                </div>
+            </form>
         </div>
-    @endif
+    </div>
     {{-- LOGIC STATUS DOKUMEN & TOMBOL SUBMIT Versi Desktop --}}
     @if (request('prodi_id') && $activePeriod)
         <div class="card shadow mb-4 d-none d-md-block bg-label-{{ $documentData ? $documentData->status_color : '' }}">

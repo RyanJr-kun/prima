@@ -67,15 +67,15 @@ Route::middleware('auth')->group(function () {
 
 
     // Route Distribusi Matkul
-    Route::resource('distribusi-mata-kuliah', DistributionController::class)->except('show');
     Route::prefix('distribusi-mata-kuliah')->name('distribusi-mata-kuliah.')->group(function () {
-        Route::delete('bulk-destroy', [DistributionController::class, 'bulkDestroy'])->name('bulk-destroy');
-        Route::get('template', [DistributionController::class, 'downloadTemplate'])->name('template');
-        Route::post('import', [DistributionController::class, 'import'])->name('import');
-        Route::post('submit', [DistributionController::class, 'submitToKaprodi'])->name('submit');
-        Route::get('doc/{document}', [DistributionController::class, 'show'])->name('show-doc');
-        Route::get('{id}/print', [DistributionController::class, 'printPDF'])->name('print');
+        Route::delete('/bulk-destroy', [DistributionController::class, 'bulkDestroy'])->name('bulk-destroy');
+        Route::get('/template', [DistributionController::class, 'downloadTemplate'])->name('template');
+        Route::post('/import', [DistributionController::class, 'import'])->name('import');
+        Route::post('/submit', [DistributionController::class, 'submitToKaprodi'])->name('submit');
+        Route::get('/doc/{document}', [DistributionController::class, 'show'])->name('show-doc');
+        Route::get('/{id}/print', [DistributionController::class, 'printPDF'])->name('print');
     });
+    Route::resource('distribusi-mata-kuliah', DistributionController::class)->except('show');
     Route::prefix('distributions')->name('distributions.')->group(function () {
         Route::post('/generate', [DistributionController::class, 'generate'])->name('generate');
         Route::get('/export/{period_id}', [DistributionController::class, 'export'])->name('export');

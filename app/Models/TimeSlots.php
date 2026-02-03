@@ -53,19 +53,20 @@ class TimeSlots extends Model
     {
         $dayGroup = null;
 
+        $targetShift = $isKaryawan ? 'malam' : 'pagi';
+        $query->where('shift', $targetShift);
+
         if ($isKaryawan) {
-            // --- LOGIKA KARYAWAN ---
             if ($englishDayName === 'Saturday') {
                 $dayGroup = 'sabtu';
             } else {
-                // UBAH DISINI: Dari 'senin_jumat_malam' menjadi 'senin_jumat'
-                // Agar sesuai dengan enum di migration database Anda
                 $dayGroup = 'senin_jumat';
             }
         } else {
-            // --- LOGIKA REGULER ---
             if ($englishDayName === 'Friday') {
                 $dayGroup = 'jumat';
+            } elseif ($englishDayName === 'Saturday') {
+                $dayGroup = 'sabtu';
             } elseif (in_array($englishDayName, ['Monday', 'Tuesday', 'Wednesday', 'Thursday'])) {
                 $dayGroup = 'senin_kamis';
             }
@@ -74,7 +75,6 @@ class TimeSlots extends Model
         if ($dayGroup) {
             return $query->where('day_group', $dayGroup);
         }
-
         return $query->where('id', -1);
     }
 }

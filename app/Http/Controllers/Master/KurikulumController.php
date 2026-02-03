@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Master;
 
+use App\Models\Prodi;
 use App\Models\Kurikulum;
 use Illuminate\Http\Request;
 use App\Services\SiakadSyncService;
@@ -13,8 +14,8 @@ class KurikulumController extends Controller
 {
     public function index()
     {
-        $prodis = \App\Models\Prodi::all();
-        $kurikulums = Kurikulum::all();
+        $prodis = Prodi::all();
+        $kurikulums = Kurikulum::with('prodi')->get();
         return view('content.master.kurikulum.index', compact('kurikulums', 'prodis'));
     }
 

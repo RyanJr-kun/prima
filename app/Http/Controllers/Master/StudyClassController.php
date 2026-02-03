@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Master;
 
 use App\Models\User;
+use App\Models\Prodi;
 use App\Models\Kurikulum;
 use App\Models\StudyClass;
 use Illuminate\Http\Request;
@@ -22,12 +23,21 @@ class StudyClassController extends Controller
         $periods = AcademicPeriod::orderBy('name', 'desc')->get();
         $activePeriod = $periods->where('is_active', true)->first();
 
+        if (!$activePeriod && $periods->isNotEmpty()) {
+            $activePeriod = $periods->first();
+        }
 
-        $prodis = \App\Models\Prodi::all();
-        $dosens = User::role('dosen')->get();
+
+        $prodis = Prodi::all();
+        $dosens = User::role('dosen')->select('id', 'name')->orderBy('name')->get();
         $kurikulums = Kurikulum::where('is_active', true)->get();
 
-        $query = StudyClass::with(['academicAdvisor', 'kurikulum', 'prodi'])
+        $query = StudyClass::with([
+            'academicAdvisor',
+            'kurikulum',
+            'prodi',
+            'period'
+        ])
             ->select('study_classes.*') // Penting: Pilih kolom study_classes saja agar ID tidak tertimpa
             ->join('prodis', 'study_classes.prodi_id', '=', 'prodis.id') // Join ke tabel prodi
             ->where('study_classes.academic_period_id', $activePeriod->id ?? 0);
@@ -56,7 +66,12 @@ class StudyClassController extends Controller
 
         $classes = $query->get();
 
-        // Ambil list angkatan yang ada di periode ini untuk dropdown filter
+        if ($activePeriod) {
+            $classes->each(function ($class) use ($activePeriod) {
+                $class->setRelation('period', $activePeriod);
+            });
+        }
+
         $angkatans = StudyClass::where('academic_period_id', $activePeriod->id ?? 0)
             ->select('angkatan')->distinct()->orderBy('angkatan', 'desc')->pluck('angkatan');
 

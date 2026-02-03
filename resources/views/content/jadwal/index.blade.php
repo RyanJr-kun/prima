@@ -191,8 +191,15 @@
                             $lecturers = $dist->teachingLecturers;
                             $primaryLecturerId = $lecturers->first()->id ?? null;
                             $dosenNames = $lecturers->pluck('name')->join(', ');
-                            $sks = $dist->course->sks_total ?? 2;
-                            $durationMinutes = $sks * 50;
+                            $sks = $dist->course->sks_total;
+
+                            if ($sks > 1) {
+                                $effectiveSks = $sks - 1;
+                            } else {
+                                $effectiveSks = 1; // Minimal 1 sesi tatap muka
+                            }
+                            $durationMinutes = $effectiveSks * 50;
+
                             $hours = floor($durationMinutes / 60);
                             $minutes = $durationMinutes % 60;
                             $durationString = sprintf('%02d:%02d', $hours, $minutes);

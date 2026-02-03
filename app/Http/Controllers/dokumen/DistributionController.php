@@ -29,7 +29,7 @@ class DistributionController extends Controller
         $periods = AcademicPeriod::orderBy('name', 'desc')->get();
 
         if ($request->has('period_id')) {
-            $activePeriod = $periods->where('id', $request->period_id)->first();
+            $activePeriod = $periods->find($request->period_id);
         } else {
             $activePeriod = $periods->where('is_active', true)->first();
         }
@@ -42,21 +42,25 @@ class DistributionController extends Controller
             return redirect()->back()->with('error', 'Belum ada Periode Akademik yang tersedia!');
         }
 
-        $prodis = Prodi::all();
-        $query = CourseDistribution::with([
-            'studyClass.prodi',
-            'course',
-            'teachingLecturers',
-            'pddiktiLecturers'
-        ])
+        $query = CourseDistribution::query()
+            ->with([
+                'studyClass.prodi',
+                'studyClass.academicAdvisor',
+                'studyClass.kurikulum',
+                'course',
+                'teachingLecturers',
+                'pddiktiLecturers'
+            ])
             ->where('academic_period_id', $activePeriod->id);
 
+        // Filter Prodi
         if ($request->filled('prodi_id')) {
             $query->whereHas('studyClass', function ($q) use ($request) {
                 $q->where('prodi_id', $request->prodi_id);
             });
         }
 
+        // Filter Semester
         if ($request->filled('semester')) {
             $query->whereHas('studyClass', function ($q) use ($request) {
                 $q->where('semester', $request->semester);
@@ -72,32 +76,32 @@ class DistributionController extends Controller
                 $item->studyClass->shift;
         });
 
-        $study_classes = StudyClass::with('prodi')
+        $classes = StudyClass::with('prodi')
             ->where('academic_period_id', $activePeriod->id)
             ->get();
 
-        $activePeriod = $periods->firstwhere('is_active', true)->firstOrFail();
-        $classes = StudyClass::where('academic_period_id', $activePeriod->id)->get();
+        $prodis = Prodi::all();
         $dosens = User::role('dosen')->select('id', 'name')->orderBy('name')->get();
 
-        $documentStatus = null;
+        $documentStatus = 'draft';
         $documentData = null;
 
-        if ($activePeriod && $request->filled('prodi_id')) {
+        if ($request->filled('prodi_id')) {
             $documentData = AprovalDocument::where([
                 'academic_period_id' => $activePeriod->id,
                 'prodi_id'           => $request->prodi_id,
                 'type'               => 'distribusi_matkul'
             ])->first();
 
-            $documentStatus = $documentData ? $documentData->status : 'draft';
+            if ($documentData) {
+                $documentStatus = $documentData->status;
+            }
         }
 
         return view('content.distribution.index', compact(
             'distributions',
             'activePeriod',
             'periods',
-            'study_classes',
             'prodis',
             'dosens',
             'classes',

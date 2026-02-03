@@ -63,7 +63,7 @@
                             <tr>
                                 <td class="text-center">{{ $loop->iteration }}</td>
                                 <td>{{ $dist->course->code }}</td>
-                                <td>{{ \Illuminate\Support\Str::limit($dist->course->name ?? '-', 25) }}</td>
+                                <td>{{ \Illuminate\Support\Str::limit($dist->course->name ?? '-', 40) }}</td>
                                 <td class="text-center">{{ $dist->course->sks_teori ?? 0 }}</td>
                                 <td class="text-center">{{ $dist->course->sks_praktik ?? 0 }}</td>
                                 <td class="text-center">{{ $dist->course->sks_lapangan ?? 0 }}</td>
@@ -77,7 +77,7 @@
                                         <ul class="list-unstyled mb-0 small">
                                             @foreach ($dist->teachingLecturers as $dosen)
                                                 @if ($dist->user_id !== $dosen->id)
-                                                    <li>{{ $dosen->name }}</li>
+                                                    <li>• {{ $dosen->name }}</li>
                                                 @endif
                                             @endforeach
                                         </ul>
@@ -89,7 +89,7 @@
                                     @if ($dist->pddiktiLecturers->count() > 0)
                                         <ul class="list-unstyled mb-0 small text-secondary">
                                             @foreach ($dist->pddiktiLecturers as $dosen)
-                                                <li>{{ $dosen->name }} <br></li>
+                                                <li>• {{ $dosen->name }} <br></li>
                                             @endforeach
                                         </ul>
                                     @else

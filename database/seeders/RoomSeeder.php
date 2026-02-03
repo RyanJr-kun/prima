@@ -33,7 +33,7 @@ class RoomSeeder extends Seeder
                 'location' => 'kampus_1',
                 'building' => 'Gedung A',
                 'floor' => 3,
-                'capacity' => 25,
+                'capacity' => 60,
                 'type' => 'teori',
                 'facility_tags' => ['general'],
                 'for_prodis' => ['BMR', 'PM', 'TRPL', 'TRO', 'HT', 'AP']
@@ -77,7 +77,7 @@ class RoomSeeder extends Seeder
                 'location' => 'kampus_1',
                 'building' => 'Gedung A',
                 'floor' => 3,
-                'capacity' => 20,
+                'capacity' => 30,
                 'type' => 'laboratorium',
                 'facility_tags' => ['broadcasting'], // Kamera, Green Screen
                 'for_prodis' => ['PM']
@@ -135,7 +135,7 @@ class RoomSeeder extends Seeder
                 'location' => 'kampus_1',
                 'building' => 'Gedung B',
                 'floor' => 1,
-                'capacity' => 25,
+                'capacity' => 60,
                 'type' => 'laboratorium',
                 'facility_tags' => ['kitchen_resto'],
                 'for_prodis' => ['HT']

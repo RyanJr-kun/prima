@@ -201,6 +201,8 @@ class ScheduleController extends Controller
 
         try {
             $distribution = CourseDistribution::findOrFail($request->course_distribution_id);
+            $studyClass = StudyClass::findOrFail($request->study_class_id);
+            $newStudentsCount = $studyClass->total_students;
 
             $isLecturerValid = $distribution->teachingLecturers()
                 ->where('users.id', $request->user_id)
@@ -216,7 +218,6 @@ class ScheduleController extends Controller
             $startTimeISO = Carbon::parse($request->start_time);
             $dayName      = $startTimeISO->format('l');
             $startTime    = $startTimeISO->format('H:i');
-
 
             $course = Course::findOrFail($request->course_id);
             $room   = Room::findOrFail($request->room_id);
@@ -238,8 +239,14 @@ class ScheduleController extends Controller
 
 
             $course = Course::findOrFail($request->course_id);
-            $sks    = $course->sks_total ?? 2;
-            $requiredMinutes = $sks * 50;
+            $sks = $course->sks_total;
+
+            if ($sks > 1) {
+                $effectiveSks = $sks - 1;
+            } else {
+                $effectiveSks = 1; // Minimal 1 sesi tatap muka
+            }
+            $requiredMinutes = $effectiveSks * 50;
 
             $studyClass = StudyClass::findOrFail($request->study_class_id);
             $isKaryawan = $studyClass->shift === 'malam';
@@ -289,23 +296,19 @@ class ScheduleController extends Controller
                 ], 422);
             }
 
-
             // 6. Cek Bentrok
-            $existingSchedules = Schedule::where('day', $dayName)->get();
+            $clashError = $this->checkClash(
+                $dayName,
+                $selectedSlotIds,
+                $request->room_id,
+                $request->user_id,
+                $request->study_class_id,
+                $request->course_id,
+                $newStudentsCount
+            );
 
-            foreach ($existingSchedules as $existing) {
-                $intersect = array_intersect($existing->time_slot_ids ?? [], $selectedSlotIds);
-                if (empty($intersect)) continue;
-
-                if ($existing->room_id == $request->room_id) {
-                    return response()->json(['success' => false, 'message' => "BENTROK RUANGAN! Ruang dipakai {$existing->studyClass->name}."], 422);
-                }
-                if ($existing->user_id == $request->user_id) {
-                    return response()->json(['success' => false, 'message' => "BENTROK DOSEN! Dosen sedang mengajar di {$existing->studyClass->name}."], 422);
-                }
-                if ($existing->study_class_id == $request->study_class_id) {
-                    return response()->json(['success' => false, 'message' => "BENTROK KELAS! {$existing->studyClass->name} sudah ada jadwal lain."], 422);
-                }
+            if ($clashError) {
+                return response()->json(['success' => false, 'message' => $clashError], 422);
             }
 
             // 8. SIMPAN (Versi Bersih)
@@ -337,7 +340,10 @@ class ScheduleController extends Controller
             $newStart = Carbon::parse($request->start_time);
             $newEnd   = Carbon::parse($request->end_time);
             $dayName  = $newStart->format('l');
+            $studyClass = StudyClass::findOrFail($request->study_class_id);
+            $newStudentsCount = $studyClass->total_students;
             $isKaryawan = $schedule->studyClass->shift === 'malam';
+
 
             $slots = TimeSlots::forDay($dayName, $isKaryawan)
                 ->whereTime('start_time', '>=', $newStart->format('H:i:s'))
@@ -355,11 +361,13 @@ class ScheduleController extends Controller
 
             $clashError = $this->checkClash(
                 $dayName,
-                $slots,
-                $schedule->room_id,
+                $selectedSlotIds,
+                $request->room_id,
                 $schedule->user_id,
                 $schedule->study_class_id,
-                $schedule->id
+                $schedule->course_id,     // <--- Parameter Baru
+                $newStudentsCount,        // <--- Parameter Baru
+                $schedule->id             // Exclude ID sendiri
             );
 
             if ($clashError) {
@@ -388,13 +396,20 @@ class ScheduleController extends Controller
         ]);
 
         try {
-            $schedule = Schedule::findOrFail($id);
+            $schedule = Schedule::with(['course', 'studyClass', 'room'])->findOrFail($id);
+            $newStudentsCount = $schedule->studyClass->total_students;
 
             // 1. Ambil Data Durasi / SKS dari Course Terkait
             // Kita butuh tahu berapa menit yang dibutuhkan
             $course = $schedule->course;
-            $sks = $course->sks_total ?? 2;
-            $requiredMinutes = $sks * 50; // Asumsi 1 SKS = 50 menit
+            $sks = $course->sks_total;
+
+            if ($sks > 1) {
+                $effectiveSks = $sks - 1;
+            } else {
+                $effectiveSks = 1; // Minimal 1 sesi tatap muka
+            }
+            $requiredMinutes = $effectiveSks * 50;
 
             // 2. Parsing Waktu Baru
             $startTimeISO = Carbon::parse($request->start_time);
@@ -445,9 +460,14 @@ class ScheduleController extends Controller
                 $request->room_id,
                 $schedule->user_id,
                 $schedule->study_class_id,
-                $schedule->id // <--- EXCLUDE
+                $schedule->course_id,     // <--- Parameter Baru
+                $newStudentsCount,        // <--- Parameter Baru
+                $schedule->id             // Exclude ID sendiri
             );
-            if ($clashError) return response()->json(['success' => false, 'message' => $clashError], 422);
+
+            if ($clashError) {
+                return response()->json(['success' => false, 'message' => $clashError], 422);
+            }
 
             // 7. Update Database
             $schedule->update([
@@ -548,7 +568,8 @@ class ScheduleController extends Controller
                 'extendedProps' => [
                     // Panggil Accessor full_name dari Model StudyClass
                     'fullClassName' => $schedule->studyClass->full_name,
-
+                    'semester'      => $schedule->studyClass->semester,     // <--- Tambah ini
+                    'prodiCode'     => $schedule->studyClass->prodi->code,
                     'courseName' => $schedule->course->name,
                     'courseCode' => $schedule->course->code,
                     'dosenName' => $schedule->lecturer->name ?? 'Belum ada Dosen',
@@ -601,11 +622,14 @@ class ScheduleController extends Controller
         return null;
     }
 
-    private function checkClash($day, $slotIds, $roomId, $userId, $classId, $excludeScheduleId = null)
+    /**
+     * Cek Bentrok dengan Logika Smart Merging
+     */
+    private function checkClash($day, $slotIds, $roomId, $userId, $classId, $courseId, $newStudentsCount, $excludeScheduleId = null)
     {
-        $query = Schedule::where('day', $day);
+        $query = Schedule::with(['studyClass', 'course', 'room'])
+            ->where('day', $day);
 
-        // PENTING: Kecualikan jadwal ini sendiri saat update/resize
         if ($excludeScheduleId) {
             $query->where('id', '!=', $excludeScheduleId);
         }
@@ -617,16 +641,45 @@ class ScheduleController extends Controller
             if (empty($intersect)) continue;
 
             if ($existing->room_id == $roomId) {
-                return "BENTROK RUANGAN! Ruang dipakai {$existing->studyClass->name}.";
+                $isSameLecturer = ($existing->user_id == $userId);
+                $isSameCourse   = ($existing->course_id == $courseId);
+
+                if ($isSameLecturer && $isSameCourse) {
+                    $currentOccupants = $existingSchedules->filter(function ($item) use ($roomId, $intersect) {
+                        return $item->room_id == $roomId && !empty(array_intersect($item->time_slot_ids, $intersect));
+                    })->sum(function ($item) {
+                        return $item->studyClass->total_students ?? 0;
+                    });
+
+                    $totalStudents = $currentOccupants + $newStudentsCount;
+                    $roomCapacity  = $existing->room->capacity;
+
+                    if ($totalStudents > $roomCapacity) {
+                        return "Gagal Gabung: Ruangan penuh! (Total Mhs: $totalStudents, Kapasitas: $roomCapacity).";
+                    }
+
+
+                    continue;
+                }
+
+                if (!$isSameLecturer) {
+                    return "BENTROK RUANGAN! Ruang dipakai dosen {$existing->lecturer->name}.";
+                }
+                if (!$isSameCourse) {
+                    return "BENTROK RUANGAN! Sedang dipakai kuliah {$existing->course->name}.";
+                }
             }
+
             if ($existing->user_id == $userId) {
-                return "BENTROK DOSEN! Sedang mengajar di {$existing->studyClass->name}.";
+                return "BENTROK DOSEN! Dosen sedang mengajar di {$existing->room->name}.";
             }
+
             if ($existing->study_class_id == $classId) {
-                return "BENTROK KELAS! {$existing->studyClass->name} sudah ada jadwal.";
+                return "BENTROK KELAS! {$existing->studyClass->name} sudah ada jadwal {$existing->course->name}.";
             }
         }
-        return null;
+
+        return null; // Aman
     }
 
     public function show(Request $request)
@@ -750,23 +803,23 @@ class ScheduleController extends Controller
 
     public function autoGenerate(Request $request, AutoScheduleService $service)
     {
-        // Schedule::whereHas('studyClass', function ($q) use ($request) {
-        //     $q->where('shift', $request->shift);
-        //     $q->whereHas('prodi', fn($p) => $p->where('primary_campus', $request->campus));
-        // })->delete();
-
-        // // 2. LANJUT PROSES GENERATE 
-        // $result = $service->generate(
-        //     $request->campus,
-        //     $request->shift,
-        //     $request->prodi_id
-        // );
-        // Validasi input
         $request->validate([
             'campus' => 'required',
             'shift'  => 'required',
-            // prodi_id opsional
         ]);
+
+        $queryDelete = Schedule::query()
+            ->whereHas('studyClass', function ($q) use ($request) {
+                $q->where('shift', $request->shift);
+
+                if ($request->prodi_id) {
+                    $q->where('prodi_id', $request->prodi_id);
+                }
+
+                $q->whereHas('prodi', fn($p) => $p->where('primary_campus', $request->campus));
+            });
+
+        $queryDelete->delete();
 
         // Panggil Service
         $result = $service->generate(

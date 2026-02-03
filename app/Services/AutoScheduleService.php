@@ -15,15 +15,34 @@ class AutoScheduleService
     protected $logs = [];
     protected $successCount = 0;
     protected $failCount = 0;
+    protected $mergedCount = 0;
 
-    /**
-     * Jalankan Generator Jadwal
-     */
+    // Tracker Beban (Load Balancing)
+    protected $lecturerDailyLoad = [];
+    protected $classDailyLoad = [];
+    protected $dayGlobalLoad = [];
+
+    const MAX_LECTURER_SESSIONS_PER_DAY = 4;
+    const MAX_STUDENT_SESSIONS_PER_DAY = 6;
+
     public function generate($campus, $shift, $prodiId = null)
     {
+        // Reset Variables
         $this->logs = [];
         $this->successCount = 0;
         $this->failCount = 0;
+        $this->mergedCount = 0;
+        $this->lecturerDailyLoad = [];
+        $this->classDailyLoad = [];
+
+        $days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+        foreach ($days as $d) $this->dayGlobalLoad[$d] = 0;
+
+        // Load Existing Load
+        $existingSchedules = Schedule::with('studyClass')->get();
+        foreach ($existingSchedules as $sch) {
+            $this->incrementTracker($sch->user_id, $sch->study_class_id, $sch->day);
+        }
 
         DB::beginTransaction();
 
@@ -32,16 +51,13 @@ class AutoScheduleService
 
             $approvedProdiIds = \App\Models\AprovalDocument::where('academic_period_id', $activePeriodId)
                 ->where('type', 'distribusi_matkul')
-                ->where('status', 'approved_direktur') // <--- KUNCI UTAMA
+                ->where('status', 'approved_direktur')
                 ->pluck('prodi_id')
                 ->toArray();
 
-            // 1. AMBIL DATA DISTRIBUSI YANG BELUM TERJADWAL
-            // Filter berdasarkan Kampus, Shift, dan Prodi (jika ada)
-            if (empty($approvedProdiIds)) {
-                return ['status' => false, 'message' => 'Belum ada Dokumen Distribusi Mata Kuliah yang disetujui Direktur.'];
-            }
+            if (empty($approvedProdiIds)) return ['status' => false, 'message' => 'Belum ada Dokumen disetujui.'];
 
+            // Query Distributions
             $query = CourseDistribution::query()
                 ->where('academic_period_id', $activePeriodId)
                 ->has('teachingLecturers')
@@ -50,37 +66,23 @@ class AutoScheduleService
                 ->whereHas('studyClass', function ($q) use ($shift, $prodiId, $campus, $approvedProdiIds) {
                     $q->where('shift', $shift);
                     $q->whereIn('prodi_id', $approvedProdiIds);
-                    if ($prodiId) {
-                        $q->where('prodi_id', $prodiId);
-                    }
+                    if ($prodiId) $q->where('prodi_id', $prodiId);
                     $q->whereHas('prodi', fn($p) => $p->where('primary_campus', $campus));
                 });
 
+            // Filter Ignore & SKS
             $query->whereHas('course', function ($q) {
                 $ignoredKeywords = ['Praktik Industri', 'Magang', 'Skripsi', 'Tugas Akhir', 'KKN', 'PKL'];
-
                 $q->where(function ($sub) use ($ignoredKeywords) {
-                    foreach ($ignoredKeywords as $keyword) {
-                        $sub->where('name', 'NOT LIKE', "%{$keyword}%");
-                    }
+                    foreach ($ignoredKeywords as $keyword) $sub->where('name', 'NOT LIKE', "%{$keyword}%");
                 });
-
-                // Filter SKS menggunakan Raw SQL (sesuai perbaikan sebelumnya)
                 $q->whereRaw('(COALESCE(sks_teori, 0) + COALESCE(sks_praktik, 0) + COALESCE(sks_lapangan, 0)) <= 6');
             });
 
             $distributions = $query->get();
-            // ------------------------------------
+            if ($distributions->isEmpty()) return ['status' => false, 'message' => 'Tidak ada matkul valid.'];
 
-            if ($distributions->isEmpty()) {
-                return ['status' => false, 'message' => 'Tidak ada mata kuliah valid (Approved & Ada Dosen) yang perlu dijadwalkan.'];
-            }
-
-            // 2. SORTING (HEURISTIC)
-            // Urutkan dari yang paling susah:
-            // - Butuh Lab (Tags)
-            // - SKS Terbesar (Durasi panjang susah cari slot)
-            // - Jumlah Mahasiswa Terbanyak (Butuh ruang besar)
+            // Sorting
             $sortedDistributions = $distributions->sortByDesc(function ($dist) {
                 $needsLab = str_contains(json_encode($dist->course->required_tags), 'lab') ? 1000 : 0;
                 $sks = $dist->course->sks_total * 100;
@@ -88,142 +90,159 @@ class AutoScheduleService
                 return $needsLab + $sks + $students;
             });
 
-            // 3. SIAPKAN RESOURCES (RUANGAN & SLOT WAKTU) 
-            $rooms = Room::where('location', $campus)
-                ->orderBy('capacity', 'asc') // Cari ruangan yang "pas" dulu (Smallest Fit)
-                ->get();
+            // Resources
+            $rooms = Room::where('location', $campus)->orderBy('capacity', 'asc')->get();
+            if ($rooms->isEmpty()) return ['status' => false, 'message' => "Gagal: Tidak ada ruangan di $campus"];
 
-            if ($rooms->isEmpty()) {
-                return ['status' => false, 'message' => "Gagal: Tidak ada ruangan ditemukan di lokasi $campus"];
-            }
-
-            // Ambil Slot Waktu Sesuai Shift
+            // Time Slots
             $isKaryawan = ($shift === 'malam');
-            $days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
             $timeSlotsGrouped = [];
             foreach ($days as $day) {
-                // Logika Sabtu Malam = Pagi (seperti request sebelumnya)
                 $checkShift = ($day == 'Saturday' && $shift == 'malam') ? false : $isKaryawan;
-
-                $slots = TimeSlots::forDay($day, $checkShift)
-                    ->orderBy('start_time')
-                    ->get();
-
-                if ($slots->isNotEmpty()) {
-                    $timeSlotsGrouped[$day] = $slots;
-                }
+                $slots = TimeSlots::forDay($day, $checkShift)->orderBy('start_time')->get();
+                if ($slots->isNotEmpty()) $timeSlotsGrouped[$day] = $slots;
             }
+            if (empty($timeSlotsGrouped)) return ['status' => false, 'message' => "Tidak ada Time Slot tersedia."];
 
-            if (empty($timeSlotsGrouped)) {
-                return ['status' => false, 'message' => "Gagal: Tidak ada Time Slot (Jam) yang tersedia untuk shift $shift di database."];
-            }
-
-            // 4. ALGORITMA GREEDY
+            // ---------------------------------------------------------
+            // ALGORITMA UTAMA
+            // ---------------------------------------------------------
             foreach ($sortedDistributions as $dist) {
                 $assigned = false;
-
-                // Ambil Data Matkul
                 $sks = $dist->course->sks_total;
-
-                if ($sks > 1) {
-                    $effectiveSks = $sks - 1;
-                } else {
-                    $effectiveSks = 1; // Minimal 1 sesi tatap muka
-                }
-
+                $effectiveSks = ($sks > 1) ? $sks - 1 : 1;
                 $requiredMinutes = $effectiveSks * 50;
 
-                // Handle Tags
+                $studentsCount = $dist->studyClass->total_students;
+                $lecturerId = $dist->teachingLecturers->first()->id ?? null;
+                $classId = $dist->studyClass->id;
+                $semester = $dist->studyClass->semester;
+                $prodiIdClass = $dist->studyClass->prodi_id;
+
+                // Tags Processing
                 $rawTags = $dist->course->required_tags;
                 $requiredTags = is_array($rawTags) ? $rawTags : json_decode($rawTags ?? '[]', true);
                 if (!is_array($requiredTags)) $requiredTags = [];
 
-                $studentsCount = $dist->studyClass->total_students;
-                $lecturerId = $dist->teachingLecturers->first()->id ?? null;
-                $semester = $dist->studyClass->semester;
-                $prodiIdClass = $dist->studyClass->prodi_id;
+                // Cek apakah ini Matkul Umum (General Only atau Kosong)
+                $isGeneralCourse = (empty($requiredTags) || (count($requiredTags) === 1 && $requiredTags[0] === 'general'));
 
-                // DIAGNOSTIC FLAGS
+                // --- LANGKAH A: MERGING STRATEGY (STRICT SHIFT) ---
+                if ($lecturerId) {
+                    $mergeCandidate = Schedule::with('room')
+                        ->where('course_id', $dist->course_id)
+                        ->where('user_id', $lecturerId)
+                        ->whereHas('studyClass', function ($q) use ($prodiIdClass, $semester, $shift) {
+                            $q->where('prodi_id', $prodiIdClass)
+                                ->where('semester', $semester)
+                                ->where('shift', $shift); // <--- HARAM DIGABUNG KALAU BEDA SHIFT
+                        })
+                        ->get()
+                        ->filter(function ($existingSchedule) use ($studentsCount) {
+                            $currentOccupants = Schedule::where('room_id', $existingSchedule->room_id)
+                                ->where('day', $existingSchedule->day)
+                                ->whereJsonContains('time_slot_ids', $existingSchedule->time_slot_ids[0])
+                                ->with('studyClass')->get()->sum('studyClass.total_students');
+                            return $existingSchedule->room->capacity >= ($currentOccupants + $studentsCount);
+                        })
+                        ->first();
+
+                    if ($mergeCandidate) {
+                        Schedule::create([
+                            'course_distribution_id' => $dist->id,
+                            'study_class_id' => $classId,
+                            'course_id' => $dist->course_id,
+                            'room_id' => $mergeCandidate->room_id,
+                            'user_id' => $lecturerId,
+                            'day' => $mergeCandidate->day,
+                            'time_slot_ids' => $mergeCandidate->time_slot_ids
+                        ]);
+                        $this->incrementTracker($lecturerId, $classId, $mergeCandidate->day);
+                        $this->successCount++;
+                        $this->mergedCount++;
+                        $assigned = true;
+                        continue;
+                    }
+                }
+
+                // --- LANGKAH B: SEARCH NEW ROOM ---
                 $debugReasons = [];
+                $sortedDays = collect($timeSlotsGrouped)->sortBy(fn($slots, $day) => $this->dayGlobalLoad[$day] ?? 0);
 
-                // LOOP HARI
-                foreach ($timeSlotsGrouped as $day => $slots) {
+                foreach ($sortedDays as $day => $slots) {
                     if ($assigned) break;
+
+                    // Limit Check
+                    if ($lecturerId && ($this->lecturerDailyLoad[$lecturerId][$day] ?? 0) >= self::MAX_LECTURER_SESSIONS_PER_DAY) {
+                        $debugReasons['lecturer_limit'] = "Dosen Full";
+                        continue;
+                    }
+                    if (($this->classDailyLoad[$classId][$day] ?? 0) >= self::MAX_STUDENT_SESSIONS_PER_DAY) {
+                        $debugReasons['student_limit'] = "Mhs Full";
+                        continue;
+                    }
 
                     // LOOP RUANGAN
                     foreach ($rooms as $room) {
                         if ($assigned) break;
 
-                        // DIAGNOSA 1: KAPASITAS
-                        if ($room->capacity < $studentsCount) {
-                            $debugReasons['capacity'] = "Kapasitas ruangan kurang (Butuh: $studentsCount)";
-                            continue;
-                        }
-
-                        // DIAGNOSA 2: TAGS / FASILITAS
+                        // [LOGIKA BARU] STRICT GENERAL ROOM CHECK
                         $rawRoomTags = $room->facility_tags;
                         $roomTags = is_array($rawRoomTags) ? $rawRoomTags : json_decode($rawRoomTags ?? '[]', true);
                         if (!is_array($roomTags)) $roomTags = [];
 
-                        if (!empty(array_diff($requiredTags, $roomTags))) {
-                            $missing = implode(',', array_diff($requiredTags, $roomTags));
-                            $debugReasons['tags'] = "Fasilitas tidak sesuai (Kurang: $missing)";
+                        if ($isGeneralCourse) {
+                            // Jika Matkul Umum, Ruangan HARUS murni general (tidak boleh punya tag spesial)
+                            // Contoh: Punya tag 'computer' -> Haram buat matkul umum
+                            $specializedTags = array_diff($roomTags, ['general']);
+                            if (!empty($specializedTags)) {
+                                $debugReasons['tags_strict'] = "Matkul Umum dilarang pakai Lab Spesifik";
+                                continue;
+                            }
+                        } else {
+                            // Jika Matkul Spesifik, Cek kelengkapan tags seperti biasa
+                            $specificRequirements = array_diff($requiredTags, ['general']);
+                            if (!empty($specificRequirements) && !empty(array_diff($specificRequirements, $roomTags))) {
+                                $debugReasons['tags'] = "Fasilitas kurang";
+                                continue;
+                            }
+                        }
+
+                        // Cek Kapasitas
+                        if ($room->capacity < $studentsCount) {
+                            $debugReasons['capacity'] = "Kapasitas kurang";
                             continue;
                         }
 
-                        // LOOP SLOT WAKTU
+                        // LOOP SLOT
                         foreach ($slots as $startIndex => $slot) {
-
-                            // Hitung Durasi
                             $potentialSlots = [];
                             $accumulatedMinutes = 0;
                             $checkSlots = $slots->slice($startIndex);
-
-                            // Variabel untuk cek urutan (Continuity Check)
                             $prevEndTime = null;
                             $isConsecutive = true;
 
                             foreach ($checkSlots as $checkSlot) {
-                                // 1. CEK KESINAMBUNGAN WAKTU
-                                // Jika ini bukan slot pertama, dan Start Time slot ini BEDA dengan End Time slot sebelumnya
-                                // Berarti ada GAP (Istirahat atau Lompat Jam), maka berhenti.
                                 if ($prevEndTime && $checkSlot->start_time != $prevEndTime) {
                                     $isConsecutive = false;
                                     break;
                                 }
-
-                                // 2. HITUNG DURASI YANG LEBIH AMAN
-                                // Tambahkan tanggal hari ini agar Carbon tidak bingung konteks hari
                                 $startC = Carbon::parse(date('Y-m-d') . ' ' . $checkSlot->start_time);
                                 $endC   = Carbon::parse(date('Y-m-d') . ' ' . $checkSlot->end_time);
-
-                                // Pakai abs() untuk memastikan positif
-                                $dur = abs($endC->diffInMinutes($startC));
-
-                                $accumulatedMinutes += $dur;
+                                $accumulatedMinutes += abs($endC->diffInMinutes($startC));
                                 $potentialSlots[] = $checkSlot->id;
                                 $prevEndTime = $checkSlot->end_time;
-
-                                // Jika sudah cukup, berhenti loop checking
                                 if ($accumulatedMinutes >= $requiredMinutes) break;
                             }
 
-                            // DIAGNOSA 3: DURASI
-                            if (!$isConsecutive || $accumulatedMinutes < $requiredMinutes) {
-                                // Kita hanya log error jika ini percobaan di slot pagi (biar log tidak penuh sampah)
-                                if ($startIndex == 0) {
-                                    $debugReasons['duration'] = "Durasi/Urutan slot tidak valid (Butuh $requiredMinutes, Tersedia urut: $accumulatedMinutes)";
-                                }
-                                continue;
-                            }
+                            if (!$isConsecutive || $accumulatedMinutes < $requiredMinutes) continue;
 
-                            // DIAGNOSA 4: BENTROK JADWAL
-                            if ($this->isSlotSafe($day, $potentialSlots, $room->id, $lecturerId, $dist->studyClass->id, $prodiIdClass, $semester)) {
+                            // CEK BENTROK
+                            if ($this->isSlotSafe($day, $potentialSlots, $room->id, $lecturerId, $classId, $prodiIdClass, $semester, $dist->course_id)) {
 
-                                // SUKSES!
                                 Schedule::create([
                                     'course_distribution_id' => $dist->id,
-                                    'study_class_id' => $dist->studyClass->id,
+                                    'study_class_id' => $classId,
                                     'course_id' => $dist->course_id,
                                     'room_id' => $room->id,
                                     'user_id' => $lecturerId,
@@ -231,11 +250,12 @@ class AutoScheduleService
                                     'time_slot_ids' => $potentialSlots
                                 ]);
 
+                                $this->incrementTracker($lecturerId, $classId, $day);
                                 $this->successCount++;
                                 $assigned = true;
                                 break;
                             } else {
-                                $debugReasons['clash'] = "Bentrok dengan jadwal lain (Dosen/Ruang/Semester)";
+                                $debugReasons['clash'] = "Bentrok";
                             }
                         }
                     }
@@ -243,14 +263,12 @@ class AutoScheduleService
 
                 if (!$assigned) {
                     $this->failCount++;
-                    // Ambil satu alasan terkuat
                     $mainReason = implode(' | ', array_unique($debugReasons));
-                    $this->logs[] = "Gagal: {$dist->course->name} ($sks SKS) - {$mainReason}";
+                    $this->logs[] = "Gagal: {$dist->course->name} - {$mainReason}";
                 }
             }
 
-            DB::commit(); // Tetap commit yang sukses (kalau ada)
-
+            DB::commit();
             return [
                 'status' => true,
                 'message' => "Selesai. Sukses: {$this->successCount}, Gagal: {$this->failCount}",
@@ -258,52 +276,43 @@ class AutoScheduleService
             ];
         } catch (\Exception $e) {
             DB::rollBack();
-            return ['status' => false, 'message' => 'Error System: ' . $e->getMessage()];
+            return ['status' => false, 'message' => 'Error: ' . $e->getMessage()];
         }
     }
 
-    /**
-     * Cek Bentrok Lengkap
-     */
-    private function isSlotSafe($day, $slotIds, $roomId, $lecturerId, $classId, $prodiId, $semester)
+    private function incrementTracker($lecturerId, $classId, $day)
     {
-        // Query Jadwal Existing di Hari yang sama
-        // Kita gunakan whereIn time_slot_ids agak tricky karena JSON array, 
-        // tapi karena kita simpan array of int di kolom JSON/Text, kita bisa cek irisan.
-        // CARA PALING EFEKTIF DI LARAVEL UNTUK ARRAY INTERSECT DI DB ADALAH PAKE `whereJsonContains` (Kalau MySQL 5.7+)
-        // Atau ambil semua jadwal hari itu lalu filter di PHP (Lebih lambat tapi kompatibel).
+        if (!isset($this->dayGlobalLoad[$day])) $this->dayGlobalLoad[$day] = 0;
+        $this->dayGlobalLoad[$day]++;
 
-        // Optimasi: Ambil jadwal hari itu, lalu cek PHP side.
-        // Karena Auto Schedule ini batch process, load agak berat gapapa asal akurat.
+        if ($lecturerId) {
+            if (!isset($this->lecturerDailyLoad[$lecturerId][$day])) $this->lecturerDailyLoad[$lecturerId][$day] = 0;
+            $this->lecturerDailyLoad[$lecturerId][$day]++;
+        }
+        if ($classId) {
+            if (!isset($this->classDailyLoad[$classId][$day])) $this->classDailyLoad[$classId][$day] = 0;
+            $this->classDailyLoad[$classId][$day]++;
+        }
+    }
 
-        $existingSchedules = Schedule::with(['studyClass'])
-            ->where('day', $day)
-            ->get();
+    private function isSlotSafe($day, $slotIds, $roomId, $lecturerId, $classId, $prodiId, $semester, $courseId)
+    {
+        $existingSchedules = Schedule::with(['studyClass'])->where('day', $day)->get();
 
         foreach ($existingSchedules as $existing) {
-            // Cek Irisan Waktu
             $intersect = array_intersect($existing->time_slot_ids ?? [], $slotIds);
-            if (empty($intersect)) continue; // Waktunya beda, aman.
+            if (empty($intersect)) continue;
 
-            // 1. Bentrok Ruangan
+            // Bentrok Ruang & Dosen Standard
             if ($existing->room_id == $roomId) return false;
-
-            // 2. Bentrok Dosen
             if ($lecturerId && $existing->user_id == $lecturerId) return false;
-
-            // 3. Bentrok Kelas (Mahasiswanya sama)
             if ($existing->study_class_id == $classId) return false;
 
-            // 4. BENTROK SEMESTER (PENTING!)
-            // Anak Semester 1 Prodi TI tidak boleh punya 2 jadwal di jam yang sama
-            if (
-                $existing->studyClass->prodi_id == $prodiId &&
-                $existing->studyClass->semester == $semester
-            ) {
+            // Bentrok Semester (Block System)
+            if ($existing->studyClass->prodi_id == $prodiId && $existing->studyClass->semester == $semester) {
                 return false;
             }
         }
-
         return true;
     }
 }
