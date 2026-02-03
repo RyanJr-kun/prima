@@ -30,8 +30,16 @@
         {
             "url": "/beban-kerja-dosen",
             "name": "Beban Kerja Dosen",
+            "icon": "menu-icon icon-base bx bx-edit",
+            "slug": "beban-kerja-dosen.index",
+            "role": ["dosen", "kaprodi"] 
+        },
+        {
+            "url": "/beban-kerja-dosen/rekapitulasi",
+            "name": "Monitoring BKD",
             "icon": "menu-icon icon-base bx bx-bar-chart-alt-2",
-            "slug": "beban-kerja-dosen.index"
+            "slug": "beban-kerja-dosen.rekap",
+            "role": ["admin", "baak", "kaprodi"]
         },
         {
             "url": "/jadwal-perkuliahan",

@@ -15,6 +15,7 @@ class Workload extends Model
         'total_sks_penelitian',
         'total_sks_pengabdian',
         'total_sks_penunjang',
+
         'conclusion'
     ];
 
@@ -25,5 +26,9 @@ class Workload extends Model
     public function user()
     {
         return $this->belongsTo(User::class);
+    }
+    public function activities()
+    {
+        return $this->hasMany(WorkloadActivitie::class);
     }
 }

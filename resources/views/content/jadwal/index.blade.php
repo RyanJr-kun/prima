@@ -69,85 +69,88 @@
     </div>
 
     <div class="card mb-3">
-        <div class="card-body p-3 d-flex justify-content-between align-items-center">
-            <form method="GET" action="{{ route('jadwal-perkuliahan.index') }}" class="d-flex gap-2 w-100">
-                <div class="grow">
-                    <label class="form-label small mb-1">Kampus</label>
-                    <select name="campus" class="form-select form-select-sm select2" onchange="this.form.submit()">
-                        <option value="kampus_1" {{ $campus == 'kampus_1' ? 'selected' : '' }}>Kampus 1</option>
-                        <option value="kampus_2" {{ $campus == 'kampus_2' ? 'selected' : '' }}>Kampus 2</option>
-                    </select>
+        <div class="card-body py-3">
+            <div class="row g-3">
+                <div class="col-md-8">
+                    <form method="GET" action="{{ route('jadwal-perkuliahan.index') }}">
+                        <div class="row g-3">
+                            <div class="col-md-3">
+                                <label class="form-label">Kampus</label>
+                                <select name="campus" class="form-select select2" onchange="this.form.submit()">
+                                    <option value="kampus_1" {{ $campus == 'kampus_1' ? 'selected' : '' }}>Kampus 1</option>
+                                    <option value="kampus_2" {{ $campus == 'kampus_2' ? 'selected' : '' }}>Kampus 2</option>
+                                </select>
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label">Shift</label>
+                                <select name="shift" class="form-select select2" onchange="this.form.submit()">
+                                    <option value="pagi" {{ $shift == 'pagi' ? 'selected' : '' }}>Pagi</option>
+                                    <option value="malam" {{ $shift == 'malam' ? 'selected' : '' }}>Malam</option>
+                                </select>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Filter Prodi</label>
+                                <select name="prodi_id" class="form-select select2" onchange="this.form.submit()">
+                                    <option value="">-- Semua Prodi --</option>
+                                    @foreach ($prodis as $prodi)
+                                        <option value="{{ $prodi->id }}" {{ $prodiId == $prodi->id ? 'selected' : '' }}>
+                                            {{ $prodi->jenjang }} {{ $prodi->name }}
+                                        </option>
+                                    @endforeach
+                                </select>
+                            </div>
+                        </div>
+                    </form>
                 </div>
-                <div class="grow">
-                    <label class="form-label small mb-1">Shift</label>
-                    <select name="shift" class="form-select form-select-sm select2" onchange="this.form.submit()">
-                        <option value="pagi" {{ $shift == 'pagi' ? 'selected' : '' }}>Pagi</option>
-                        <option value="malam" {{ $shift == 'malam' ? 'selected' : '' }}>Malam</option>
-                    </select>
-                </div>
-                <div class="grow">
-                    <label class="form-label small mb-1">Filter Prodi</label>
-                    <select name="prodi_id" class="form-select form-select-sm select2" onchange="this.form.submit()">
-                        <option value="">-- Semua Prodi --</option>
-                        @foreach ($prodis as $prodi)
-                            <option value="{{ $prodi->id }}" {{ $prodiId == $prodi->id ? 'selected' : '' }}>
-                                {{ $prodi->jenjang }} {{ $prodi->name }}
-                            </option>
-                        @endforeach
-                    </select>
-                </div>
-            </form>
+                <div class="col-md-4 d-flex justify-content-end">
+                    <div class="d-flex align-items-center gap-2">
+                        @if ($campus && $shift)
+                            @if ($document)
 
-            {{-- STATUS & TOMBOL ACTION --}}
-            <div class="d-flex align-items-center gap-2">
-                {{-- Cek Kampus & Shift (Logic Baru) --}}
-                @if ($campus && $shift)
+                                <span class="badge bg-label-{{ $document->status_color }}">
+                                    {{ strtoupper($document->status_text) }}
+                                </span>
 
-                    @if ($document)
-                        {{-- Badge Status Dokumen --}}
-                        <span class="badge bg-label-{{ $document->status_color }}">
-                            {{ strtoupper($document->status_text) }}
-                        </span>
+                                @if (in_array($document->status, ['draft', 'rejected']))
+                                    <form action="{{ route('jadwal-perkuliahan.submit') }}" method="POST"
+                                        onsubmit="return confirm('Yakin jadwal {{ $campus }} shift {{ $shift }} sudah final dan siap diajukan?')">
+                                        @csrf
 
-                        {{-- Tombol Ajukan (Hanya muncul jika Draft/Rejected) --}}
-                        @if (in_array($document->status, ['draft', 'rejected']))
-                            <form action="{{ route('jadwal-perkuliahan.submit') }}" method="POST"
-                                onsubmit="return confirm('Yakin jadwal {{ $campus }} shift {{ $shift }} sudah final dan siap diajukan?')">
-                                @csrf
-                                {{-- UPDATE: Kirim Kampus & Shift, bukan Prodi ID --}}
-                                <input type="hidden" name="campus" value="{{ $campus }}">
-                                <input type="hidden" name="shift" value="{{ $shift }}">
+                                        <input type="hidden" name="campus" value="{{ $campus }}">
+                                        <input type="hidden" name="shift" value="{{ $shift }}">
 
-                                <button type="submit" class="btn btn-sm btn-primary ms-2">
-                                    <i class='bx bx-send'></i> Ajukan Validasi
-                                </button>
-                            </form>
+                                        <button type="submit" class="btn btn-sm btn-primary ms-2">
+                                            <i class='bx bx-send'></i> Ajukan Validasi
+                                        </button>
+                                    </form>
+                                @endif
+
+                                @if ($document->status == 'rejected' && $document->feedback_message)
+                                    <small class="text-danger fw-bold ms-2">
+                                        <i class='bx bx-error-circle'></i> Revisi: {{ $document->feedback_message }}
+                                    </small>
+                                @endif
+                            @else
+                                <span class="badge bg-label-secondary">DRAFT</span>
+
+                                <form id="submitScheduleForm" action="{{ route('jadwal-perkuliahan.submit') }}"
+                                    method="POST">
+                                    @csrf
+                                    <input type="hidden" name="campus" value="{{ $campus }}">
+                                    <input type="hidden" name="shift" value="{{ $shift }}">
+
+                                    <button type="button" class="btn btn-primary" id="btnSubmitSchedule">
+                                        <i class='bx bx-send'></i> Ajukan
+                                    </button>
+                                </form>
+                            @endif
+                        @else
+                            <span class="text-muted small fst-italic">Pilih Kampus dan Shift terlebih dahulu.</span>
                         @endif
-
-                        {{-- Pesan Revisi --}}
-                        @if ($document->status == 'rejected' && $document->feedback_message)
-                            <small class="text-danger fw-bold ms-2">
-                                <i class='bx bx-error-circle'></i> Revisi: {{ $document->feedback_message }}
-                            </small>
-                        @endif
-                    @else
-                        {{-- KONDISI DRAFT (Belum ada dokumen sama sekali) --}}
-                        <span class="badge bg-label-secondary">DRAFT</span>
-
-                        <form id="submitScheduleForm" action="{{ route('jadwal-perkuliahan.submit') }}" method="POST">
-                            @csrf
-                            <input type="hidden" name="campus" value="{{ $campus }}">
-                            <input type="hidden" name="shift" value="{{ $shift }}">
-
-                            <button type="button" class="btn btn-primary" id="btnSubmitSchedule">
-                                <i class='bx bx-send'></i> Ajukan
-                            </button>
-                        </form>
-                    @endif
-                @else
-                    <span class="text-muted small fst-italic">Pilih Kampus dan Shift terlebih dahulu.</span>
-                @endif
+                    </div>
+                </div>
             </div>
+
         </div>
     </div>
     <div class="card mb-4">
@@ -263,6 +266,30 @@
     </div>
 @endsection
 @section('page-script')
+    <script type="module">
+        // Fungsi inisialisasi Select2
+        const initSelect2 = () => {
+            // Cek apakah jQuery dan Select2 sudah siap
+            if (typeof $ !== 'undefined' && $.fn.select2) {
+                $('.select2').each(function() {
+                    const $this = $(this);
+                    $this.select2({
+                        placeholder: $this.data('placeholder') || "Pilih...",
+                        allowClear: $this.find('option[value=""]').length >
+                            0, // Hanya allowClear jika ada value=""
+                        width: '100%',
+                        minimumResultsForSearch: 10 // Sembunyikan search box jika opsi < 10
+                    });
+                });
+            } else {
+                // Jika belum siap, coba lagi dalam 100ms
+                setTimeout(initSelect2, 100);
+            }
+        };
+
+        // Jalankan saat script dimuat
+        initSelect2();
+    </script>
     <script>
         // Fungsi Helper untuk menampilkan Toast dari JS
         function showJsToast(type, message) {

@@ -146,7 +146,8 @@
                     <div class="mb-3">
                         <label class="form-label">Homebase Kampus (Prioritas Jadwal)</label>
                         <select name="primary_campus" id="primary_campus"
-                            class="form-select @error('primary_campus') is-invalid @enderror" required>
+                            class="form-select select2 @error('primary_campus') is-invalid @enderror"
+                            data-placeholder="Pilih Kampus Utama" required>
                             <option value="">-- Pilih Kampus Utama --</option>
                             <option value="kampus_1">Kampus 1 (Pusat/Teknik)</option>
                             <option value="kampus_2">Kampus 2 (Kesehatan)</option>
@@ -226,6 +227,7 @@
                         }
                     });
                 });
+
 
             } else {
                 // Jika belum siap, coba lagi dalam 100ms

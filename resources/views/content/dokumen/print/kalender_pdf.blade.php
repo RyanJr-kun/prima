@@ -167,7 +167,7 @@
                 <br><br>
                 @if ($direktur && !empty($direktur->signature_path) && file_exists(public_path('storage/' . $direktur->signature_path)))
                     <img src="{{ public_path('storage/' . $direktur->signature_path) }}"
-                        style="height: 80px; width: auto; margin-top: -15px; margin-bottom: -15px;">
+                        style="height: 90px; width: auto; margin-top: -15px; margin-bottom: -10px;">
                     <br>
                 @else
                     <br><br><br>
@@ -183,7 +183,7 @@
                 <br><br>
                 @if ($wadir1 && !empty($wadir1->signature_path) && file_exists(public_path('storage/' . $wadir1->signature_path)))
                     <img src="{{ public_path('storage/' . $wadir1->signature_path) }}"
-                        style="height: 80px; width: auto; margin-top: -15px; margin-bottom: -15px;">
+                        style="height: 90px; width: auto; margin-top: -15px; margin-bottom: -10px;">
                     <br>
                 @else
                     <br><br><br>

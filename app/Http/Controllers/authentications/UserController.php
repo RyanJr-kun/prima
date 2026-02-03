@@ -17,10 +17,25 @@ use Illuminate\Support\Facades\Hash;
 
 class UserController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
 
-        $data = User::with('roles')->orderBy('id', 'DESC')->get();
+        $query = User::with('roles')->orderBy('id', 'DESC');
+
+        if ($request->filled('q')) {
+            $search = $request->q;
+            $query->where(function ($q) use ($search) {
+                $q->where('name', 'LIKE', "%{$search}%")
+                    ->orWhere('nidn', 'LIKE', "%{$search}%")
+                    ->orWhere('username', 'LIKE', "%{$search}%");
+            });
+        }
+
+        if ($request->filled('role')) {
+            $query->role($request->role);
+        }
+
+        $data = $query->get();
         $roles = Role::pluck('name', 'name')->all();
         return view('content.authentications.user', compact('data', 'roles'));
     }
@@ -53,10 +68,15 @@ class UserController extends Controller
 
     public function update(Request $request, string $id)
     {
+        // Pastikan input kosong dikonversi menjadi null agar lolos validasi unique (nullable)
+        // if ($request->input('nidn') === '') {
+        //     $request->merge(['nidn' => null]);
+        // }
+
         $input = $request->validate([
             'name' => 'required',
             'username' => 'required|unique:users,username,' . $id,
-            'nidn' =>  ['required', Rule::unique('users', 'nidn')->ignore($id)],
+            'nidn' =>  ['nullable', Rule::unique('users', 'nidn')->ignore($id)],
             'email' => 'required|email|unique:users,email,' . $id,
             'password' => 'nullable|same:confirm-password',
             'userRole' => 'required|array',

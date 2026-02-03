@@ -36,6 +36,34 @@
         @endif
     </div>
 
+    <div class="card mb-4">
+        <div class="card-body py-4">
+            <form method="GET" action="{{ route('user.index') }}">
+                <div class="row align-items-end">
+                    <div class="col-md-4 mb-3 mb-md-0">
+                        <label class="form-label">Cari Nama / NIDN / Username</label>
+                        <input type="text" name="q" class="form-control" placeholder="Cari user..."
+                            value="{{ request('q') }}">
+                    </div>
+                    <div class="col-md-3 mb-3 mb-md-0">
+                        <label class="form-label">Filter Role</label>
+                        <select name="role" class="form-select select2" data-placeholder="Semua Role">
+                            <option value="">Semua Role</option>
+                            @foreach ($roles as $roleName)
+                                <option value="{{ $roleName }}" {{ request('role') == $roleName ? 'selected' : '' }}>
+                                    {{ ucfirst($roleName) }}</option>
+                            @endforeach
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <button type="submit" class="btn btn-primary me-2"><i class="bx bx-search me-1"></i> Cari</button>
+                        <a href="{{ route('user.index') }}" class="btn btn-outline-secondary">Reset</a>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+
     <div class="card">
         <div class="card-header border-bottom">
             <div class="row">
@@ -185,7 +213,7 @@
                     enctype="multipart/form-data">
                     @csrf
                     <div id="methodInput"></div>
-                    <input type="hidden" id="user_id" name="user_id">
+                    <input type="hidden" id="user_id" name="user_id" value="{{ old('user_id') }}">
 
                     <div class="mb-3">
                         <label class="form-label" for="add-user-fullname">Full Name</label>
@@ -308,6 +336,16 @@
                     });
                 });
 
+                // Targetkan select2 umum (Filter, dll) yang berada di luar offcanvas
+                $('.select2').not('#offcanvasAddUser .select2').each(function() {
+                    const $this = $(this);
+                    $this.select2({
+                        placeholder: $this.data('placeholder') || "Pilih...",
+                        allowClear: true,
+                        width: '100%'
+                    });
+                });
+
             } else {
                 // Jika belum siap, coba lagi dalam 100ms
                 setTimeout(initSelect2, 100);
@@ -406,7 +444,7 @@
 
             // Reset form kembali ke Mode Create saat offcanvas ditutup
             offcanvasEl.addEventListener('hidden.bs.offcanvas', function() {
-                offcanvasTitle.textContent = 'Tambah Kurikulum';
+                offcanvasTitle.textContent = 'Add User';
                 saveBtn.textContent = 'Submit';
                 form.action = defaultAction;
                 form.reset();
@@ -469,6 +507,19 @@
             @if ($errors->any())
                 const offcanvasError = new bootstrap.Offcanvas(offcanvasEl);
                 offcanvasError.show();
+
+                // LOGIC TAMBAHAN: Restore Edit Mode jika validasi gagal saat Update
+                @if (old('user_id'))
+                    offcanvasTitle.textContent = 'Edit Pengguna';
+                    saveBtn.textContent = 'Simpan Perubahan';
+                    form.action = "{{ route('user.update', old('user_id')) }}";
+
+                    let methodInput = document.createElement('input');
+                    methodInput.type = 'hidden';
+                    methodInput.name = '_method';
+                    methodInput.value = 'PUT';
+                    form.appendChild(methodInput);
+                @endif
             @endif
         });
     </script>

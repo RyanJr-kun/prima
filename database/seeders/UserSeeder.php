@@ -74,7 +74,7 @@ class UserSeeder extends Seeder
         ], [
             'name' => 'Wachid Yahya, M.Pd., Ph.D',
             'username' => 'wachid.yahya',
-            'nidn' => '0623097702',
+            'nidn' => '0623097704',
             'password' => Hash::make('password'),
             'signature_path' => null,
         ]);

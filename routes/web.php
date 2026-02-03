@@ -1,14 +1,10 @@
 <?php
 
 use Illuminate\Support\Facades\Route;
-use App\Http\Controllers\bkd\BkdController;
 use App\Http\Controllers\master\RoomController;
 use App\Http\Controllers\Master\ProdiController;
-use App\Http\Controllers\jadwal\JadwalController;
 use App\Http\Controllers\Master\CourseController;
-use App\Http\Controllers\ruang\RuanganController;
 use App\Http\Controllers\dashboard\NotifController;
-use App\Http\Controllers\dokumen\DokumenController;
 use App\Http\Controllers\Master\KurikulumController;
 use App\Http\Controllers\Master\StudyClassController;
 use App\Http\Controllers\dashboard\AnalisisController;
@@ -20,7 +16,7 @@ use App\Http\Controllers\Master\AcademicPeriodController;
 use App\Http\Controllers\dokumen\AcademicCalendarController;
 use App\Http\Controllers\dokumen\AprovalDocumentController;
 use App\Http\Controllers\dokumen\ScheduleController;
-use App\Http\Controllers\WorkloadController;
+use App\Http\Controllers\dokumen\WorkloadController;
 
 Route::middleware('guest')->group(function () {
     Route::get('/login', [AuthController::class, 'showLoginForm'])->name('login');
@@ -83,13 +79,18 @@ Route::middleware('auth')->group(function () {
     });
 
     // Beban kerja dosen
-    Route::resource('beban-kerja-dosen', WorkloadController::class);
     Route::prefix('beban-kerja-dosen')->name('beban-kerja-dosen.')->group(function () {
         // Route::get('/doc/{document}', [WorkloadController::class, 'show'])->name('beban-kerja-dosen.show-doc');
         // Route::post('/submit', [WorkloadController::class, 'submitValidation'])->name('beban-kerja-dosen.submit');
+        Route::get('/', [WorkloadController::class, 'index'])->name('index');
         Route::post('/generate', [WorkloadController::class, 'generate'])->name('generate');
-        Route::post('/update-all', [WorkloadController::class, 'updateAllActivities'])->name('update-all');
+        Route::put('/update-all', [WorkloadController::class, 'updateAllActivities'])->name('update-all');
+        Route::get('/rekapitulasi', [WorkloadController::class, 'rekapIndex'])->name('rekap');
+        Route::post('/submit', [WorkloadController::class, 'submit'])->name('submit');
+        Route::get('/document/{id}', [WorkloadController::class, 'showDoc'])->name('show-doc');
+        Route::get('/document/{id}/print', [WorkloadController::class, 'printDoc'])->name('print-doc');
     });
+    // Route::resource('beban-kerja-dosen', WorkloadController::class);
 
     // jadwal Perkuliahan
     Route::prefix('jadwal-perkuliahan')->name('jadwal-perkuliahan.')->group(function () {

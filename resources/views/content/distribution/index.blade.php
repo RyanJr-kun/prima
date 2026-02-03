@@ -57,7 +57,7 @@
                     </div>
                     <div class="col-md-4">
                         <label class="form-label">Program Studi</label>
-                        <select name="prodi_id" class="form-select select2">
+                        <select name="prodi_id" class="form-select select2" data-placeholder="Pilih Program Studi ...">
                             <option value="">Semua Program Studi</option>
                             @foreach ($prodis as $prodi)
                                 <option value="{{ $prodi->id }}"
@@ -69,7 +69,7 @@
                     </div>
                     <div class="col-md-3">
                         <label class="form-label">Semester</label>
-                        <select name="semester" class="form-select select2">
+                        <select name="semester" class="form-select select2" data-placeholder="Pilih Semester ...">
                             <option value="">Semua Semester</option>
                             @for ($i = 1; $i <= 8; $i++)
                                 <option value="{{ $i }}" {{ request('semester') == $i ? 'selected' : '' }}>
@@ -503,8 +503,8 @@
                 @csrf
                 <div class="mb-3">
                     <label class="form-label">Kelas</label>
-                    <select name="study_class_id" id="selectKelas" class="form-select select2-edit"
-                        aria-placeholder="pilih kelas" required>
+                    <select name="study_class_id" id="selectKelas" class="form-select select2"
+                        data-placeholder="Pilih Kelas ..." required>
                         <option value="">Pilih Kelas</option>
                         @foreach ($classes as $kelas)
                             <option value="{{ $kelas->id }}">
@@ -515,7 +515,8 @@
                 </div>
                 <div class="mb-3">
                     <label class="form-label">Mata Kuliah</label>
-                    <select name="course_id" id="selectMatkul" class="form-select select2-edit" required>
+                    <select name="course_id" id="selectMatkul" class="form-select select2"
+                        data-placeholder="Pilih Mata Kuliah ..." required>
                         <option value=""> Pilih Kelas Terlebih Dahulu </option>
                     </select>
                     <small class="text-muted">Mata kuliah otomatis muncul sesuai kurikulum kelas yang dipilih.</small>
@@ -523,8 +524,8 @@
 
                 <div class="mb-3">
                     <label class="form-label">Dosen Pengajar</label>
-                    <select name="teaching_ids[]" id="edit_teaching_ids" class="form-select select2-edit"
-                        multiple="multiple" style="width: 100%">
+                    <select name="teaching_ids[]" id="edit_teaching_ids" class="form-select select2"
+                        data-placeholder="Pilih Dosen Pengajar" multiple="multiple" style="width: 100%">
                         @foreach ($dosens as $dosen)
                             <option value="{{ $dosen->id }}">{{ $dosen->name }}</option>
                         @endforeach
@@ -533,8 +534,8 @@
 
                 <div class="mb-3">
                     <label class="form-label">Dosen Pelaporan</label>
-                    <select name="pddikti_ids[]" id="edit_pddikti_ids" class="form-select select2-edit"
-                        multiple="multiple" style="width: 100%">
+                    <select name="pddikti_ids[]" id="edit_pddikti_ids" class="form-select select2"
+                        data-placeholder="Pilih Dosen PDDIKTI" multiple="multiple" style="width: 100%">
                         @foreach ($dosens as $dosen)
                             <option value="{{ $dosen->id }}">{{ $dosen->name }}</option>
                         @endforeach
@@ -637,27 +638,57 @@
 @endsection
 
 @section('page-script')
+    <script type="module">
+        // Fungsi inisialisasi
+        const initSelect2 = () => {
+            // Cek apakah jQuery dan Select2 sudah siap
+            if (typeof $ !== 'undefined' && $.fn.select2) {
+
+                // Targetkan select2 di dalam Offcanvas secara spesifik
+                $('#offcanvasAddDistribusi .select2').each(function() {
+                    const $this = $(this);
+                    $this.select2({
+                        placeholder: $this.data('placeholder') || "Pilih...",
+                        allowClear: true,
+                        dropdownParent: $('#offcanvasAddDistribusi'), // <--- INI KUNCINYA
+                        width: '100%', // Paksa lebar agar tidak menyempit
+                        templateSelection: function(data) {
+                            if (!data.id) {
+                                return data.text;
+                            }
+                            // Gunakan data-code jika ada (untuk prodi), jika tidak gunakan text biasa
+                            const code = $(data.element).data('code');
+                            return code ? code : data.text;
+                        }
+                    });
+                });
+
+                $('.select2').not('#offcanvasAddUser .select2').each(function() {
+                    const $this = $(this);
+                    $this.select2({
+                        placeholder: $this.data('placeholder') || "Pilih...",
+                        allowClear: true,
+                        width: '100%'
+                    });
+                });
+
+            } else {
+                // Jika belum siap, coba lagi dalam 100ms
+                setTimeout(initSelect2, 100);
+            }
+        };
+
+        // Jalankan saat script dimuat
+        initSelect2();
+
+        // PENTING: Jalankan ulang saat Offcanvas dibuka (untuk jaga-jaga rendering error)
+        const offcanvasElement = document.getElementById('offcanvasAddDistribusi');
+        offcanvasElement.addEventListener('shown.bs.offcanvas', function() {
+            initSelect2();
+        });
+    </script>
     <script>
         document.addEventListener('DOMContentLoaded', function() {
-            function initSelect2() {
-                if (typeof $ !== 'undefined' && $.fn.select2) {
-                    if ($('.select2-edit').hasClass("select2-hidden-accessible")) {
-                        $('.select2-edit').select2('destroy');
-                    }
-                    $('.select2-edit').select2({
-                        dropdownParent: $('#offcanvasAddDistribusi'),
-                        width: '100%',
-                        placeholder: '-- Pilih Dosen --',
-                        allowClear: true
-                    });
-                }
-            }
-
-            var myOffcanvas = document.getElementById('offcanvasAddDistribusi');
-            myOffcanvas.addEventListener('shown.bs.offcanvas', function() {
-                initSelect2();
-            });
-
             $('body').on('click', '.edit-record', function() {
                 var button = $(this);
                 var id = button.data('id');
@@ -699,7 +730,6 @@
             initSelect2();
         });
     </script>
-
     <script>
         document.addEventListener('DOMContentLoaded', function() {
 

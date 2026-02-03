@@ -84,13 +84,9 @@
                 $urlDetail = '#';
                 // Arahkan ke halaman index masing-masing fitur dengan filter yang sesuai
                 switch ($doc->type) {
-                    case 'distribusi_matkul':
-                        $urlDetail = route('.show-doc', $doc->id);
+                    case 'beban_kerja_dosen':
+                        $urlDetail = route('beban-kerja-dosen.show-doc', $doc->id);
                         break;
-                    // case 'beban_kerja_dosen':
-                    //     $urlDetail = route('beban-kerja-dosen.show-doc', $doc->id);
-                    //     break;
-                    // Tambahkan case lain nanti (Jadwal, BKD)
                 }
             @endphp
 
@@ -136,16 +132,13 @@
                     $urlPrint = '#';
                     // Arahkan ke halaman index masing-masing fitur dengan filter yang sesuai
                     switch ($doc->type) {
-                        case 'distribusi_matkul':
-                            $urlPrint = route('distribusi-mata-kuliah.print', $doc->id);
+                        case 'beban_kerja_dosen':
+                            $urlPrint = route('beban-kerja-dosen.print-doc', $doc->id);
                             break;
-                        // case 'beban_kerja_dosen':
-                        //     $urlPrint = route('beban-kerja-dosen.print', $doc->id);
-                        //     break;
                     }
                 @endphp
                 <div class="d-flex justify-content-end">
-                    <a href="{{ $urlPrint }}" class="btn me-3 btn-outline-danger btn-sm">
+                    <a href="{{ $urlPrint }}" target="_blank" class="btn me-3 btn-outline-danger btn-sm">
                         <i class="bx bxs-file-pdf me-1"></i> PDF
                     </a>
                     <span class="text-success mt-1"><i class="bx bx-check-double"></i> Terbit</span>

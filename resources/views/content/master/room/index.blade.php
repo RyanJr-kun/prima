@@ -41,7 +41,7 @@
                     </div>
                     <div class="col-md-3">
                         <label class="form-label">Lokasi Kampus</label>
-                        <select name="location" class="form-select select2">
+                        <select name="location" class="form-select select2" data-placeholder="Pilih Kampus...">
                             <option value="">Semua Kampus</option>
                             <option value="kampus_1" {{ request('location') == 'kampus_1' ? 'selected' : '' }}>Kampus 1
                             </option>
@@ -51,7 +51,7 @@
                     </div>
                     <div class="col-md-3">
                         <label class="form-label">Tipe Ruangan</label>
-                        <select name="type" class="form-select select2">
+                        <select name="type" class="form-select select2" data-placeholder="Pilih Ruangan...">
                             <option value="">Semua Tipe</option>
                             <option value="teori" {{ request('type') == 'teori' ? 'selected' : '' }}>Teori</option>
                             <option value="laboratorium" {{ request('type') == 'laboratorium' ? 'selected' : '' }}>
@@ -192,8 +192,8 @@
                     @csrf
                     <div class="mb-3">
                         <label class="form-label">Program Studi</label>
-                        <select name="prodi_ids[]" id="prodis" class="form-select select2" multiple
-                            data-placeholder="Pilih Program Studi">
+                        <select name="prodi_ids[]" id="prodis" class="form-select select2"
+                            data-placeholder="Pilih Program Studi" multiple>
                             @foreach ($prodis as $prodi)
                                 <option value="{{ $prodi->id }}" data-code="{{ $prodi->code }}"
                                     {{ isset($room) && $room->prodis->contains($prodi->id) ? 'selected' : '' }}>
@@ -261,20 +261,8 @@
                             <div class="invalid-feedback d-block">{{ $message }}</div>
                         @enderror
                     </div>
-
-                    {{-- <div class="mb-3" id="divTags">
-                        <label class="form-label">Spesifikasi Fasilitas Utama</label>
-                        <select name="facility_tag" id="facility_tag" class="form-select select2"
-                            data-placeholder="Pilih Fasilitas">
-                            <option value=""></option>
-                            @foreach ($tags as $key => $label)
-                                <option value="{{ $key }}">{{ $label }}</option>
-                            @endforeach
-                        </select>
-                        <div class="form-text">Pilih 'Umum' jika tidak ada alat khusus.</div>
-                    </div> --}}
                     <div class="mb-3" id="divTags">
-                        <label class="form-label">Fasilitas Utama (Bisa pilih banyak)</label>
+                        <label class="form-label">Fasilitas Utama</label>
                         <select name="facility_tags[]" id="facility_tags" class="form-select select2"
                             multiple="multiple" data-placeholder="Pilih Fasilitas...">
                             @foreach ($tags as $key => $label)
@@ -319,6 +307,15 @@
                             const code = $(data.element).data('code');
                             return code ? code : data.text;
                         }
+                    });
+                });
+
+                $('.select2').not('#offcanvasAddUser .select2').each(function() {
+                    const $this = $(this);
+                    $this.select2({
+                        placeholder: $this.data('placeholder') || "Pilih...",
+                        allowClear: true,
+                        width: '100%'
                     });
                 });
 

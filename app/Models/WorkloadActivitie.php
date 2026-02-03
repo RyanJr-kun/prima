@@ -13,6 +13,7 @@ class WorkloadActivitie extends Model
         'category',
         'activity_name',
         'sks_load',
+        'sks_real',
         'realisasi_pertemuan',
         'jenis_ujian',
         'description',

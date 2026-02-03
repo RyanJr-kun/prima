@@ -336,14 +336,14 @@ class ScheduleController extends Controller
     public function resize(Request $request, $id)
     {
         try {
-            $schedule = Schedule::findOrFail($id);
+            $schedule = Schedule::with('studyClass')->findOrFail($id);
+
             $newStart = Carbon::parse($request->start_time);
             $newEnd   = Carbon::parse($request->end_time);
             $dayName  = $newStart->format('l');
-            $studyClass = StudyClass::findOrFail($request->study_class_id);
-            $newStudentsCount = $studyClass->total_students;
-            $isKaryawan = $schedule->studyClass->shift === 'malam';
 
+            $newStudentsCount = $schedule->studyClass->total_students;
+            $isKaryawan       = $schedule->studyClass->shift === 'malam';
 
             $slots = TimeSlots::forDay($dayName, $isKaryawan)
                 ->whereTime('start_time', '>=', $newStart->format('H:i:s'))
@@ -361,13 +361,13 @@ class ScheduleController extends Controller
 
             $clashError = $this->checkClash(
                 $dayName,
-                $selectedSlotIds,
-                $request->room_id,
+                $slots,
+                $schedule->room_id,       // Ganti $request->room_id jadi $schedule->room_id
                 $schedule->user_id,
                 $schedule->study_class_id,
-                $schedule->course_id,     // <--- Parameter Baru
-                $newStudentsCount,        // <--- Parameter Baru
-                $schedule->id             // Exclude ID sendiri
+                $schedule->course_id,
+                $newStudentsCount,
+                $schedule->id
             );
 
             if ($clashError) {
