@@ -116,7 +116,7 @@
                 @endphp
 
                 <div class="d-flex justify-content-end">
-                    <a href="{{ $urlPrint }}" class="btn me-3 btn-outline-danger btn-sm">
+                    <a href="{{ $urlPrint }}" target="_blank" class="btn me-3 btn-outline-danger btn-sm">
                         <i class="bx bxs-file-pdf me-1"></i> PDF
                     </a>
                     <span class="text-success mt-1"><i class="bx bx-check-double"></i> Terbit</span>

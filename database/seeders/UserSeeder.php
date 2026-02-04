@@ -100,7 +100,7 @@ class UserSeeder extends Seeder
             ['Suparmini, M,Pd.I', 'suparmini'],
             ['Muhammad Nurfauzi Sahono, M.Kom', 'muhammad.nurfauzi'],
             ['Wasis Waluyo, S.Kom', 'wasis.waluyo'],
-            ['Nawangsih Eddyna Putri, S.Hum, M.A.', 'nawangsih.edynna'],
+            ['Nawangsih Edyna Putri, S.Hum, M.A.', 'nawangsih.edyna'],
             ['Agung Wibiyanto, SS., MM', 'agung.wibiyanto'],
             ['Makmun Syaifudin, M.Pd', 'makmun.syaifudin'],
             ['Utomo Ramelan, ST, M.Pd', 'utomo.ramelan'],

@@ -5,6 +5,7 @@ namespace App\Http\Controllers\dokumen;
 use Carbon\Carbon;
 
 use App\Models\Room;
+use App\Models\User;
 use App\Models\Prodi;
 use App\Models\Course;
 use App\Models\Schedule;
@@ -18,6 +19,7 @@ use App\Models\CourseDistribution;
 use App\Http\Controllers\Controller;
 use Illuminate\Support\Facades\Auth;
 use App\Services\AutoScheduleService;
+use Barryvdh\DomPDF\Facade\Pdf as PDF;
 
 class ScheduleController extends Controller
 {
@@ -91,8 +93,8 @@ class ScheduleController extends Controller
                 // TAMBAHAN: Generate HTML Badge siap pakai untuk View
                 $badges = [];
                 foreach ($tags as $t) {
-                    $label = \App\Models\Room::getTagName($t);
-                    $color = \App\Models\Room::getTagColor($t);
+                    $label = Room::getTagName($t);
+                    $color = Room::getTagColor($t);
                     // Kita simpan struktur data untuk diloop di view
                     $badges[] = [
                         'label' => $label,
@@ -143,6 +145,113 @@ class ScheduleController extends Controller
             'document',
             'isReadOnly',
             'prodiId' // Perbaikan: sebelumnya 'ProdiId' (Typo kapital)
+        ));
+    }
+
+    public function show(Request $request)
+    {
+        $campus = $request->input('campus', 'kampus_1');
+        $shift  = $request->input('shift', 'pagi');
+        $prodiId = $request->input('prodi_id');
+        $semester = $request->input('semester');
+
+        $activePeriodId = AcademicPeriod::where('is_active', true)->value('id');
+
+        // 1. Definisikan Slot Waktu (Master Data Grid)
+        // Format: [Label Jam, Start, End]
+        $slotsPagi = [
+            ['08:00', '08:50'],
+            ['08:50', '09:40'],
+            ['09:40', '10:30'],
+            ['10:30', '11:20'],
+            ['11:20', '12:10'],
+            ['13:00', '13:50'],
+            ['13:50', '14:40'],
+            ['14:40', '15:30'],
+            ['15:30', '16:20']
+        ];
+
+        // Shift Malam (Senin-Jumat beda, Sabtu ikut pagi)
+        // Kita buat master slot malam standar dulu
+        $slotsMalam = [
+            ['13:00', '13:50'],
+            ['13:50', '14:40'],
+            ['14:40', '15:30'],
+            ['15:30', '16:20'],
+            ['16:20', '17:00'],
+            ['17:00', '17:30'],
+            ['17:30', '18:00'],
+            ['18:00', '18:30'],
+            ['18:30', '19:00'],
+            ['19:00', '19:30'],
+            ['19:30', '20:00']
+        ];
+
+        // Pilih Slot Berdasarkan Filter
+        $masterSlots = ($shift === 'malam') ? $slotsMalam : $slotsPagi;
+
+        // 2. Query Data Jadwal
+        $query = Schedule::query()
+            ->with(['course', 'studyClass', 'lecturer', 'room'])
+            ->whereHas('room', fn($q) => $q->where('location', $campus))
+            ->whereHas('courseDistribution', fn($q) => $q->where('academic_period_id', $activePeriodId))
+            ->whereHas('studyClass', function ($q) use ($shift, $prodiId, $semester) {
+                // Filter Shift (Penting!)
+                $q->where('shift', $shift);
+                if ($prodiId) $q->where('prodi_id', $prodiId);
+                if ($semester) $q->where('semester', $semester);
+            });
+
+        $schedules = $query->get();
+
+        // 3. Ambil Ruangan yang TERPAKAI saja (Agar tidak terlalu lebar)
+        $usedRoomIds = $schedules->pluck('room_id')->unique();
+
+        $rooms = Room::whereIn('id', $usedRoomIds)
+            ->orderBy('building')
+            ->orderBy('name')
+            ->get();
+
+        // 4. CHUNKING (PENTING UNTUK PDF)
+        // Karena kertas terbatas, kita bagi ruangan misal per 6 ruangan satu tabel
+        $roomChunks = $rooms->chunk(6);
+
+        // 5. PETA MATRIKS (Mapping Data ke Grid)
+        // Struktur: $scheduleMatrix[Hari][IndexSlot][RoomId] = DataJadwal
+        $scheduleMatrix = [];
+        $days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+
+        foreach ($schedules as $sched) {
+            // Ambil Slot ID pertama dari jadwal ini
+            $firstSlotId = $sched->time_slot_ids[0] ?? null;
+            if (!$firstSlotId) continue;
+
+            // Cari jadwal ini masuk ke "Master Slot" nomor berapa?
+            // Kita bandingkan jam mulainya.
+            $startTime = TimeSlots::find($firstSlotId)->start_time; // ex: 08:00:00
+            $startHi = substr($startTime, 0, 5); // 08:00
+
+            // Cari index di masterSlots
+            foreach ($masterSlots as $index => $slotVal) {
+
+                if ($this->isSlotInSchedule($sched, $slotVal[0])) {
+                    $scheduleMatrix[$sched->day][$index][$sched->room_id][] = $sched;
+                }
+            }
+        }
+
+        $prodis = Prodi::all();
+
+        return view('content.jadwal.show', compact(
+            'roomChunks',
+            'masterSlots',
+            'scheduleMatrix',
+            'days',
+            'campus',
+            'shift',
+            'prodiId',
+            'semester',
+            'prodis'
         ));
     }
 
@@ -682,112 +791,6 @@ class ScheduleController extends Controller
         return null; // Aman
     }
 
-    public function show(Request $request)
-    {
-        $campus = $request->input('campus', 'kampus_1');
-        $shift  = $request->input('shift', 'pagi');
-        $prodiId = $request->input('prodi_id');
-        $semester = $request->input('semester');
-
-        $activePeriodId = AcademicPeriod::where('is_active', true)->value('id');
-
-        // 1. Definisikan Slot Waktu (Master Data Grid)
-        // Format: [Label Jam, Start, End]
-        $slotsPagi = [
-            ['08:00', '08:50'],
-            ['08:50', '09:40'],
-            ['09:40', '10:30'],
-            ['10:30', '11:20'],
-            ['11:20', '12:10'],
-            ['13:00', '13:50'],
-            ['13:50', '14:40'],
-            ['14:40', '15:30'],
-            ['15:30', '16:20']
-        ];
-
-        // Shift Malam (Senin-Jumat beda, Sabtu ikut pagi)
-        // Kita buat master slot malam standar dulu
-        $slotsMalam = [
-            ['13:00', '13:50'],
-            ['13:50', '14:40'],
-            ['14:40', '15:30'],
-            ['15:30', '16:20'],
-            ['16:20', '17:00'],
-            ['17:00', '17:30'],
-            ['17:30', '18:00'],
-            ['18:00', '18:30'],
-            ['18:30', '19:00'],
-            ['19:00', '19:30'],
-            ['19:30', '20:00']
-        ];
-
-        // Pilih Slot Berdasarkan Filter
-        $masterSlots = ($shift === 'malam') ? $slotsMalam : $slotsPagi;
-
-        // 2. Query Data Jadwal
-        $query = Schedule::query()
-            ->with(['course', 'studyClass', 'lecturer', 'room'])
-            ->whereHas('room', fn($q) => $q->where('location', $campus))
-            ->whereHas('courseDistribution', fn($q) => $q->where('academic_period_id', $activePeriodId))
-            ->whereHas('studyClass', function ($q) use ($shift, $prodiId, $semester) {
-                // Filter Shift (Penting!)
-                $q->where('shift', $shift);
-                if ($prodiId) $q->where('prodi_id', $prodiId);
-                if ($semester) $q->where('semester', $semester);
-            });
-
-        $schedules = $query->get();
-
-        // 3. Ambil Ruangan yang TERPAKAI saja (Agar tidak terlalu lebar)
-        $usedRoomIds = $schedules->pluck('room_id')->unique();
-
-        $rooms = Room::whereIn('id', $usedRoomIds)
-            ->orderBy('building')
-            ->orderBy('name')
-            ->get();
-
-        // 4. CHUNKING (PENTING UNTUK PDF)
-        // Karena kertas terbatas, kita bagi ruangan misal per 6 ruangan satu tabel
-        $roomChunks = $rooms->chunk(6);
-
-        // 5. PETA MATRIKS (Mapping Data ke Grid)
-        // Struktur: $scheduleMatrix[Hari][IndexSlot][RoomId] = DataJadwal
-        $scheduleMatrix = [];
-        $days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
-
-        foreach ($schedules as $sched) {
-            // Ambil Slot ID pertama dari jadwal ini
-            $firstSlotId = $sched->time_slot_ids[0] ?? null;
-            if (!$firstSlotId) continue;
-
-            // Cari jadwal ini masuk ke "Master Slot" nomor berapa?
-            // Kita bandingkan jam mulainya.
-            $startTime = TimeSlots::find($firstSlotId)->start_time; // ex: 08:00:00
-            $startHi = substr($startTime, 0, 5); // 08:00
-
-            // Cari index di masterSlots
-            foreach ($masterSlots as $index => $slotVal) {
-
-                if ($this->isSlotInSchedule($sched, $slotVal[0])) {
-                    $scheduleMatrix[$sched->day][$index][$sched->room_id] = $sched;
-                }
-            }
-        }
-
-        $prodis = Prodi::all();
-
-        return view('content.jadwal.show', compact(
-            'roomChunks',
-            'masterSlots',
-            'scheduleMatrix',
-            'days',
-            'campus',
-            'shift',
-            'prodiId',
-            'semester',
-            'prodis'
-        ));
-    }
 
     private function isSlotInSchedule($schedule, $slotStartTime)
     {
@@ -840,5 +843,104 @@ class ScheduleController extends Controller
         }
     }
 
-    public function printPDF(Request $request) {}
+    public function printPDF(Request $request)
+    {
+        $campus = $request->input('campus', 'kampus_1');
+        $shift  = $request->input('shift', 'pagi');
+        $prodiId = $request->input('prodi_id');
+        $semester = $request->input('semester');
+
+        $activePeriod = AcademicPeriod::where('is_active', true)->first();
+        if (!$activePeriod) return back()->with('error', 'Periode tidak aktif');
+
+        // 1. Setup Master Slot (Sama seperti function show)
+        $slotsPagi = [
+            ['08:00', '08:50'],
+            ['08:50', '09:40'],
+            ['09:40', '10:30'],
+            ['10:30', '11:20'],
+            ['11:20', '12:10'],
+            ['13:00', '13:50'],
+            ['13:50', '14:40'],
+            ['14:40', '15:30'],
+            ['15:30', '16:20']
+        ];
+        $slotsMalam = [
+            ['13:00', '13:50'],
+            ['13:50', '14:40'],
+            ['14:40', '15:30'],
+            ['15:30', '16:20'],
+            ['16:20', '17:00'],
+            ['17:00', '17:30'],
+            ['17:30', '18:00'],
+            ['18:00', '18:30'],
+            ['18:30', '19:00'],
+            ['19:00', '19:30'],
+            ['19:30', '20:00']
+        ];
+        $masterSlots = ($shift === 'malam') ? $slotsMalam : $slotsPagi;
+
+        // 2. Query Jadwal
+        $query = Schedule::query()
+            ->with(['course', 'studyClass.prodi', 'lecturer', 'room'])
+            ->whereHas('room', fn($q) => $q->where('location', $campus))
+            ->whereHas('courseDistribution', fn($q) => $q->where('academic_period_id', $activePeriod->id))
+            ->whereHas('studyClass', function ($q) use ($shift, $prodiId, $semester) {
+                $q->where('shift', $shift);
+                if ($prodiId) $q->where('prodi_id', $prodiId);
+                if ($semester) $q->where('semester', $semester);
+            });
+
+        $schedules = $query->get();
+
+        // 3. Filter Ruangan yang Terpakai Saja
+        $usedRoomIds = $schedules->pluck('room_id')->unique();
+        $rooms = Room::whereIn('id', $usedRoomIds)
+            ->orderByRaw("CASE WHEN type = 'teori' THEN 1 WHEN type = 'laboratorium' THEN 2 ELSE 3 END") // Prioritize Theory
+            ->orderBy('building')
+            ->orderBy('name')
+            ->get();
+
+        // Chunking untuk PDF (Misal 7 Ruangan per halaman agar muat di F4)
+        $roomChunks = $rooms->chunk(7);
+
+        // 4. Mapping Matrix
+        $scheduleMatrix = [];
+        $days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+
+        foreach ($schedules as $sched) {
+            $firstSlotId = $sched->time_slot_ids[0] ?? null;
+            if (!$firstSlotId) continue;
+
+            $startTime = TimeSlots::find($firstSlotId)->start_time;
+            // Cari index di masterSlots
+            foreach ($masterSlots as $index => $slotVal) {
+                if ($this->isSlotInSchedule($sched, $slotVal[0])) {
+
+                    $scheduleMatrix[$sched->day][$index][$sched->room_id][] = $sched;
+                }
+            }
+        }
+
+        // 5. Data Tanda Tangan (Ambil pejabat terkait)
+        $wadir1 = User::role('wadir1')->first();
+        $direktur = User::role('direktur')->first();
+
+        // 6. Generate PDF
+        $pdf = PDF::loadView('content.dokumen.print.jadwal_pdf', compact(
+            'roomChunks',
+            'masterSlots',
+            'scheduleMatrix',
+            'days',
+            'campus',
+            'shift',
+            'activePeriod',
+            'direktur',
+            'wadir1'
+        ));
+
+        $pdf->setPaper('a4', 'landscape');
+
+        return $pdf->stream('Jadwal_Kuliah_' . $campus . '_' . $shift . '.pdf');
+    }
 }
