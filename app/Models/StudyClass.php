@@ -19,6 +19,8 @@ class StudyClass extends Model
         'academic_advisor_id',
         'is_active',
         'shift',
+        'pic_name',
+        'pic_contact',
     ];
 
     public function academicAdvisor(): BelongsTo

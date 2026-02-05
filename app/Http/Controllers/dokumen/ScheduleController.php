@@ -20,6 +20,7 @@ use App\Http\Controllers\Controller;
 use Illuminate\Support\Facades\Auth;
 use App\Services\AutoScheduleService;
 use Barryvdh\DomPDF\Facade\Pdf as PDF;
+use App\Notifications\DocumentActionNotification;
 
 class ScheduleController extends Controller
 {
@@ -255,6 +256,7 @@ class ScheduleController extends Controller
         ));
     }
 
+
     public function submit(Request $request)
     {
         $request->validate([
@@ -262,11 +264,10 @@ class ScheduleController extends Controller
             'shift'  => 'required|in:pagi,malam',
         ]);
 
-
         try {
             $activePeriodId = AcademicPeriod::where('is_active', true)->value('id');
 
-            // Cek apakah ada jadwal di Kampus & Shift ini?
+            // 1. Cek Ketersediaan Jadwal
             $hasSchedule = Schedule::whereHas('studyClass', function ($q) use ($request) {
                 $q->where('shift', $request->shift);
             })->whereHas('room', function ($q) use ($request) {
@@ -276,8 +277,10 @@ class ScheduleController extends Controller
             if (!$hasSchedule) {
                 return back()->with('error', 'Belum ada jadwal yang dibuat untuk ' . $request->campus . ' shift ' . $request->shift);
             }
-            // Buat Dokumen Global (Prodi ID NULL)
-            AprovalDocument::updateOrCreate(
+
+            // 2. Simpan Dokumen Approval
+            // Tampung ke variabel $doc untuk notifikasi
+            $doc = AprovalDocument::updateOrCreate(
                 [
                     'academic_period_id' => $activePeriodId,
                     'type'   => 'jadwal_perkuliahan',
@@ -291,7 +294,23 @@ class ScheduleController extends Controller
                     'feedback_message' => null
                 ]
             );
-            return back()->with('success', 'Jadwal ' . $request->campus . ' (' . ucfirst($request->shift) . ') berhasil diajukan!');
+
+            // 3. LOGIC NOTIFIKASI KE WADIR 1
+            $currentUser = Auth::user();
+
+            // Cari user yang memiliki role 'wadir1'
+            $wadir1 = User::role('wadir1')->first();
+
+            // Kirim notif jika Wadir 1 ada & bukan orang yang mensubmit (biar ga notif diri sendiri)
+            if ($wadir1 && $wadir1->id !== $currentUser->id) {
+                $wadir1->notify(new DocumentActionNotification(
+                    $doc,
+                    'submitted',
+                    $currentUser->name
+                ));
+            }
+
+            return back()->with('success', 'Jadwal ' . $request->campus . ' (' . ucfirst($request->shift) . ') berhasil diajukan ke Wadir 1!');
         } catch (\Exception $e) {
             return back()->with('error', 'Gagal mengajukan: ' . $e->getMessage());
         }

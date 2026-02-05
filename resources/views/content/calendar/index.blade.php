@@ -1,13 +1,6 @@
 @extends('layouts/contentNavbarLayout')
 @section('title', 'Kalender Akademik - PRIMA')
-@section('page-style')
-    <script src='https://cdn.jsdelivr.net/npm/fullcalendar@6.1.11/index.global.min.js'></script>
-    <style>
-        .fc-event {
-            cursor: pointer;
-        }
-    </style>
-@endsection
+
 
 @section('content')
 
@@ -221,17 +214,15 @@
 
 @section('page-script')
     <script>
+        // --- 1. Helper Function Modal Edit ---
         const formEvent = document.getElementById('formEvent');
         const methodContainer = document.getElementById('methodInputContainer');
         const modalTitle = document.querySelector('#addEventModal .modal-title');
 
         function editEvent(button) {
             modalTitle.innerText = "Edit Agenda";
-
             formEvent.action = button.dataset.url;
-
             methodContainer.innerHTML = '<input type="hidden" name="_method" value="PUT">';
-
             formEvent.elements['name'].value = button.dataset.name;
             formEvent.elements['start_date'].value = button.dataset.startDate;
             formEvent.elements['end_date'].value = button.dataset.endDate;
@@ -243,29 +234,95 @@
             formEvent.action = "{{ route('kalender-akademik.store') }}";
             methodContainer.innerHTML = '';
             formEvent.reset();
-
-
         }
+
         document.getElementById('addEventModal').addEventListener('hidden.bs.modal', function() {
             resetModal();
         });
 
+        // --- 2. Inisialisasi FullCalendar (Safe Mode) ---
         document.addEventListener('DOMContentLoaded', function() {
+
+            // Fungsi rekursif untuk menunggu library dimuat
+            const initCalendar = () => {
+                // Cek apakah object 'fullcalendar' sudah ada di window global?
+                // (Ini berasal dari file fullcalendar.js yang kita buat di folder libs)
+                if (window.fullcalendar) {
+                    const calendarEl = document.getElementById('calendar');
+
+                    // Destructure plugin dari window.fullcalendar
+                    const {
+                        Calendar,
+                        plugins
+                    } = window.fullcalendar;
+
+                    const calendar = new Calendar(calendarEl, {
+                        // Pastikan plugins didaftarkan disini!
+                        plugins: plugins,
+
+                        initialView: 'dayGridMonth',
+                        headerToolbar: {
+                            left: 'prev,next today',
+                            center: 'title',
+                            right: 'dayGridMonth,listMonth'
+                        },
+                        // Locale Indonesia
+                        locale: 'id',
+                        buttonText: {
+                            today: 'Hari Ini',
+                            month: 'Bulan',
+                            week: 'Minggu',
+                            day: 'Hari',
+                            list: 'Agenda'
+                        },
+
+                        // Load Events dari Controller
+                        events: "{{ route('kalender-akademik.events') }}",
+
+                        editable: false,
+                        selectable: true,
+                        eventClick: function(info) {
+                            Swal.fire({
+                                title: info.event.title,
+                                text: info.event.extendedProps.description ||
+                                    'Tidak ada deskripsi',
+                                icon: 'info',
+                                confirmButtonText: 'Tutup',
+                                customClass: {
+                                    confirmButton: 'btn btn-primary'
+                                },
+                                buttonsStyling: false
+                            });
+                        }
+                    });
+
+                    calendar.render();
+                } else {
+                    // Jika belum load, coba lagi 100ms kemudian
+                    setTimeout(initCalendar, 100);
+                }
+            };
+
+            // Jalankan fungsi
+            initCalendar();
+        });
+
+        // --- 3. Handler Submit & Delete (SweetAlert) ---
+        document.addEventListener('DOMContentLoaded', function() {
+            // Submit Form
             const btnSubmitCalendar = document.getElementById('btnSubmitCalendar');
             if (btnSubmitCalendar) {
                 btnSubmitCalendar.addEventListener('click', function() {
                     Swal.fire({
-                        title: 'Apakah Anda yakin?',
+                        title: 'Ajukan ke Wadir?',
                         text: "Data tidak bisa diubah setelah diajukan!",
-                        icon: 'warning',
+                        icon: 'question',
                         showCancelButton: true,
                         confirmButtonText: 'Ya, Ajukan!',
                         cancelButtonText: 'Batal',
                         customClass: {
-                            title: 'my-0 py-0',
-                            htmlContainer: 'py-0 my-0',
-                            confirmButton: 'btn btn-sm btn-primary me-3',
-                            cancelButton: 'btn btn-sm btn-secondary'
+                            confirmButton: 'btn btn-success me-3',
+                            cancelButton: 'btn btn-secondary'
                         },
                         buttonsStyling: false
                     }).then((result) => {
@@ -275,46 +332,17 @@
                     });
                 });
             }
-        });
 
-
-        document.addEventListener('DOMContentLoaded', function() {
-            // Bagian Success Toast
+            // Toast Notifikasi
             @if (session('success'))
-                let successToast = document.getElementById('successToast');
-                if (successToast) {
-                    new bootstrap.Toast(successToast).show();
-                }
+                new bootstrap.Toast(document.getElementById('successToast')).show();
             @endif
-
-            // Bagian Error Toast
             @if (session('error'))
-                let errorToast = document.getElementById('errorToast');
-                if (errorToast) {
-                    new bootstrap.Toast(errorToast).show();
-                }
+                new bootstrap.Toast(document.getElementById('errorToast')).show();
             @endif
-
-            // 1. Inisialisasi FullCalendar
-            var calendarEl = document.getElementById('calendar');
-            var calendar = new FullCalendar.Calendar(calendarEl, {
-                initialView: 'dayGridMonth',
-                headerToolbar: {
-                    left: 'prev,next today',
-                    center: 'title',
-                    right: 'dayGridMonth,listMonth'
-                },
-                events: "{{ route('kalender-akademik.events') }}",
-                editable: false,
-                eventClick: function(info) {
-                    alert('Kegiatan: ' + info.event.title + '\nDeskripsi: ' + (info.event
-                        .extendedProps
-                        .description || '-'));
-                }
-            });
-            calendar.render();
         });
 
+        // Delete Handler
         document.body.addEventListener('click', function(e) {
             const deleteBtn = e.target.closest('.delete-record');
             if (deleteBtn) {
@@ -322,17 +350,15 @@
                 const form = deleteBtn.closest('form');
 
                 Swal.fire({
-                    title: 'Apakah Anda yakin?',
+                    title: 'Hapus Agenda?',
                     text: "Data yang dihapus tidak dapat dikembalikan!",
                     icon: 'warning',
                     showCancelButton: true,
-                    confirmButtonText: 'Ya, hapus!',
+                    confirmButtonText: 'Ya, Hapus!',
                     cancelButtonText: 'Batal',
                     customClass: {
-                        title: 'my-0 py-0',
-                        htmlContainer: 'py-0 my-0',
-                        confirmButton: 'btn btn-sm btn-primary me-3',
-                        cancelButton: 'btn btn-sm btn-secondary'
+                        confirmButton: 'btn btn-danger me-3',
+                        cancelButton: 'btn btn-secondary'
                     },
                     buttonsStyling: false
                 }).then((result) => {

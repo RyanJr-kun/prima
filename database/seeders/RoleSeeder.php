@@ -2,8 +2,9 @@
 
 namespace Database\Seeders;
 
-use Spatie\Permission\Models\Role;
 use Illuminate\Database\Seeder;
+use Spatie\Permission\Models\Role;
+use Spatie\Permission\PermissionRegistrar;
 use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 
 class RoleSeeder extends Seeder
@@ -13,7 +14,7 @@ class RoleSeeder extends Seeder
      */
     public function run(): void
     {
-        app()[\Spatie\Permission\PermissionRegistrar::class]->forgetCachedPermissions();
+        app()[PermissionRegistrar::class]->forgetCachedPermissions();
 
         $roles = [
             'admin',

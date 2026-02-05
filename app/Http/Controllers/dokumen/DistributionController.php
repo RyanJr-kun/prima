@@ -19,6 +19,7 @@ use App\Imports\CourseDistributionImport;
 use App\Exports\CourseDistributionTemplateExport;
 use App\Models\AprovalDocument;
 use Illuminate\Support\Facades\Auth;
+use App\Notifications\DocumentActionNotification;
 use Barryvdh\DomPDF\Facade\Pdf as PDF;
 
 
@@ -115,7 +116,6 @@ class DistributionController extends Controller
         //
     }
 
-
     public function store(Request $request)
     {
         $request->validate([
@@ -197,6 +197,7 @@ class DistributionController extends Controller
             ->findOrFail($id);
         return response()->json($distribution);
     }
+
     public function update(Request $request, $id)
     {
         $request->validate([
@@ -435,7 +436,7 @@ class DistributionController extends Controller
             'prodi_id'  => 'required'
         ]);
 
-        AprovalDocument::updateOrCreate(
+        $doc = AprovalDocument::updateOrCreate(
             [
                 'academic_period_id' => $request->period_id,
                 'prodi_id'           => $request->prodi_id,
@@ -447,6 +448,25 @@ class DistributionController extends Controller
                 'feedback_message'  => null
             ]
         );
+
+        $prodi = Prodi::find($request->prodi_id);
+
+        if ($prodi && $prodi->kaprodi_id) {
+
+            $kaprodi = User::find($prodi->kaprodi_id);
+            if ($kaprodi && $kaprodi->id !== Auth::id()) {
+
+                // Di Controller, ubah bagian notifikasi jadi begini:
+                // try {
+                //     $kaprodi->notify(new DocumentActionNotification($doc, 'submitted', Auth::user()->name));
+                //     dd("Email berhasil dikirim (seharusnya)!"); // Cek apakah script sampai sini
+                // } catch (\Exception $e) {
+                //     dd($e->getMessage()); // Ini akan menampilkan error SMTP di layar jika ada
+                // }
+
+                $kaprodi->notify(new DocumentActionNotification($doc, 'submitted', Auth::user()->name));
+            }
+        }
 
         return back()->with('success', 'Distribusi berhasil diajukan ke Kaprodi!');
     }

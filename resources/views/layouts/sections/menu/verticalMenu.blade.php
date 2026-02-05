@@ -20,14 +20,8 @@
 
     <ul class="menu-inner py-1">
         @foreach ($menuData[0]->menu as $menu)
-            @if (isset($menu->slug) && $menu->slug === 'beban-kerja-dosen.rekap')
-                @if (!auth()->user()->hasAnyRole(['admin', 'baak', 'kaprodi']))
-                    @continue
-                @endif
-            @endif
-
-            @if (isset($menu->slug) && $menu->slug === 'beban-kerja-dosen.index')
-                @if (!auth()->user()->hasAnyRole(['dosen', 'kaprodi']))
+            @if (isset($menu->role))
+                @if (!auth()->user()->hasAnyRole($menu->role))
                     @continue
                 @endif
             @endif

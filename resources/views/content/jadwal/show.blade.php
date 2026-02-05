@@ -281,6 +281,13 @@
                                             @if (!empty($schedules))
                                                 @php
                                                     $firstSched = $schedules[0];
+
+                                                    // Cek jumlah dosen unik di slot ini
+                                                    // (Berguna jika ini adalah Team Teaching yang diinput sebagai 2 jadwal terpisah)
+                                                    $uniqueLecturers = collect($schedules)
+                                                        ->pluck('lecturer.name')
+                                                        ->unique();
+                                                    $isTeam = $uniqueLecturers->count() > 1;
                                                 @endphp
                                                 <div class="schedule-card"
                                                     title="{{ $firstSched->course->name }} - {{ $firstSched->lecturer->name }}">
@@ -297,10 +304,14 @@
                                                                 </span>
                                                             @endforeach
                                                         </div>
-                                                        <div class="text-muted mt-1 d-flex align-items-center"
-                                                            style="font-size: 0.7rem;">
-                                                            <i class="bx bx-user me-1" style="font-size: 0.8rem;"></i>
+                                                        <div class="text-muted mt-1 d-flex align-items-center">
+                                                            <i class="bx bx-user me-1"></i>
+
                                                             {{ \Illuminate\Support\Str::limit($firstSched->lecturer->name, 15) }}
+                                                            @if ($isTeam)
+                                                                <span class="ms-1 fst-italic text-primary"
+                                                                    style="font-size: 0.65rem;">(Tim)</span>
+                                                            @endif
                                                         </div>
                                                     </div>
                                                 </div>
@@ -325,27 +336,22 @@
 
 @section('page-script')
     <script type="module">
-        // Fungsi inisialisasi Select2
         const initSelect2 = () => {
-            // Cek apakah jQuery dan Select2 sudah siap
             if (typeof $ !== 'undefined' && $.fn.select2) {
                 $('.select2').each(function() {
                     const $this = $(this);
                     $this.select2({
                         placeholder: $this.data('placeholder') || "Pilih...",
                         allowClear: $this.find('option[value=""]').length >
-                            0, // Hanya allowClear jika ada value=""
+                            0,
                         width: '100%',
-                        minimumResultsForSearch: 10 // Sembunyikan search box jika opsi < 10
+                        minimumResultsForSearch: 10
                     });
                 });
             } else {
-                // Jika belum siap, coba lagi dalam 100ms
                 setTimeout(initSelect2, 100);
             }
         };
-
-        // Jalankan saat script dimuat
         initSelect2();
     </script>
 @endsection

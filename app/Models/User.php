@@ -28,6 +28,8 @@ class User extends Authenticatable
         'signature_path',
         'nidn',
         'status',
+        'profile_photo_path',
+        'notification_settings',
     ];
 
     /**
@@ -51,6 +53,7 @@ class User extends Authenticatable
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
             'status' => 'boolean',
+            'notification_settings' => 'array',
         ];
     }
 

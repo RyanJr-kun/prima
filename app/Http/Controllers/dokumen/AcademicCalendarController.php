@@ -10,6 +10,7 @@ use App\Models\AcademicCalendar;
 use App\Http\Controllers\Controller;
 use Illuminate\Support\Facades\Auth;
 use Barryvdh\DomPDF\Facade\Pdf as PDF;
+use App\Notifications\DocumentActionNotification;
 
 class AcademicCalendarController extends Controller
 {
@@ -117,14 +118,15 @@ class AcademicCalendarController extends Controller
     {
         $activePeriodId = AcademicPeriod::where('is_active', true)->value('id');
 
-        // Cek apakah ada isinya? Jangan ajukan kertas kosong
+        // 1. Validasi Isi Kalender
         $count = AcademicCalendar::where('academic_period_id', $activePeriodId)->count();
         if ($count == 0) {
             return back()->with('error', 'Tidak bisa mengajukan! Data kalender masih kosong.');
         }
 
-        // Buat atau Update Dokumen Approval
-        AprovalDocument::updateOrCreate(
+        // 2. Simpan/Update Dokumen Approval
+        // Simpan ke variabel $doc untuk dikirim ke notifikasi
+        $doc = AprovalDocument::updateOrCreate(
             [
                 'academic_period_id' => $activePeriodId,
                 'type' => 'kalender_akademik',
@@ -137,7 +139,22 @@ class AcademicCalendarController extends Controller
             ]
         );
 
-        return back()->with('success', 'Kalender Akademik berhasil diajukan ke Pimpinan!');
+        // 3. LOGIC NOTIFIKASI KE WADIR 1
+        $currentUser = Auth::user();
+
+        // Cari user dengan role 'wadir1'
+        $wadir1 = User::role('wadir1')->first();
+
+        // Kirim notif jika Wadir 1 ditemukan & bukan user yang sedang submit
+        if ($wadir1 && $wadir1->id !== $currentUser->id) {
+            $wadir1->notify(new DocumentActionNotification(
+                $doc,
+                'submitted',
+                $currentUser->name
+            ));
+        }
+
+        return back()->with('success', 'Kalender Akademik berhasil diajukan ke Wadir 1!');
     }
 
     /**

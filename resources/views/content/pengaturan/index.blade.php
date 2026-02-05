@@ -2,7 +2,6 @@
 
 @section('title', 'Pengaturan Akun - PRIMA')
 
-<!-- Page Scripts -->
 @section('page-script')
     @vite(['resources/assets/js/pages-account-settings-account.js'])
 @endsection
@@ -10,168 +9,203 @@
 @section('content')
     <div class="row">
         <div class="col-md-12">
+
+            {{-- Alert Sukses --}}
+            @if (session('success'))
+                <div class="alert alert-success alert-dismissible" role="alert">
+                    {{ session('success') }}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+            @endif
+
+            {{-- Alert Error --}}
+            @if ($errors->any())
+                <div class="alert alert-danger alert-dismissible" role="alert">
+                    <ul class="mb-0">
+                        @foreach ($errors->all() as $error)
+                            <li>{{ $error }}</li>
+                        @endforeach
+                    </ul>
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+            @endif
+
             <div class="nav-align-top">
                 <ul class="nav nav-pills flex-column flex-md-row mb-6 gap-md-0 gap-2">
                     <li class="nav-item">
                         <a class="nav-link active" href="javascript:void(0);"><i
-                                class="icon-base bx bx-user icon-sm me-1_5"></i> Account</a>
+                                class="icon-base bx bx-user icon-sm me-1_5"></i> Akun</a>
                     </li>
                     <li class="nav-item">
                         <a class="nav-link" href="{{ route('notifikasi') }}"><i
-                                class="icon-base bx bx-bell icon-sm me-1_5"></i> Notifications</a>
+                                class="icon-base bx bx-bell icon-sm me-1_5"></i> Notifikasi</a>
                     </li>
                 </ul>
             </div>
-            <div class="card mb-6">
-                <!-- Account -->
-                <div class="card-body">
-                    <div class="d-flex align-items-start align-items-sm-center gap-6 pb-4 border-bottom">
-                        <img src="{{ asset('assets/img/avatars/1.png') }}" alt="user-avatar"
-                            class="d-block w-px-100 h-px-100 rounded" id="uploadedAvatar" />
-                        <div class="button-wrapper">
-                            <label for="upload" class="btn btn-primary me-3 mb-4" tabindex="0">
-                                <span class="d-none d-sm-block">Upload new photo</span>
-                                <i class="icon-base bx bx-upload d-block d-sm-none"></i>
-                                <input type="file" id="upload" class="account-file-input" hidden
-                                    accept="image/png, image/jpeg" />
-                            </label>
-                            <button type="button" class="btn btn-outline-secondary account-image-reset mb-4">
-                                <i class="icon-base bx bx-reset d-block d-sm-none"></i>
-                                <span class="d-none d-sm-block">Reset</span>
-                            </button>
 
-                            <div>Allowed JPG, GIF or PNG. Max size of 800K</div>
+            <div class="card mb-6">
+                <form id="formAccountSettings" method="POST" action="{{ route('pengaturan.update') }}"
+                    enctype="multipart/form-data">
+                    @csrf
+                    @method('PUT')
+
+                    <div class="card-body">
+                        <div class="d-flex align-items-start align-items-sm-center gap-6 pb-4 border-bottom">
+                            {{-- Logic Avatar: Cek Database / File Exists --}}
+                            @php
+
+                                $hasPhoto =
+                                    $user->profile_photo_path &&
+                                    Storage::disk('public')->exists($user->profile_photo_path);
+
+                                // 2. Jika ada, pakai foto itu. Jika tidak, pakai UI Avatars (Inisial Nama)
+                                $avatarUrl = $hasPhoto
+                                    ? asset('storage/' . $user->profile_photo_path)
+                                    : 'https://ui-avatars.com/api/?name=' .
+                                        urlencode($user->name) .
+                                        '&background=random&color=fff&bold=true&size=128';
+                            @endphp
+
+                            <img src="{{ $avatarUrl }}" alt="user-avatar"
+                                class="d-block w-px-100 h-px-100 rounded object-fit-cover" id="uploadedAvatar" />
+
+                            <div class="button-wrapper">
+                                <label for="upload" class="btn btn-primary me-3 mb-4" tabindex="0">
+                                    <span class="d-none d-sm-block">Upload foto baru</span>
+                                    <i class="icon-base bx bx-upload d-block d-sm-none"></i>
+                                    <input type="file" id="upload" name="upload" class="account-file-input" hidden
+                                        accept="image/png, image/jpeg" />
+                                </label>
+                                @if ($hasPhoto)
+                                    <button type="button" class="btn btn-outline-secondary account-image-reset mb-4"
+                                        id="resetAvatarBtn">
+                                        <i class="icon-base bx bx-reset d-block d-sm-none"></i>
+                                        <span class="d-none d-sm-block">Hapus Foto</span>
+                                    </button>
+                                @endif
+
+                                <div>Allowed JPG, GIF or PNG. Max size of 1MB</div>
+                            </div>
                         </div>
                     </div>
-                </div>
-                <div class="card-body pt-4">
-                    <form id="formAccountSettings" method="POST" onsubmit="return false">
+
+                    <div class="card-body pt-4">
                         <div class="row g-6">
+                            {{-- Username --}}
                             <div class="col-md-6">
-                                <label for="firstName" class="form-label">Nama Lengkap</label>
-                                <input class="form-control" type="text" id="firstName" name="firstName" value="John"
-                                    autofocus />
+                                <label for="username" class="form-label">Username</label>
+                                <input class="form-control" type="text" id="username" name="username"
+                                    value="{{ old('username', $user->username) }}" autofocus />
                             </div>
+
+                            {{-- Nama Lengkap --}}
                             <div class="col-md-6">
-                                <label for="lastName" class="form-label">Last Name</label>
-                                <input class="form-control" type="text" name="lastName" id="lastName" value="Doe" />
+                                <label for="name" class="form-label">Nama Lengkap</label>
+                                <input class="form-control" type="text" name="name" id="name"
+                                    value="{{ old('name', $user->name) }}" />
                             </div>
+
+                            {{-- E-mail --}}
                             <div class="col-md-6">
                                 <label for="email" class="form-label">E-mail</label>
-                                <input class="form-control" type="text" id="email" name="email"
-                                    value="john.doe@example.com" placeholder="john.doe@example.com" />
+                                <input class="form-control" type="email" id="email" name="email"
+                                    value="{{ old('email', $user->email) }}" />
                             </div>
+
+                            {{-- NIDN --}}
                             <div class="col-md-6">
-                                <label for="organization" class="form-label">Organization</label>
-                                <input type="text" class="form-control" id="organization" name="organization"
-                                    value="{{ config('variables.creatorName') }}" />
+                                <label for="nidn" class="form-label">NIDN (Nomor Induk Dosen Nasional)</label>
+                                <input type="text" class="form-control" id="nidn" name="nidn"
+                                    value="{{ old('nidn', $user->nidn) }}" placeholder="Isi jika ada" />
                             </div>
-                            <div class="col-md-6">
-                                <label class="form-label" for="phoneNumber">Phone Number</label>
-                                <div class="input-group input-group-merge">
-                                    <span class="input-group-text">US (+1)</span>
-                                    <input type="text" id="phoneNumber" name="phoneNumber" class="form-control"
-                                        placeholder="202 555 0111" />
+
+                            {{-- LOGIC TTD KHUSUS ROLE --}}
+                            @hasanyrole('direktur|wadir1|wadir2|wadir3|kaprodi')
+                                <div class="col-md-12">
+                                    <div class="divider text-start">
+                                        <div class="divider-text text-primary fw-bold"> <i class="bx bx-pen"></i> Tanda Tangan
+                                            Digital</div>
+                                    </div>
+                                    <div class="alert alert-warning mb-2">
+                                        <small>Upload gambar tanda tangan (Format PNG Transparan disarankan). Akan digunakan
+                                            untuk dokumen resmi.</small>
+                                    </div>
+
+                                    <div class="d-flex align-items-center gap-3">
+                                        @if ($user->signature_path)
+                                            <div class="border p-2 rounded bg-light">
+                                                <img src="{{ asset('storage/' . $user->signature_path) }}" height="60"
+                                                    alt="TTD Saat ini">
+                                            </div>
+                                        @endif
+                                        <div class="flex-grow-1">
+                                            <label for="signature" class="form-label">Upload TTD Baru</label>
+                                            <input class="form-control" type="file" id="signature" name="signature"
+                                                accept="image/png, image/jpeg">
+                                        </div>
+                                    </div>
+                                </div>
+                            @endhasanyrole
+
+                            {{-- Ganti Password Section --}}
+                            <div class="col-md-12 mt-4">
+                                <div class="divider text-start">
+                                    <div class="divider-text">Ganti Password (Opsional)</div>
                                 </div>
                             </div>
+
                             <div class="col-md-6">
-                                <label for="address" class="form-label">Address</label>
-                                <input type="text" class="form-control" id="address" name="address"
-                                    placeholder="Address" />
+                                <label for="new_password" class="form-label">Password Baru</label>
+                                <input type="password" class="form-control" id="new_password" name="new_password"
+                                    placeholder="Kosongkan jika tidak ingin mengganti" />
                             </div>
                             <div class="col-md-6">
-                                <label for="state" class="form-label">State</label>
-                                <input class="form-control" type="text" id="state" name="state"
-                                    placeholder="California" />
+                                <label for="new_password_confirmation" class="form-label">Konfirmasi Password Baru</label>
+                                <input type="password" class="form-control" id="new_password_confirmation"
+                                    name="new_password_confirmation" placeholder="Ulangi password baru" />
                             </div>
-                            <div class="col-md-6">
-                                <label for="zipCode" class="form-label">Zip Code</label>
-                                <input type="text" class="form-control" id="zipCode" name="zipCode"
-                                    placeholder="231465" maxlength="6" />
-                            </div>
-                            <div class="col-md-6">
-                                <label class="form-label" for="country">Country</label>
-                                <select id="country" class="select2 form-select">
-                                    <option value="">Select</option>
-                                    <option value="Australia">Australia</option>
-                                    <option value="Bangladesh">Bangladesh</option>
-                                    <option value="Belarus">Belarus</option>
-                                    <option value="Brazil">Brazil</option>
-                                    <option value="Canada">Canada</option>
-                                    <option value="China">China</option>
-                                    <option value="France">France</option>
-                                    <option value="Germany">Germany</option>
-                                    <option value="India">India</option>
-                                    <option value="Indonesia">Indonesia</option>
-                                    <option value="Israel">Israel</option>
-                                    <option value="Italy">Italy</option>
-                                    <option value="Japan">Japan</option>
-                                    <option value="Korea">Korea, Republic of</option>
-                                    <option value="Mexico">Mexico</option>
-                                    <option value="Philippines">Philippines</option>
-                                    <option value="Russia">Russian Federation</option>
-                                    <option value="South Africa">South Africa</option>
-                                    <option value="Thailand">Thailand</option>
-                                    <option value="Turkey">Turkey</option>
-                                    <option value="Ukraine">Ukraine</option>
-                                    <option value="United Arab Emirates">United Arab Emirates</option>
-                                    <option value="United Kingdom">United Kingdom</option>
-                                    <option value="United States">United States</option>
-                                </select>
-                            </div>
-                            <div class="col-md-6">
-                                <label for="language" class="form-label">Language</label>
-                                <select id="language" class="select2 form-select">
-                                    <option value="">Select Language</option>
-                                    <option value="en">English</option>
-                                    <option value="fr">French</option>
-                                    <option value="de">German</option>
-                                    <option value="pt">Portuguese</option>
-                                </select>
-                            </div>
-                            <div class="col-md-6">
-                                <label for="timeZones" class="form-label">Timezone</label>
-                                <select id="timeZones" class="select2 form-select">
-                                    <option value="">Select Timezone</option>
-                                    <option value="-12">(GMT-12:00) International Date Line West</option>
-                                    <option value="-11">(GMT-11:00) Midway Island, Samoa</option>
-                                    <option value="-10">(GMT-10:00) Hawaii</option>
-                                    <option value="-9">(GMT-09:00) Alaska</option>
-                                    <option value="-8">(GMT-08:00) Pacific Time (US & Canada)</option>
-                                    <option value="-8">(GMT-08:00) Tijuana, Baja California</option>
-                                    <option value="-7">(GMT-07:00) Arizona</option>
-                                    <option value="-7">(GMT-07:00) Chihuahua, La Paz, Mazatlan</option>
-                                    <option value="-7">(GMT-07:00) Mountain Time (US & Canada)</option>
-                                    <option value="-6">(GMT-06:00) Central America</option>
-                                    <option value="-6">(GMT-06:00) Central Time (US & Canada)</option>
-                                    <option value="-6">(GMT-06:00) Guadalajara, Mexico City, Monterrey</option>
-                                    <option value="-6">(GMT-06:00) Saskatchewan</option>
-                                    <option value="-5">(GMT-05:00) Bogota, Lima, Quito, Rio Branco</option>
-                                    <option value="-5">(GMT-05:00) Eastern Time (US & Canada)</option>
-                                    <option value="-5">(GMT-05:00) Indiana (East)</option>
-                                    <option value="-4">(GMT-04:00) Atlantic Time (Canada)</option>
-                                    <option value="-4">(GMT-04:00) Caracas, La Paz</option>
-                                </select>
-                            </div>
-                            <div class="col-md-6">
-                                <label for="currency" class="form-label">Currency</label>
-                                <select id="currency" class="select2 form-select">
-                                    <option value="">Select Currency</option>
-                                    <option value="usd">USD</option>
-                                    <option value="euro">Euro</option>
-                                    <option value="pound">Pound</option>
-                                    <option value="bitcoin">Bitcoin</option>
-                                </select>
-                            </div>
+
                         </div>
                         <div class="mt-6">
-                            <button type="submit" class="btn btn-primary me-3">Save changes</button>
-                            <button type="reset" class="btn btn-outline-secondary">Cancel</button>
+                            <button type="submit" class="btn btn-primary me-3">Simpan Perubahan</button>
+                            <button type="reset" class="btn btn-outline-secondary">Batal</button>
                         </div>
-                    </form>
-                </div>
-                <!-- /Account -->
+                    </div>
+                </form>
             </div>
         </div>
     </div>
+@endsection
+
+@section('page-script')
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const resetBtn = document.getElementById('resetAvatarBtn');
+            if (resetBtn) {
+                resetBtn.addEventListener('click', function() {
+                    if (confirm('Apakah Anda yakin ingin menghapus foto profil?')) {
+                        // Create a temporary form to submit DELETE request
+                        let form = document.createElement('form');
+                        form.method = 'POST';
+                        form.action = "{{ route('pengaturan.deleteAvatar') }}";
+
+                        let csrf = document.createElement('input');
+                        csrf.type = 'hidden';
+                        csrf.name = '_token';
+                        csrf.value = "{{ csrf_token() }}";
+                        form.appendChild(csrf);
+
+                        let method = document.createElement('input');
+                        method.type = 'hidden';
+                        method.name = '_method';
+                        method.value = 'DELETE';
+                        form.appendChild(method);
+
+                        document.body.appendChild(form);
+                        form.submit();
+                    }
+                });
+            }
+        });
+    </script>
 @endsection

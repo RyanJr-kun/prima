@@ -69,4 +69,9 @@ class CourseDistribution extends Model
         return $this->hasOne(Schedule::class, 'course_id', 'course_id')
             ->whereColumn('study_class_id', 'course_distributions.study_class_id');
     }
+
+    public function aprovalDocument()
+    {
+        return $this->belongsTo(AprovalDocument::class, 'aproval_document_id');
+    }
 }

@@ -156,11 +156,11 @@
                     <thead class="bg-label-secondary">
                         <tr>
                             <th width="2%" class="text-center">No</th>
-                            <th width="45%">Mata Kuliah</th>
+                            <th width="30%">Mata Kuliah</th>
                             <th width="15%" class="text-center">Kelas</th>
                             <th width="10%" class="text-center">SKS</th>
-                            <th width="10%" class="text-center">Pertemuan</th>
-                            <th width="13%" class="text-center">Ujian</th>
+                            <th width="18%" class="text-center">Pertemuan</th>
+                            <th width="20%" class="text-center">Ujian</th>
                             <th width="10%" class="text-center">SKS Real</th>
                         </tr>
                     </thead>

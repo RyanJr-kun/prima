@@ -4,6 +4,9 @@ namespace App\Http\Controllers\dokumen;
 
 
 use Illuminate\Http\Request;
+use App\Models\User;
+use App\Notifications\DocumentActionNotification;
+use Illuminate\Support\Facades\Notification;
 use App\Models\AcademicPeriod;
 use App\Models\AprovalDocument;
 use App\Http\Controllers\Controller;
@@ -92,61 +95,49 @@ class AprovalDocumentController extends Controller
 
     public function approve(Request $request, $id)
     {
-        $doc = AprovalDocument::findOrFail($id);
+        $doc = AprovalDocument::with('prodi')->findOrFail($id);
+
         /** @var \App\Models\User $user */
         $user = Auth::user();
 
-
-        if ($doc->type == 'kalender_akademik') {
-            if ($user->hasRole('wadir1') && $doc->status == 'submitted') {
-                $doc->update([
-                    'status' => 'approved_wadir1',
-                    'action_by_user_id' => $user->id,
-                    'feedback_message' => null
-                ]);
-                return back()->with('success', 'Kalender Akademik disetujui Wadir 1. Menunggu Direktur.');
-            }
-
-            if ($user->hasRole('direktur') && $doc->status == 'approved_wadir1') {
-                $doc->update([
-                    'status' => 'approved_direktur',
-                    'action_by_user_id' => $user->id
-                ]);
-                return back()->with('success', 'Kalender Akademik Disahkan!');
-            }
-        }
-
-        if ($doc->type == 'jadwal_perkuliahan') {
-            if ($user->hasRole('wadir1') && $doc->status == 'submitted') {
-                $doc->update([
-                    'status' => 'approved_wadir1',
-                    'action_by_user_id' => $user->id,
-                    'feedback_message' => null
-                ]);
-                return back()->with('success', 'Kalender Akademik disetujui Wadir 1. Menunggu Direktur.');
-            }
-
-            if ($user->hasRole('direktur') && $doc->status == 'approved_wadir1') {
-                $doc->update([
-                    'status' => 'approved_direktur',
-                    'action_by_user_id' => $user->id
-                ]);
-                return back()->with('success', 'Kalender Akademik Disahkan!');
-            }
-        }
-
+        $currentStatus = $doc->status;
         $nextStatus = null;
+        $feedbackMsg = null;
 
-        if ($user->hasRole('kaprodi') && $doc->status == 'submitted') {
-            $nextStatus = 'approved_kaprodi';
-        } elseif ($user->hasRole('wadir1') && $doc->status == 'approved_kaprodi') {
-            $nextStatus = 'approved_wadir1';
-        } elseif ($user->hasRole('wadir2') && $doc->status == 'approved_wadir1') {
-            $nextStatus = 'approved_wadir2';
-        } elseif ($user->hasRole('direktur') && $doc->status == 'approved_wadir2') {
-            $nextStatus = 'approved_direktur';
+        if (in_array($doc->type, ['kalender_akademik', 'jadwal_perkuliahan'])) {
+            if ($user->hasRole('wadir1') && $currentStatus == 'submitted') {
+                $nextStatus = 'approved_wadir1';
+                $feedbackMsg = 'Disetujui Wadir 1. Menunggu Direktur.';
+            } elseif ($user->hasRole('direktur') && $currentStatus == 'approved_wadir1') {
+                $nextStatus = 'approved_direktur';
+                $feedbackMsg = 'Dokumen Disahkan oleh Direktur!';
+            }
         } else {
-            return back()->with('error', 'Gagal: Status dokumen tidak sesuai atau Anda tidak memiliki akses.');
+            if ($user->hasRole('kaprodi') && $currentStatus == 'submitted') {
+                $nextStatus = 'approved_kaprodi';
+            } elseif ($user->hasRole('wadir1') && $currentStatus == 'approved_kaprodi') {
+                $nextStatus = 'approved_wadir1';
+
+                // KHUSUS DISTRIBUSI: Jika ingin skip Wadir 2, langsung set logic disini
+                // if ($doc->type == 'distribusi_matkul') { $nextStatus = 'approved_wadir2'; } // Skip step
+            } elseif ($user->hasRole('wadir2') && $currentStatus == 'approved_wadir1') {
+                $nextStatus = 'approved_wadir2';
+            } elseif ($user->hasRole('direktur') && $currentStatus == 'approved_wadir2') {
+                $nextStatus = 'approved_direktur';
+            }
+
+            // Override Khusus BKD (Jika ingin BKD sama persis kayak Distribusi/Tanpa Wadir 2)
+            // Hapus komentar ini jika BKD tidak butuh Wadir 2:
+            /*
+            if ($doc->type == 'beban_kerja_dosen' && $user->hasRole('wadir1') && $currentStatus == 'approved_kaprodi') {
+                 // Skip Wadir 2, status langsung dianggap approved_wadir2 agar siap diambil Direktur
+                 // Atau sesuaikan logic 'approved_wadir1' -> Direktur langsung.
+            }
+            */
+        }
+
+        if (!$nextStatus) {
+            return back()->with('error', 'Gagal: Status dokumen tidak sesuai atau Anda tidak memiliki akses approval.');
         }
 
         $doc->update([
@@ -155,8 +146,48 @@ class AprovalDocumentController extends Controller
             'feedback_message' => null
         ]);
 
+        if ($doc->prodi_id) {
+            $kaprodi = User::find($doc->prodi->kaprodi_id);
+            if ($kaprodi && $kaprodi->id != $user->id) {
+                $kaprodi->notify(new DocumentActionNotification($doc, 'approved', $user->name));
+            }
+        } else {
+            if ($nextStatus == 'approved_direktur') {
+                $wadir1 = User::role('wadir1')->first();
+                if ($wadir1 && $wadir1->id != $user->id) {
+                    $wadir1->notify(new DocumentActionNotification($doc, 'approved', $user->name));
+                }
+            }
+        }
 
-        return back()->with('success', 'Dokumen berhasil disetujui dan diteruskan.');
+        $nextRole = null;
+
+        switch ($nextStatus) {
+            case 'approved_kaprodi':
+                $nextRole = 'wadir1';
+                break;
+            case 'approved_wadir1':
+                if (in_array($doc->type, ['jadwal_perkuliahan', 'kalender_akademik'])) {
+                    $nextRole = 'direktur'; // Global docs skip Wadir 2
+                    // } elseif ($doc->type == 'distribusi_matkul') {
+                    //     $nextRole = 'direktur'; // Distribusi biasanya skip Wadir 2
+                } else {
+                    $nextRole = 'wadir2';   // Default (termasuk BKD) masuk ke Wadir 2
+                }
+                break;
+            case 'approved_wadir2':
+                $nextRole = 'direktur';
+                break;
+        }
+
+        // Kirim Notif ke Next Role
+        if ($nextRole) {
+            $receivers = User::role($nextRole)->get();
+            Notification::send($receivers, new DocumentActionNotification($doc, 'submitted', $user->name));
+        }
+
+        $msg = $feedbackMsg ?? 'Dokumen berhasil disetujui dan diteruskan.';
+        return back()->with('success', $msg);
     }
 
     public function reject(Request $request, $id)
@@ -165,13 +196,35 @@ class AprovalDocumentController extends Controller
             'feedback_message' => 'required|string|max:1000'
         ]);
 
-        $doc = AprovalDocument::findOrFail($id);
+        $doc = AprovalDocument::with('prodi')->findOrFail($id);
+        $user = Auth::user();
 
         $doc->update([
             'status' => 'rejected',
             'feedback_message' => $request->feedback_message,
-            'action_by_user_id' => Auth::id()
+            'action_by_user_id' => $user->id
         ]);
+
+        if ($doc->prodi_id) {
+            $kaprodi = User::find($doc->prodi->kaprodi_id);
+            if ($kaprodi) {
+                $kaprodi->notify(new DocumentActionNotification($doc, 'rejected', $user->name));
+            }
+        } elseif ($doc->type == 'kalender_akademik') {
+            $wadir1 = User::role('wadir1')->first();
+            if ($wadir1) {
+                $wadir1->notify(new DocumentActionNotification($doc, 'rejected', $user->name));
+            }
+        }
+
+        $admins = User::role(['admin', 'baak'])->get();
+        $adminsToNotify = $admins->reject(function ($admin) use ($user) {
+            return $admin->id === $user->id;
+        });
+
+        if ($adminsToNotify->isNotEmpty()) {
+            Notification::send($adminsToNotify, new DocumentActionNotification($doc, 'rejected', $user->name));
+        }
 
         return back()->with('success', 'Dokumen dikembalikan untuk revisi.');
     }
@@ -179,10 +232,7 @@ class AprovalDocumentController extends Controller
     public function submit(Request $request)
     {
 
-        $docId = $request->id ?? $request->document_id;
-
-        $doc = AprovalDocument::findOrFail($docId);
-
+        $doc = AprovalDocument::findOrFail($request->id ?? $request->document_id);
 
         if (!in_array($doc->status, ['draft', 'rejected'])) {
             return back()->with('error', 'Dokumen sedang dalam proses approval, tidak bisa disubmit ulang.');
@@ -193,6 +243,15 @@ class AprovalDocumentController extends Controller
             'feedback_message' => null,
             'action_by_user_id' => Auth::id()
         ]);
+
+
+        $user = Auth::user();
+
+        $targetRole = 'wadir1';
+        if ($doc->type == 'kalender_akademik') $targetRole = 'wadir1';
+
+        $receivers = User::role($targetRole)->get();
+        Notification::send($receivers, new DocumentActionNotification($doc, 'submitted', $user->name));
 
         return back()->with('success', 'Dokumen berhasil diajukan ulang.');
     }

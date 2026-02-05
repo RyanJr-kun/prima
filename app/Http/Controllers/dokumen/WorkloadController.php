@@ -13,6 +13,7 @@ use App\Models\CourseDistribution;
 use App\Http\Controllers\Controller;
 use Illuminate\Support\Facades\Auth;
 use Barryvdh\DomPDF\Facade\Pdf as PDF;
+use App\Notifications\DocumentActionNotification;
 
 class WorkloadController extends Controller
 {
@@ -189,41 +190,64 @@ class WorkloadController extends Controller
     public function rekapIndex(Request $request)
     {
         $activePeriod = AcademicPeriod::where('is_active', true)->first();
-
-        $prodiId = $request->input('prodi_id');
         $user = Auth::user();
 
-        if ($user->hasRole('kaprodi')) {
-            $prodiId = $user->prodi_id;
+        // Default variable
+        $prodiId = null;
+        $isKaprodi = $user->hasRole('kaprodi');
+        $dosens = collect([]);
+        $approvalDoc = null;
+
+        if ($isKaprodi) {
+            $myProdi = Prodi::where('kaprodi_id', $user->id)->first();
+
+            if ($myProdi) {
+                $prodiId = $myProdi->id;
+            } else {
+                return back()->with('error', 'Akun Anda terdaftar sebagai Kaprodi, namun belum dipetakan ke Program Studi manapun.');
+            }
+        } else {
+            // Jika Admin/BAAK, ambil dari Input Filter
+            $prodiId = $request->input('prodi_id');
         }
 
-        $dosens = User::role('dosen')
-            ->when($prodiId, function ($query) use ($prodiId, $activePeriod) {
-                $query->whereHas('teachingDistributions', function ($qDist) use ($prodiId, $activePeriod) {
+        // 2. EKSEKUSI QUERY HANYA JIKA PRODI ID ADA
+        // (Kaprodi otomatis ada, Admin menunggu input)
+        if ($prodiId) {
+            $dosens = User::role('dosen')
+                ->whereHas('teachingDistributions', function ($qDist) use ($prodiId, $activePeriod) {
                     $qDist->where('academic_period_id', $activePeriod->id ?? 0);
                     $qDist->whereHas('studyClass', function ($qClass) use ($prodiId) {
                         $qClass->where('prodi_id', $prodiId);
                     });
-                });
-            })
-            ->with(['prodi', 'workloads' => function ($q) use ($activePeriod) {
-                $q->where('academic_period_id', $activePeriod->id ?? 0);
-            }])
-            ->orderBy('name')
-            ->get();
+                })
+                ->with(['prodi', 'workloads' => function ($q) use ($activePeriod) {
+                    $q->where('academic_period_id', $activePeriod->id ?? 0);
+                }])
+                ->orderBy('name')
+                ->get();
 
-        $prodis = Prodi::all();
-
-        $approvalDoc = null;
-        if ($prodiId && $activePeriod) {
-            $approvalDoc = AprovalDocument::where([
-                'academic_period_id' => $activePeriod->id,
-                'prodi_id' => $prodiId,
-                'type' => 'beban_kerja_dosen'
-            ])->first();
+            // Cek Dokumen Approval
+            if ($activePeriod) {
+                $approvalDoc = AprovalDocument::where([
+                    'academic_period_id' => $activePeriod->id,
+                    'prodi_id' => $prodiId,
+                    'type' => 'beban_kerja_dosen'
+                ])->first();
+            }
         }
 
-        return view('content.bkd.admin_rekap', compact('activePeriod', 'dosens', 'prodis', 'prodiId', 'approvalDoc'));
+        // 3. AMBIL LIST PRODI UNTUK DROPDOWN
+        $prodis = Prodi::orderBy('name')->get();
+
+        return view('content.bkd.admin_rekap', compact(
+            'activePeriod',
+            'dosens',
+            'prodis',
+            'prodiId',
+            'approvalDoc',
+            'isKaprodi'
+        ));
     }
 
     public function submit(Request $request)
@@ -233,20 +257,42 @@ class WorkloadController extends Controller
             'academic_period_id' => 'required'
         ]);
 
-        AprovalDocument::updateOrCreate(
+        // 1. Simpan/Update Dokumen
+        // Tampung ke variabel $doc agar bisa dikirim ke notifikasi
+        $doc = AprovalDocument::updateOrCreate(
             [
-                // Kunci Pencarian (Where)
                 'academic_period_id' => $request->academic_period_id,
                 'prodi_id' => $request->prodi_id,
                 'type' => 'beban_kerja_dosen',
             ],
             [
-                // Data yang di-update/insert
-                'status' => 'submitted',          // Reset status jadi submitted
-                'feedback_message' => null,       // Hapus pesan penolakan lama (jika ada)
-                'action_by_user_id' => Auth::id() // Update siapa yang terakhir submit
+                'status' => 'submitted',
+                'feedback_message' => null,
+                'action_by_user_id' => Auth::id()
             ]
         );
+
+        // 2. LOGIC NOTIFIKASI KE KAPRODI
+        $prodi = Prodi::find($request->prodi_id);
+        $currentUser = Auth::user();
+
+        if ($prodi && $prodi->kaprodi_id) {
+            $kaprodi = User::find($prodi->kaprodi_id);
+
+            if ($kaprodi && $kaprodi->id !== $currentUser->id) {
+                $kaprodi->notify(new DocumentActionNotification(
+                    $doc,
+                    'submitted',
+                    $currentUser->name
+                ));
+            }
+        } elseif ($currentUser->hasRole('kaprodi')) {
+            $wadir1 = User::role('wadir1')->first();
+            if ($wadir1) {
+                $wadir1->notify(new DocumentActionNotification($doc, 'submitted', $currentUser->name));
+            }
+        }
+
 
         return back()->with('success', 'Dokumen Rekap BKD berhasil diajukan!');
     }

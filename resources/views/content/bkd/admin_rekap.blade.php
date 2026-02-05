@@ -12,17 +12,19 @@
                     <p class="text-muted mb-0">Periode: {{ $activePeriod->name ?? 'Tidak Aktif' }}</p>
                 </div>
                 <div class="col-md-4">
-                    <form action="{{ route('beban-kerja-dosen.rekap') }}" method="GET"
-                        class="d-flex gap-2 justify-content-md-end">
-                        <select name="prodi_id" class="form-select select2" onchange="this.form.submit()">
-                            <option value="">-- Pilih Prodi --</option>
-                            @foreach ($prodis as $prodi)
-                                <option value="{{ $prodi->id }}" {{ $prodiId == $prodi->id ? 'selected' : '' }}>
-                                    {{ $prodi->jenjang }} {{ $prodi->name }}
-                                </option>
-                            @endforeach
-                        </select>
-                    </form>
+                    @if (!$isKaprodi)
+                        <form action="{{ route('beban-kerja-dosen.rekap') }}" method="GET"
+                            class="d-flex gap-2 justify-content-md-end">
+                            <select name="prodi_id" class="form-select select2" onchange="this.form.submit()">
+                                <option value="">-- Pilih Prodi --</option>
+                                @foreach ($prodis as $prodi)
+                                    <option value="{{ $prodi->id }}" {{ $prodiId == $prodi->id ? 'selected' : '' }}>
+                                        {{ $prodi->jenjang }} {{ $prodi->name }}
+                                    </option>
+                                @endforeach
+                            </select>
+                        </form>
+                    @endif
                 </div>
             </div>
         </div>

@@ -15,10 +15,14 @@ const initSelect2 = async () => {
 
         // Langkah B: Cek apakah Select2 berhasil nempel ke jQuery
         if (!$.fn.select2) {
-            console.error('Select2 gagal dimuat. Mencoba inisialisasi manual...');
+            console.warn('Select2 belum terdeteksi. Mencoba inisialisasi manual...');
             // Fallback manual jika perlu (jarang terjadi jika langkah A sukses)
             const s2 = await import('select2');
-            if (typeof s2.default === 'function') s2.default($);
+            if (typeof s2.default === 'function') {
+                s2.default($);
+            } else if (typeof s2 === 'function') {
+                s2($);
+            }
         }
 
         // Langkah C: Load Bahasa Indonesia (Hanya jika Select2 sudah siap)

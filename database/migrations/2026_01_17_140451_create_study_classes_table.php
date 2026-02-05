@@ -21,6 +21,8 @@ return new class extends Migration
             $table->string('angkatan');
             $table->integer('total_students')->default(0);
             $table->foreignId('kurikulum_id')->constrained()->restrictOnDelete();
+            $table->string('pic_name', 100)->nullable();
+            $table->string('pic_contact', 20)->nullable();
             $table->boolean('is_active')->default(true);
             $table->foreignId('academic_advisor_id')->nullable()->constrained('users')->nullOnDelete();
 

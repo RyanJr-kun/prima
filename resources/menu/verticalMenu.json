@@ -1,7 +1,7 @@
 {
     "menu": [
         {
-            "url": "/",
+            "url": "/Dashboard",
             "name": "Dashboards",
             "icon": "menu-icon icon-base bx bx-home-smile",
             "slug": "dashboard"
@@ -10,30 +10,40 @@
             "url": "/documents",
             "name": "Dokumen",
             "icon": "menu-icon icon-base bx bx-file",
-            "slug": "documents.index"
+            "slug": "documents.index",
+            "role": ["admin", "baak", "kaprodi", "wadir1", "wadir2", "wadir3", "direktur"]
         },
         {
-        "menuHeader": "Akademik"
-        },
-        {
-            "url": "/kalender-akademik",
-            "name": "Kalender Akademik",
-            "icon": "menu-icon icon-base bx bx-calendar",
-            "slug": "kalender-akademik.index"
-        },
-        {
-            "url": "/distribusi-mata-kuliah",
-            "name": "Distribusi Mata Kuliah",
-            "icon": "menu-icon icon-base bx bx-calendar-v2",
-            "slug": "distribusi-mata-kuliah.index"
+            "url": "/dashboard/jadwal-saya",
+            "name": "Jadwal Mengajar",
+            "icon": "menu-icon icon-base bx bx-schedule",
+            "slug": "dashboard.jadwal-saya"
         },
         {
             "url": "/beban-kerja-dosen",
             "name": "Beban Kerja Dosen",
             "icon": "menu-icon icon-base bx bx-edit",
-            "slug": "beban-kerja-dosen.index",
-            "role": ["dosen", "kaprodi"] 
+            "slug": "beban-kerja-dosen.index"
         },
+        {
+        "menuHeader": "Akademik",
+        "role": ["admin", "baak"]
+        },
+        {
+            "url": "/kalender-akademik",
+            "name": "Kalender Akademik",
+            "icon": "menu-icon icon-base bx bx-calendar",
+            "slug": "kalender-akademik.index",
+            "role": ["admin", "baak"]
+        },
+        {
+            "url": "/distribusi-mata-kuliah",
+            "name": "Distribusi Mata Kuliah",
+            "icon": "menu-icon icon-base bx bx-calendar-v2",
+            "slug": "distribusi-mata-kuliah.index",
+            "role": ["admin", "baak"]
+        },
+        
         {
             "url": "/beban-kerja-dosen/rekapitulasi",
             "name": "Monitoring BKD",
@@ -45,49 +55,58 @@
             "url": "/jadwal-perkuliahan",
             "name": "Jadwal Perkuliahan",
             "icon": "menu-icon icon-base bx bx-schedule",
-            "slug": "jadwal-perkuliahan.index"
+            "slug": "jadwal-perkuliahan.index",
+            "role": ["admin", "baak"]
         },
         {
-        "menuHeader": "Data Master"
+        "menuHeader": "Data Master",
+        "role": ["admin", "baak"]
         },
         {
             "url": "master/periode-akademik",
             "name": "Periode Akademik",
             "icon": "menu-icon icon-base bx bx-time-setting",
-            "slug": "master.periode-akademik.index"
+            "slug": "master.periode-akademik.index",
+            "role": ["admin", "baak"]
         },
         {
             "url": "master/program-studi",
             "name": "Program Studi",
             "icon": "menu-icon icon-base bx bx-graudate-cap",
-            "slug": "master.program-studi.index"
+            "slug": "master.program-studi.index",
+            "role": ["admin", "baak"]
         },
         {
             "url": "master/kurikulum",
             "name": "Kurikulum",
             "icon": "menu-icon icon-base bx bx-document-add-outline",
-            "slug": "master.kurikulum.index"
+            "slug": "master.kurikulum.index",
+            "role": ["admin", "baak"]
         },
         {
             "url": "master/ruangan",
             "name": "Ruangan",
             "icon": "menu-icon icon-base bx bx-location",
-            "slug": "master.ruangan.index"
+            "slug": "master.ruangan.index",
+            "role": ["admin", "baak"]
         },
         {
             "url": "master/kelas",
             "name": "Kelas Perkuliahan",
             "icon": "menu-icon icon-base bx bx-class",
-            "slug": "master.kelas.index"
+            "slug": "master.kelas.index",
+            "role": ["admin", "baak"]
         },
         {
             "url": "master/mata-kuliah",
             "name": "Mata Kuliah",
             "icon": "menu-icon icon-base bx bx-book-bookmark",
-            "slug": "master.mata-kuliah.index"
+            "slug": "master.mata-kuliah.index",
+            "role": ["admin", "baak"]
         },
         {
-        "menuHeader": "Autentikasi"
+        "menuHeader": "Autentikasi",
+        "role": ["admin", "baak"]
         },
         {
             "url": "/Pengaturan",
@@ -99,7 +118,8 @@
             "url": "user",
             "name": "Pengguna",
             "icon": "menu-icon icon-base bx bx-user",
-            "slug": "user.index"
+            "slug": "user.index",
+            "role": ["admin"]
         }
     ]
 }
