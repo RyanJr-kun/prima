@@ -77,5 +77,21 @@ export default defineConfig({
         commonjsOptions: {
             include: [/node_modules/], // Helps with importing CommonJS modules
         },
+    chunkSizeWarningLimit: 3000, // <--- TAMBAHAN 1: Naikkan limit agar warning 500kb hilang
+    },
+    // <--- TAMBAHAN 2: Konfigurasi CSS/SCSS di sini (Paling Bawah)
+    css: {
+        preprocessorOptions: {
+            scss: {
+                api: 'modern-compiler',
+                silenceDeprecations: [
+                    'legacy-js-api',
+                    'global-builtin',
+                    'color-functions',
+                    'mixed-decls',
+                    'import'
+                ],
+            },
+        },
     },
 });
