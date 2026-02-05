@@ -7,6 +7,7 @@ use App\Models\Room;
 use App\Models\User;
 use App\Models\Schedule;
 use App\Models\RoomBooking;
+use App\Models\AcademicPeriod;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use App\Http\Controllers\Controller;
@@ -18,56 +19,123 @@ class AnalisisController extends Controller
   {
     $user = Auth::user();
     $now = Carbon::now();
+
+    // 1. FILTER INPUT
     $filterDate = $request->get('date', $now->format('Y-m-d'));
+    $filterCampus = $request->get('campus'); // 'kampus_1' atau 'kampus_2'
+
+    $dayName = Carbon::parse($filterDate)->format('l'); // Monday, Tuesday...
     $greeting = $this->getGreeting($now->format('H'));
 
+    $activePeriod = AcademicPeriod::where('is_active', true)->first();
+
+    // ==========================================
+    // DASHBOARD DOSEN
+    // ==========================================
     if ($user->hasRole('dosen')) {
 
-      $dayName = Carbon::parse($filterDate)->format('l');
-      $todaySchedules = Schedule::with(['room', 'course', 'studyClass'])
-        ->where('user_id', $user->id)
-        ->where('day', $dayName)
-        ->whereHas('studyClass', function ($q) {
-          $q->whereExists(function ($subQuery) {
-            $subQuery->select(DB::raw(1))
-              ->from('aproval_documents')
-              ->whereColumn('aproval_documents.prodi_id', 'study_classes.prodi_id')
-              ->whereColumn('aproval_documents.academic_period_id', 'study_classes.academic_period_id')
-              ->where('aproval_documents.type', 'jadwal_perkuliahan')
-              ->where('aproval_documents.status', 'approved_direktur');
-          });
+      // 1. QUERY JADWAL HARI INI (Diperbaiki agar sama dengan MyScheduleController)
+      $todaySchedules = collect([]);
+
+      if ($activePeriod) {
+        $todaySchedules = Schedule::with(['course', 'studyClass.prodi', 'room'])
+          ->where('day', $dayName)
+          // Gunakan logika relasi yang sama persis dengan MyScheduleController
+          ->whereHas('courseDistribution', function ($q) use ($activePeriod, $user) {
+            $q->where('academic_period_id', $activePeriod->id);
+            $q->whereHas('teachingLecturers', function ($teacher) use ($user) {
+              $teacher->where('users.id', $user->id);
+            });
+          })
+          ->orderBy('time_slot_ids')
+          ->take(3)
+          ->get();
+      }
+
+      // 2. LOGIC KETERSEDIAAN RUANGAN (Menampilkan Jam Terpakai)
+      $allRooms = Room::where('is_active', true)
+        ->when($filterCampus, function ($q) use ($filterCampus) {
+          return $q->where('location', $filterCampus);
         })
-        ->orderBy('time_slot_ids')
-        ->take(3)
+        ->orderBy('building')
+        ->orderBy('name')
         ->get();
 
-      $occupiedRoomIds = $this->getOccupiedRoomIds($filterDate);
+      $availableRooms = $allRooms->map(function ($room) use ($dayName, $filterDate) {
 
-      $availableRooms = Room::whereNotIn('id', $occupiedRoomIds)
-        ->where('is_active', true)
-        ->get();
+        // A. Ambil Jadwal Rutin (Schedule)
+        $schedules = Schedule::where('room_id', $room->id)
+          ->where('day', $dayName)
+          ->get();
 
-      $bookedRooms = Room::whereIn('id', $occupiedRoomIds)->get();
+        // B. Ambil Booking Insidental (Approved)
+        $bookings = RoomBooking::where('room_id', $room->id)
+          ->where('booking_date', $filterDate)
+          ->where('status', 'approved')
+          ->get();
+
+        // C. List Jam Terpakai (Untuk ditampilkan ke user)
+        $busySlots = [];
+
+        // Cek dari Jadwal Rutin
+        foreach ($schedules as $sch) {
+          $realTime = $sch->real_time; // accessor getRealTimeAttribute
+          if ($realTime) {
+            $busySlots[] = $realTime['start_formatted'] . '-' . $realTime['end_formatted'];
+          }
+        }
+
+        foreach ($bookings as $book) {
+          $start = substr($book->start_time, 0, 5);
+          $end = substr($book->end_time, 0, 5);
+          $busySlots[] = $start . '-' . $end . ' (Booked)';
+        }
+        sort($busySlots);
+
+        if (empty($busySlots)) {
+          $room->availability_status = 'Kosong Sepanjang Hari';
+          $room->availability_color = 'success';
+          $room->busy_notes = 'Bisa digunakan kapan saja';
+        } else {
+          $room->availability_status = 'Terpakai Sebagian';
+          $room->availability_color = 'warning';
+          $room->busy_notes = implode(', ', $busySlots);
+        }
+        return $room;
+      });
+      $displayRooms = $availableRooms->take(20);
+
+      // Untuk tab "Terpakai", kita ambil yang memang ada jadwalnya
+      $busyRooms = $availableRooms->filter(function ($r) {
+        return $r->availability_color == 'warning';
+      });
 
       return view('content.dashboard.dashboard', compact(
         'user',
         'greeting',
         'todaySchedules',
-        'availableRooms',
-        'bookedRooms',
-        'filterDate'
+        'displayRooms',
+        'busyRooms',
+        'filterDate',
+        'filterCampus'
       ));
-    } else {
+    }
 
+    // ==========================================
+    // DASHBOARD ADMIN (Tetap Sama)
+    // ==========================================
+    else {
       $pendingBookings = RoomBooking::with(['user', 'room'])
         ->where('status', 'pending')
         ->orderBy('created_at', 'desc')
         ->get();
 
-      // 2. Monitoring Ruangan
       $occupiedRoomIds = $this->getOccupiedRoomIds($filterDate);
 
       $allRooms = Room::where('is_active', true)
+        ->when($filterCampus, function ($q) use ($filterCampus) {
+          return $q->where('location', $filterCampus);
+        })
         ->orderBy('building')
         ->orderBy('name')
         ->get()
@@ -76,13 +144,7 @@ class AnalisisController extends Controller
           return $room;
         });
 
-      // 3. Aktivitas Terkini
-
-      // A. Booking Terakhir
-      $recentBookings = RoomBooking::with('user', 'room')
-        ->latest()
-        ->take(5)
-        ->get()
+      $recentBookings = RoomBooking::with('user', 'room')->latest()->take(5)->get()
         ->map(function ($item) {
           $item->activity_type = 'booking';
           $item->activity_desc = "Mengajukan booking ruang {$item->room->name}";
@@ -90,13 +152,7 @@ class AnalisisController extends Controller
           return $item;
         });
 
-      // B. Login Terakhir (Dosen)
-      // PERUBAHAN 2: Gunakan scope role() milik Spatie
-      // Pastikan nama role di database roles adalah 'dosen' (huruf kecil/besar berpengaruh)
-      $recentLogins = User::role('dosen')
-        ->orderBy('updated_at', 'desc')
-        ->take(5)
-        ->get()
+      $recentLogins = User::role('dosen')->orderBy('updated_at', 'desc')->take(5)->get()
         ->map(function ($item) {
           $item->activity_type = 'login';
           $item->activity_desc = "Login ke dalam sistem";
@@ -104,9 +160,7 @@ class AnalisisController extends Controller
           return $item;
         });
 
-      $activities = $recentBookings->concat($recentLogins)
-        ->sortByDesc('time')
-        ->take(5);
+      $activities = $recentBookings->concat($recentLogins)->sortByDesc('time')->take(5);
 
       return view('content.dashboard.dashboard_admin', compact(
         'user',
@@ -114,34 +168,18 @@ class AnalisisController extends Controller
         'pendingBookings',
         'allRooms',
         'activities',
-        'filterDate'
+        'filterDate',
+        'filterCampus'
       ));
     }
   }
 
+  // Helper Lama
   private function getOccupiedRoomIds($date)
   {
     $dayName = Carbon::parse($date)->format('l');
-
-    $idsFromSchedule = Schedule::where('day', $dayName)
-      ->whereHas('studyClass', function ($q) {
-        $q->whereExists(function ($subQuery) {
-          $subQuery->select(DB::raw(1))
-            ->from('aproval_documents')
-            ->whereColumn('aproval_documents.prodi_id', 'study_classes.prodi_id')
-            ->whereColumn('aproval_documents.academic_period_id', 'study_classes.academic_period_id')
-            ->where('aproval_documents.type', 'jadwal_perkuliahan')
-            ->where('aproval_documents.status', 'approved_direktur');
-        });
-      })
-      ->pluck('room_id')
-      ->toArray();
-
-    $idsFromBooking = RoomBooking::where('booking_date', $date)
-      ->where('status', 'approved')
-      ->pluck('room_id')
-      ->toArray();
-
+    $idsFromSchedule = Schedule::where('day', $dayName)->pluck('room_id')->toArray();
+    $idsFromBooking = RoomBooking::where('booking_date', $date)->where('status', 'approved')->pluck('room_id')->toArray();
     return array_unique(array_merge($idsFromSchedule, $idsFromBooking));
   }
 

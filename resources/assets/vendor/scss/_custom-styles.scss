@@ -1,0 +1,673 @@
+// Variabel untuk memudahkan kustomisasi
+$schedule-primary: #696cff;
+$schedule-bg-hover: rgba(105, 108, 255, 0.05);
+$transition-speed: 0.3s;
+
+.schedule-card-wrapper {
+  .schedule-container {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+  }
+
+  .schedule-item-modern {
+    position: relative;
+    padding: 1.25rem;
+    background: #ffffff;
+    border-radius: 12px;
+    border: 1px solid #eceef1;
+    transition: all $transition-speed cubic-bezier(0.4, 0, 0.2, 1);
+    cursor: default;
+    overflow: hidden;
+
+    // Garis indikator di samping (reusable warna via border-start)
+    &::before {
+      content: '';
+      position: absolute;
+      left: 0;
+      top: 0;
+      bottom: 0;
+      width: 5px;
+      background: $schedule-primary;
+      border-radius: 12px 0 0 12px;
+      transition: width 0.2s ease;
+    }
+
+    &:hover {
+      transform: translateX(8px);
+      border-color: transparent;
+      box-shadow: 0 10px 20px rgba(105, 108, 255, 0.1);
+      background: $schedule-bg-hover;
+
+      &::before {
+        width: 8px;
+      }
+
+      .course-title {
+        color: $schedule-primary;
+      }
+
+      .icon-go {
+        opacity: 1;
+        transform: translateX(0);
+      }
+    }
+
+    .schedule-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 0.75rem;
+
+      .time-badge {
+        font-size: 0.75rem;
+        font-weight: 700;
+        letter-spacing: 0.5px;
+        padding: 0.4rem 0.8rem;
+        border-radius: 6px;
+        background: rgba(105, 108, 255, 0.1);
+        color: $schedule-primary;
+      }
+
+      .room-label {
+        font-size: 0.8rem;
+        color: #a1acb8;
+        display: flex;
+        align-items: center;
+        gap: 4px;
+        
+        i { font-size: 1rem; }
+      }
+    }
+
+    .course-title {
+      font-size: 1rem;
+      font-weight: 700;
+      color: #566a7f;
+      margin-bottom: 0.25rem;
+      transition: color $transition-speed ease;
+      display: block;
+    }
+
+    .class-info {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      
+      .class-name {
+        font-size: 0.85rem;
+        color: #697a8d;
+        display: flex;
+        align-items: center;
+        gap: 4px;
+      }
+    }
+
+    // Icon panah kecil yang muncul saat hover
+    .icon-go {
+      position: absolute;
+      right: 15px;
+      bottom: 15px;
+      color: $schedule-primary;
+      opacity: 0;
+      transform: translateX(-10px);
+      transition: all 0.3s ease;
+    }
+  }
+}
+
+// State Kosong (Empty State)
+.schedule-empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 3rem 1rem;
+  
+  .empty-icon-wrapper {
+    width: 80px;
+    height: 80px;
+    background: #f5f5f9;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 1.5rem;
+    color: #d9dee3;
+    font-size: 2.5rem;
+  }
+}
+
+$academic-primary: #696cff; // Warna utama Sneat
+$academic-light: #f5f5f9;
+
+.card-header-academic {
+    padding: 1.5rem !important;
+    background-color: #fff;
+    border-bottom: 1px solid rgba(67, 89, 113, 0.08);
+    position: relative;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-radius: 0.5rem 0.5rem 0 0;
+
+    .header-title-wrapper {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+
+        .icon-box {
+            width: 42px;
+            height: 42px;
+            background: rgba($academic-primary, 0.08);
+            color: $academic-primary;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 10px;
+            font-size: 1.4rem;
+            transition: all 0.3s ease;
+            border: 1px solid rgba($academic-primary, 0.1);
+        }
+
+        h5 {
+            margin: 0;
+            color: #566a7f;
+            letter-spacing: -0.5px;
+            
+            small {
+                display: block;
+                font-size: 0.75rem;
+                color: #a1acb8;
+                font-weight: 500;
+                text-transform: uppercase;
+                margin-top: 2px;
+            }
+        }
+    }
+
+    .header-action-wrapper {
+        .btn-view-all {
+            background: transparent;
+            border: 1px solid #d9dee3;
+            color: #8e94a3;
+            padding: 0.5rem 1rem;
+            border-radius: 8px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            transition: all 0.2s ease;
+
+            &:hover {
+                background-color: $academic-primary;
+                color: #fff;
+                border-color: $academic-primary;
+                box-shadow: 0 4px 10px rgba($academic-primary, 0.3);
+                transform: translateY(-2px);
+            }
+        }
+    }
+
+    // Efek hover pada card secara keseluruhan jika header tersentuh
+    &:hover .icon-box {
+        transform: scale(1.1) rotate(-5deg);
+        background: $academic-primary;
+        color: #fff;
+    }
+}
+
+ /* --- UTILITIES --- */
+        .admin-dash-card {
+            background: var(--ad-card-bg);
+            border-radius: var(--ad-radius);
+            border: 1px solid rgba(0, 0, 0, 0.02);
+            box-shadow: var(--ad-shadow);
+            transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+            position: relative;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .admin-dash-card:hover {
+            transform: translateY(-4px);
+            box-shadow: var(--ad-shadow-hover);
+        }
+
+        /* Scrollable Area yang Lebih Pendek */
+        .admin-dash-scroll {
+            max-height: 350px;
+            /* Kurangi max-height jika masih dirasa terlalu tinggi */
+            overflow-y: auto;
+            overflow-x: hidden;
+            padding-right: 5px;
+        }
+
+        /* Agar table header sticky saat discroll */
+        .admin-dash-table thead th {
+            position: sticky;
+            top: 0;
+            z-index: 2;
+            background-color: #fafbfc;
+            /* Wajib ada background */
+            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+        }
+
+        /* ... Sisa CSS lainnya (Title, Subtitle, Welcome, Stats, dll) TETAP SAMA ... */
+
+        .admin-dash-title {
+            font-weight: 700;
+            color: var(--ad-dark);
+            margin-bottom: 0.5rem;
+        }
+
+        .admin-dash-subtitle {
+            color: var(--ad-secondary);
+            font-size: 0.85rem;
+            font-weight: 500;
+        }
+
+        /* --- COMPONENT: WELCOME CARD --- */
+        .admin-dash-welcome {
+            background: linear-gradient(120deg, #8fd3f4 0%, #84fab0 100%);
+            border: none;
+            color: #2b3954;
+        }
+
+        .admin-dash-welcome-content {
+            position: relative;
+            z-index: 2;
+        }
+
+        .admin-dash-welcome::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            right: -10%;
+            width: 300px;
+            height: 300px;
+            background: rgba(255, 255, 255, 0.3);
+            border-radius: 50%;
+            z-index: 1;
+        }
+
+        .admin-dash-welcome::after {
+            content: '';
+            position: absolute;
+            bottom: -30%;
+            right: 20%;
+            width: 200px;
+            height: 200px;
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 50%;
+            z-index: 1;
+        }
+
+        /* --- COMPONENT: STATS MINI CARD --- */
+        .admin-dash-stat {
+            display: flex;
+            align-items: center;
+            padding: 1.5rem;
+        }
+
+        .admin-dash-stat-icon {
+            width: 50px;
+            height: 50px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+            margin-right: 1rem;
+            flex-shrink: 0;
+        }
+
+        .bg-soft-primary {
+            background: rgba(105, 108, 255, 0.15);
+            color: var(--ad-primary);
+        }
+
+        .bg-soft-warning {
+            background: rgba(255, 171, 0, 0.15);
+            color: var(--ad-warning);
+        }
+
+        .bg-soft-success {
+            background: rgba(113, 221, 55, 0.15);
+            color: var(--ad-success);
+        }
+
+        /* --- COMPONENT: TABLE STYLING --- */
+        .admin-dash-table-header {
+            padding: 1.5rem;
+            border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .admin-dash-table {
+            width: 100%;
+            border-collapse: separate;
+            border-spacing: 0;
+        }
+
+        .admin-dash-table th {
+            text-transform: uppercase;
+            font-size: 0.75rem;
+            font-weight: 700;
+            letter-spacing: 0.5px;
+            color: var(--ad-secondary);
+            padding: 1rem 1.5rem;
+            border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+            background: #fafbfc;
+        }
+
+        .admin-dash-table td {
+            padding: 1rem 1.5rem;
+            vertical-align: middle;
+            border-bottom: 1px solid rgba(0, 0, 0, 0.03);
+            font-size: 0.9rem;
+        }
+
+        .admin-dash-table tr:last-child td {
+            border-bottom: none;
+        }
+
+        .admin-dash-table tr:hover td {
+            background-color: #fafbfc;
+        }
+
+        /* --- COMPONENT: ROOM GRID --- */
+        .admin-dash-room-item {
+            text-align: center;
+            padding: 1.5rem;
+            border-radius: 12px;
+            border: 1px dashed #d9dee3;
+            transition: all 0.2s;
+            cursor: pointer;
+            position: relative;
+        }
+
+        .admin-dash-room-item:hover {
+            border-style: solid;
+            border-color: var(--ad-primary);
+            background: rgba(105, 108, 255, 0.03);
+        }
+
+        .admin-dash-status-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            box-shadow: 0 0 0 2px white;
+        }
+
+        /* --- COMPONENT: TIMELINE --- */
+        .admin-dash-timeline {
+            position: relative;
+            padding-left: 2rem;
+            list-style: none;
+        }
+
+        .admin-dash-timeline::before {
+            content: '';
+            position: absolute;
+            left: 7px;
+            top: 0;
+            bottom: 0;
+            width: 2px;
+            background: #e5e7eb;
+        }
+
+        .admin-dash-timeline-item {
+            position: relative;
+            margin-bottom: 1.5rem;
+        }
+
+        .admin-dash-timeline-point {
+            position: absolute;
+            left: -32px;
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            border: 3px solid white;
+            box-shadow: 0 0 0 1px #e5e7eb;
+        }
+
+        /* --- BUTTONS & FORMS --- */
+        .admin-dash-btn-action {
+            width: 32px;
+            height: 32px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 8px;
+            transition: 0.2s;
+            border: none;
+            cursor: pointer;
+        }
+
+        .btn-approve {
+            background: rgba(113, 221, 55, 0.1);
+            color: var(--ad-success);
+        }
+
+        .btn-approve:hover {
+            background: var(--ad-success);
+            color: white;
+        }
+
+        .btn-reject {
+            background: rgba(255, 62, 29, 0.1);
+            color: var(--ad-danger);
+        }
+
+        .btn-reject:hover {
+            background: var(--ad-danger);
+            color: white;
+        }
+
+        .admin-dash-input {
+            border: 1px solid #d9dee3;
+            border-radius: 8px;
+            padding: 0.4rem 0.8rem;
+            font-size: 0.9rem;
+            color: var(--ad-dark);
+            outline: none;
+            transition: 0.2s;
+        }
+
+        .admin-dash-input:focus {
+            border-color: var(--ad-primary);
+            box-shadow: 0 0 0 2px rgba(105, 108, 255, 0.2);
+        }
+
+        /* Scrollbar Tipis */
+        .admin-dash-scroll::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        .admin-dash-scroll::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        .admin-dash-scroll::-webkit-scrollbar-thumb {
+            background-color: rgba(133, 146, 163, 0.3);
+            border-radius: 10px;
+        }
+
+        .admin-dash-scroll::-webkit-scrollbar-thumb:hover {
+            background-color: rgba(105, 108, 255, 0.5);
+        }
+
+        .admin-header-card {
+            background: #ffffff;
+            border-radius: 16px;
+            box-shadow: 0 0.5rem 1.5rem rgba(18, 38, 63, 0.05);
+            border: 1px solid rgba(0, 0, 0, 0.02);
+            position: relative;
+            overflow: hidden;
+            transition: all 0.3s ease;
+            height: 100%;
+            /* KUNCI AGAR TINGGI SEJAJAR */
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+        }
+
+        .admin-header-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 1rem 3rem rgba(18, 38, 63, 0.1);
+        }
+
+        /* 1. Welcome Card Style */
+        .admin-header-welcome {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            /* Premium Purple-Blue */
+            color: white;
+            border: none;
+            padding: 2rem;
+            /* Padding lebih lega */
+        }
+
+        /* Dekorasi Lingkaran Transparan */
+        .admin-header-welcome::before {
+            content: '';
+            position: absolute;
+            top: -50px;
+            right: -50px;
+            width: 200px;
+            height: 200px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 50%;
+            z-index: 0;
+        }
+
+        .admin-header-welcome::after {
+            content: '';
+            position: absolute;
+            bottom: -30px;
+            left: 10%;
+            width: 100px;
+            height: 100px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 50%;
+            z-index: 0;
+        }
+
+        .admin-header-welcome-content {
+            position: relative;
+            z-index: 1;
+            /* Agar teks di atas dekorasi */
+            max-width: 70%;
+            /* Agar teks tidak nabrak gambar */
+        }
+
+        .admin-header-img {
+            position: absolute;
+            bottom: 0;
+            right: 20px;
+            height: 160px;
+            /* Ukuran gambar pas */
+            z-index: 1;
+            filter: drop-shadow(0 10px 10px rgba(0, 0, 0, 0.2));
+            /* Efek bayangan pada orang */
+            transition: transform 0.3s ease;
+        }
+
+        .admin-header-card:hover .admin-header-img {
+            transform: scale(1.05) rotate(-2deg);
+            /* Animasi kecil saat hover */
+        }
+
+        /* 2. Mini Stat Card Style */
+        .admin-header-stat {
+            padding: 1.5rem;
+            flex-direction: row;
+            /* Icon di kiri, Teks di kanan */
+            align-items: center;
+            justify-content: flex-start;
+            /* Reset justify center dari parent */
+        }
+
+        .admin-header-icon {
+            width: 56px;
+            height: 56px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.75rem;
+            margin-right: 1.25rem;
+            flex-shrink: 0;
+            transition: transform 0.3s;
+        }
+
+        .admin-header-card:hover .admin-header-icon {
+            transform: scale(1.1) rotate(5deg);
+        }
+
+        /* Warna Soft untuk Icon */
+        .icon-soft-primary {
+            background: rgba(105, 108, 255, 0.15);
+            color: #696cff;
+        }
+
+        .icon-soft-warning {
+            background: rgba(255, 171, 0, 0.15);
+            color: #ffab00;
+        }
+
+        /* Text Styles */
+        .header-title {
+            font-size: 1.5rem;
+            font-weight: 700;
+            line-height: 1.2;
+            margin-bottom: 0.5rem;
+        }
+
+        .header-subtitle {
+            opacity: 0.9;
+            margin-bottom: 1.5rem;
+            font-size: 0.95rem;
+        }
+
+        .stat-value {
+            font-size: 1.5rem;
+            font-weight: 800;
+            color: #233446;
+            margin-bottom: 0;
+        }
+
+        .stat-label {
+            color: #8592a3;
+            font-size: 0.85rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        /* Tombol Glassmorphism */
+        .btn-glass {
+            background: rgba(255, 255, 255, 0.2);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            color: white;
+            padding: 0.5rem 1.2rem;
+            border-radius: 50px;
+            font-weight: 600;
+            font-size: 0.85rem;
+            transition: all 0.3s;
+        }
+
+        .btn-glass:hover {
+            background: white;
+            color: #696cff;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+        }

@@ -3,231 +3,135 @@
 @section('title', 'Dashboard - Manajemen Ruangan')
 
 @section('vendor-style')
-    {{-- Mengimpor Font Plus Jakarta Sans agar sama dengan Home --}}
-    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap"
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap"
         rel="stylesheet">
 
     <style>
+        /* --- VARIABLES --- */
         :root {
-            --primary-gradient: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            --primary-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
-            --card-shadow: 0 0.75rem 1.5rem rgba(18, 38, 63, 0.03);
+            --ad-primary: #696cff;
+            --ad-secondary: #8592a3;
+            --ad-success: #71dd37;
+            --ad-warning: #ffab00;
+            --ad-danger: #ff3e1d;
+            --ad-dark: #233446;
+            --ad-body: #f5f5f9;
+            --ad-card-bg: #ffffff;
+            --ad-radius: 16px;
+            --ad-shadow: 0 0.5rem 1.5rem rgba(18, 38, 63, 0.05);
+            --ad-shadow-hover: 0 1rem 3rem rgba(18, 38, 63, 0.1);
+            --ad-font: 'Plus Jakarta Sans', sans-serif;
         }
 
         body {
-            font-family: 'Plus Jakarta Sans', sans-serif !important;
-        }
-
-        /* Modern Card Styling */
-        .card {
-            border: none;
-            border-radius: 1rem;
-            /* Lebih bulat (rounded-4) */
-            box-shadow: var(--card-shadow);
-            transition: transform 0.3s ease, box-shadow 0.3s ease;
-        }
-
-        .card:hover {
-            box-shadow: 0 1rem 3rem rgba(18, 38, 63, 0.08);
-        }
-
-        .card-header {
-            background-color: transparent;
-            border-bottom: 1px solid rgba(0, 0, 0, 0.05);
-            padding: 1.5rem;
-        }
-
-        .card-header h5 {
-            font-weight: 700;
-            letter-spacing: -0.5px;
-            color: #344767;
-        }
-
-        /* Gradient Badge */
-        .badge-gradient-warning {
-            background: linear-gradient(135deg, #ff9a9e 0%, #fecfef 99%, #fecfef 100%);
-            color: #861616;
-            border: none;
-        }
-
-        /* Table Styling */
-        .table thead th {
-            text-transform: uppercase;
-            font-size: 0.75rem;
-            letter-spacing: 1px;
-            font-weight: 700;
-            color: #8898aa;
-            border-bottom: 1px solid #f0f2f5;
-        }
-
-        .table td {
-            vertical-align: middle;
-            font-weight: 500;
-            padding: 1rem 1.25rem;
-        }
-
-        /* Action Buttons */
-        .btn-icon {
-            width: 32px;
-            height: 32px;
-            border-radius: 8px;
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            transition: all 0.2s;
-        }
-
-        .btn-approve {
-            background: rgba(113, 221, 55, 0.1);
-            color: #71dd37;
-        }
-
-        .btn-approve:hover {
-            background: #71dd37;
-            color: #fff;
-            transform: translateY(-2px);
-        }
-
-        .btn-reject {
-            background: rgba(255, 62, 29, 0.1);
-            color: #ff3e1d;
-        }
-
-        .btn-reject:hover {
-            background: #ff3e1d;
-            color: #fff;
-            transform: translateY(-2px);
-        }
-
-        /* Timeline Customization */
-        .timeline .timeline-point-primary {
-            background: var(--primary-gradient);
-            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.2);
-        }
-
-        .timeline-event {
-            padding-bottom: 1.5rem;
-        }
-
-        /* Room Box Styling */
-        .room-box {
-            border: 1px solid rgba(0, 0, 0, 0.05);
-            border-radius: 12px;
-            transition: all 0.2s;
-            background: #fff;
-        }
-
-        .room-box:hover {
-            transform: translateY(-5px);
-            border-color: #667eea;
-            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.05);
-        }
-
-        .room-status-badge {
-            font-size: 0.7rem;
-            padding: 4px 8px;
-            border-radius: 6px;
+            font-family: var(--ad-font) !important;
+            background-color: var(--ad-body);
         }
     </style>
 @endsection
 
 @section('content')
-    {{-- Welcome Banner (Optional, adds "Premium" feel) --}}
-    <div class="row mb-4">
+
+
+    {{-- SECTION 2: MAIN CONTENT SPLIT --}}
+    <div class="row g-4">
         <div class="col-12">
-            <div class="card bg-transparent shadow-none border-0">
-                <div class="d-flex align-items-end row">
-                    <div class="col-sm-7">
-                        <div class="card-body py-0">
-                            <h4 class="text-primary fw-bold mb-1">Dashboard 👋</h4>
-                            <p class="mb-0 text-muted">Pantau aktivitas ruangan</p>
+            {{-- SECTION 1: HEADER & STATS --}}
+            <div class="row g-4 mb-4 align-items-stretch"> {{-- align-items-stretch penting agar tinggi sama --}}
+                {{-- 1. Welcome Card --}}
+                <div class="col-12 col-xl-8">
+                    <div class="admin-header-card admin-header-welcome">
+                        <div class="admin-header-welcome-content">
+                            <h4 class="header-title text-white">Selamat Datang, Admin! 🎉</h4>
+                            <p class="header-subtitle text-white">
+                                Saat ini terdapat <strong>{{ $pendingBookings->count() }}</strong> permintaan booking
+                                ruangan baru
+                                yang menunggu persetujuan Anda.
+                            </p>
+                            <a href="#pendingTable" class="btn btn-glass text-decoration-none">
+                                Tinjau Sekarang <i class='bx bx-right-arrow-alt ms-1'></i>
+                            </a>
                         </div>
+
+                        {{-- Gambar Ilustrasi --}}
+                        <div class="d-none d-md-block">
+                            <img src="{{ asset('assets\img\illustrations\man-with-laptop.png') }}" alt="Admin Illustration"
+                                class="admin-header-img">
+                        </div>
+                    </div>
+                </div>
+
+                {{-- 2. Mini Stats Column --}}
+                <div class="col-12 col-xl-4">
+                    <div class="row g-4 h-100"> {{-- h-100 agar row mengisi penuh tinggi parent --}}
+
+                        {{-- Stat 1: Total Ruangan --}}
+                        <div class="col-sm-6 col-xl-12" style="height: 50%;"> {{-- Bagi tinggi jadi 50% di desktop --}}
+                            <div class="admin-header-card admin-header-stat">
+                                <div class="admin-header-icon icon-soft-primary">
+                                    <i class='bx bx-buildings'></i>
+                                </div>
+                                <div>
+                                    <h3 class="stat-value">{{ $allRooms->count() }}</h3>
+                                    <span class="stat-label">Total Ruangan</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        {{-- Stat 2: Pending Approval --}}
+                        <div class="col-sm-6 col-xl-12" style="height: 50%;">
+                            <div class="admin-header-card admin-header-stat">
+                                <div class="admin-header-icon icon-soft-warning">
+                                    <i class='bx bx-time-five'></i>
+                                </div>
+                                <div>
+                                    <h3 class="stat-value">{{ $pendingBookings->count() }}</h3>
+                                    <span class="stat-label">Menunggu Review</span>
+                                </div>
+                            </div>
+                        </div>
+
                     </div>
                 </div>
             </div>
         </div>
-    </div>
+        {{-- LEFT COLUMN: APPROVAL & MONITORING (8/12) --}}
+        <div class="col-lg-8">
 
-    <div class="row">
-        {{-- 1. APPROVAL CARD (Jobdesk Utama Admin) --}}
-        <div class="col-lg-8 mb-4">
-            <div class="card h-100">
-                <div class="card-header d-flex justify-content-between align-items-center">
-                    <h5 class="mb-0">Permintaan Booking</h5>
+            {{-- 2A. TABLE APPROVAL --}}
+            <div class="admin-dash-card" id="pendingTable">
+                <div class="admin-dash-table-header">
+                    <div>
+                        <h5 class="admin-dash-title">Permintaan Booking</h5>
+                        <small class="admin-dash-subtitle">Daftar booking yang menunggu persetujuan</small>
+                    </div>
                     @if ($pendingBookings->count() > 0)
-                        <span class="badge badge-gradient-warning shadow-sm rounded-pill px-3">
-                            <i class='bx bxs-bell-ring bx-tada me-1'></i> {{ $pendingBookings->count() }} Pending
-                        </span>
+                        <span class="badge bg-label-warning rounded-pill px-3">{{ $pendingBookings->count() }} Baru</span>
                     @else
-                        <span class="badge bg-label-success rounded-pill">All Clear</span>
+                        <span class="badge bg-label-success rounded-pill px-3">Semua Beres</span>
                     @endif
                 </div>
-                <div class="table-responsive text-nowrap">
-                    <table class="table table-hover">
-                        <thead class="bg-light">
+
+                {{-- WRAPPER SCROLL DI SINI --}}
+                <div class="table-responsive admin-dash-scroll">
+                    <table class="admin-dash-table">
+                        <thead>
                             <tr>
-                                <th>Dosen</th>
-                                <th>Ruang</th>
-                                <th>Jadwal</th>
+                                <th>Dosen / Pemohon</th>
+                                <th>Detail Booking</th>
+                                <th>Tanggal & Waktu</th>
                                 <th class="text-center">Aksi</th>
                             </tr>
                         </thead>
-                        <tbody class="table-border-bottom-0">
+                        <tbody>
                             @forelse($pendingBookings as $booking)
-                                <tr>
-                                    <td>
-                                        <div class="d-flex align-items-center">
-                                            <div class="avatar me-3">
-                                                <span class="avatar-initial rounded-circle bg-label-primary">
-                                                    {{ substr($booking->user->name, 0, 2) }}</span>
-                                            </div>
-
-                                            <div>
-                                                <span class="fw-bold d-block text-dark">{{ $booking->user->name }}</span>
-                                                <small class="text-muted" style="font-size: 0.75rem">NIDN:
-                                                    {{ $booking->user->nidn ?? '-' }}</small>
-                                            </div>
-                                        </div>
-                                    </td>
-                                    <td>
-                                        <span class="badge bg-label-primary">{{ $booking->room->name }}</span>
-                                    </td>
-                                    <td>
-                                        <div class="d-flex flex-column">
-                                            <span
-                                                class="fw-semibold text-dark">{{ \Carbon\Carbon::parse($booking->booking_date)->translatedFormat('d M Y') }}</span>
-                                            <small class="text-muted">
-                                                <i class='bx bx-time-five me-1'></i>
-                                                {{ $booking->is_full_day ? 'Seharian' : \Carbon\Carbon::parse($booking->start_time)->format('H:i') . ' - ' . \Carbon\Carbon::parse($booking->end_time)->format('H:i') }}
-                                            </small>
-                                        </div>
-                                    </td>
-                                    <td class="text-center">
-                                        <div class="d-flex justify-content-center gap-2">
-                                            <form action="{{ route('booking.approve', $booking->id) }}" method="POST">
-                                                @csrf @method('PATCH')
-                                                <button type="submit" class="btn btn-icon btn-approve"
-                                                    data-bs-toggle="tooltip" title="Setujui">
-                                                    <i class="bx bx-check fs-4"></i>
-                                                </button>
-                                            </form>
-                                            <button class="btn btn-icon btn-reject"
-                                                onclick="confirmReject({{ $booking->id }})" data-bs-toggle="tooltip"
-                                                title="Tolak">
-                                                <i class="bx bx-x fs-4"></i>
-                                            </button>
-                                        </div>
-                                    </td>
-                                </tr>
+                                {{-- ... isi row ... --}}
                             @empty
                                 <tr>
                                     <td colspan="4" class="text-center py-5">
-                                        <div class="d-flex flex-column align-items-center justify-content-center">
-                                            <div class="bg-label-secondary p-3 rounded-circle mb-3">
-                                                <i class='bx bx-check-circle fs-1 text-muted'></i>
-                                            </div>
-                                            <h6 class="text-muted mb-0">Tidak ada permintaan pending saat ini.</h6>
-                                        </div>
+                                        <img src="https://cdni.iconscout.com/illustration/premium/thumb/empty-state-2130362-1800926.png"
+                                            alt="Empty" style="width: 80px; opacity: 0.5;"> {{-- Perkecil gambar --}}
+                                        <p class="text-muted mt-2 small">Tidak ada permintaan booking pending.</p>
                                     </td>
                                 </tr>
                             @endforelse
@@ -235,77 +139,84 @@
                     </table>
                 </div>
             </div>
-        </div>
 
-        {{-- 2. ACTIVITY HISTORY --}}
-        <div class="col-lg-4 mb-4">
-            <div class="card h-100">
-                <div class="card-header">
-                    <h5 class="mb-0">Aktivitas Terkini</h5>
+
+        </div>
+        <div class="col-lg-4">
+            <div class="admin-dash-card">
+                <div class="admin-dash-table-header">
+                    <h5 class="admin-dash-title">Aktivitas Terkini</h5>
                 </div>
-                <div class="card-body">
-                    <ul class="timeline timeline-dashed">
+                <div class="p-4 admin-dash-scroll">
+                    <ul class="admin-dash-timeline">
                         @foreach ($activities as $act)
-                            <li class="timeline-item timeline-item-transparent ps-4">
-                                <span
-                                    class="timeline-point {{ $act->activity_type == 'booking' ? 'timeline-point-primary' : 'timeline-point-success' }}"></span>
-                                <div class="timeline-event">
-                                    <div class="timeline-header mb-1 d-flex justify-content-between">
-                                        <h6 class="mb-0 fw-bold text-dark" style="font-size: 0.9rem">
-                                            {{ $act->name ?? $act->user->name }}</h6>
-                                        <small class="text-muted"
-                                            style="font-size: 0.7rem">{{ \Carbon\Carbon::parse($act->time)->diffForHumans() }}</small>
+                            <li class="admin-dash-timeline-item">
+                                <span class="admin-dash-timeline-point"
+                                    style="background-color: {{ $act->activity_type == 'booking' ? 'var(--ad-primary)' : 'var(--ad-success)' }}">
+                                </span>
+                                <div class="d-flex flex-column">
+                                    <div class="d-flex justify-content-between align-items-center mb-1">
+                                        <span
+                                            class="fw-bold text-dark font-small">{{ $act->name ?? $act->user->name }}</span>
+                                        <small class="text-muted" style="font-size: 0.7rem">
+                                            {{ \Carbon\Carbon::parse($act->time)->diffForHumans() }}
+                                        </small>
                                     </div>
-                                    <p class="mb-0 text-muted" style="font-size: 0.85rem; line-height: 1.5;">
-                                        {{ $act->activity_desc }}</p>
+                                    <p class="mb-0 text-muted small" style="line-height: 1.4;">
+                                        {{ $act->activity_desc }}
+                                    </p>
                                 </div>
                             </li>
                         @endforeach
                     </ul>
+                    @if ($activities->isEmpty())
+                        <div class="text-center py-4">
+                            <small class="text-muted">Belum ada aktivitas tercatat.</small>
+                        </div>
+                    @endif
                 </div>
             </div>
         </div>
-
-        {{-- 3. FILTER ROOM MONITORING --}}
-        <div class="col-12">
-            <div class="card">
-                <div class="card-header d-flex flex-wrap justify-content-between align-items-center gap-3">
+        <div class="col-md-12">
+            <div class="admin-dash-card">
+                <div class="admin-dash-table-header flex-wrap gap-2">
                     <div>
-                        <h5 class="mb-1">Monitoring Ruangan</h5>
-                        <small class="text-muted">Cek ketersediaan ruangan secara real-time</small>
+                        <h5 class="admin-dash-title">Monitoring Ruangan</h5>
+                        <small class="admin-dash-subtitle">Pantau status penggunaan ruangan real-time</small>
                     </div>
 
-                    {{-- Styled Date Picker --}}
-                    <form action="" method="GET" class="d-flex align-items-center bg-light rounded px-2 py-1 border">
-                        <i class='bx bx-calendar text-muted me-2'></i>
-                        <input type="date" name="date"
-                            class="form-control form-control-sm border-0 bg-transparent shadow-none ps-0"
-                            style="width: 130px; font-weight: 600; color: #566a7f;" value="{{ $filterDate }}"
+                    {{-- Filter Form --}}
+                    <form action="" method="GET" class="d-flex gap-2">
+                        <select name="campus" class="admin-dash-input" onchange="this.form.submit()">
+                            <option value="">Semua Kampus</option>
+                            <option value="kampus_1" {{ $filterCampus == 'kampus_1' ? 'selected' : '' }}>Kampus 1</option>
+                            <option value="kampus_2" {{ $filterCampus == 'kampus_2' ? 'selected' : '' }}>Kampus 2</option>
+                        </select>
+                        <input type="date" name="date" class="admin-dash-input" value="{{ $filterDate }}"
                             onchange="this.form.submit()">
                     </form>
                 </div>
-                <div class="card-body">
+
+                <div class="p-4">
                     <div class="row g-3">
                         @foreach ($allRooms as $room)
-                            <div class="col-6 col-md-3 col-lg-2">
-                                <div
-                                    class="room-box p-3 text-center h-100 d-flex flex-column justify-content-center align-items-center position-relative">
+                            <div class="col-6 col-md-4 col-lg-3">
+                                <div class="admin-dash-room-item">
+                                    {{-- Status Dot --}}
+                                    <span class="admin-dash-status-dot"
+                                        style="background-color: {{ $room->status_hari_ini == 'Terpakai' ? 'var(--ad-secondary)' : 'var(--ad-success)' }}">
+                                    </span>
 
-                                    {{-- Status Indicator Dot --}}
-                                    <span
-                                        class="position-absolute top-0 end-0 mt-2 me-2 p-1 rounded-circle {{ $room->status_hari_ini == 'Terpakai' ? 'bg-secondary' : 'bg-success' }}"></span>
 
                                     <div class="mb-2">
                                         <i
-                                            class='bx {{ $room->status_hari_ini == 'Terpakai' ? 'bxs-lock-alt text-secondary' : 'bxs-door-open text-primary' }} fs-2'></i>
+                                            class='bx {{ $room->status_hari_ini == 'Terpakai' ? 'bxs-lock-alt text-secondary' : 'bxs-door-open text-primary' }} fs-1'></i>
                                     </div>
-
-                                    <strong class="d-block text-dark mb-1">{{ $room->name }}</strong>
-
-                                    <span
-                                        class="room-status-badge {{ $room->status_hari_ini == 'Terpakai' ? 'bg-label-secondary text-secondary' : 'bg-label-success text-success' }}">
+                                    <h6 class="mb-1 fw-bold text-dark">{{ $room->name }}</h6>
+                                    <small
+                                        class="badge {{ $room->status_hari_ini == 'Terpakai' ? 'bg-label-secondary' : 'bg-label-success' }}">
                                         {{ $room->status_hari_ini }}
-                                    </span>
+                                    </small>
                                 </div>
                             </div>
                         @endforeach
@@ -322,9 +233,8 @@
     </form>
 
     <script>
+        // Custom Reject Logic (Bisa diganti SweetAlert jika mau)
         function confirmReject(id) {
-            // Menggunakan styling prompt bawaan browser, 
-            // tapi bisa diupgrade ke SweetAlert2 jika diinginkan untuk match design
             let reason = prompt("Silakan masukkan alasan penolakan:");
             if (reason) {
                 let form = document.getElementById('rejectForm');
@@ -334,4 +244,5 @@
             }
         }
     </script>
+
 @endsection
