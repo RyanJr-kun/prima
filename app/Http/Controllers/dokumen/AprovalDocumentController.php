@@ -105,6 +105,8 @@ class AprovalDocumentController extends Controller
         $feedbackMsg = null;
 
         if (in_array($doc->type, ['kalender_akademik', 'jadwal_perkuliahan'])) {
+            //global dokumen
+            //Alur: admin/baak -> Wadir 1 -> Direktur
             if ($user->hasRole('wadir1') && $currentStatus == 'submitted') {
                 $nextStatus = 'approved_wadir1';
                 $feedbackMsg = 'Disetujui Wadir 1. Menunggu Direktur.';
@@ -113,27 +115,17 @@ class AprovalDocumentController extends Controller
                 $feedbackMsg = 'Dokumen Disahkan oleh Direktur!';
             }
         } else {
+            // distribusi matkul + bkd
+            // Alur: Kaprodi -> Wadir 1 -> Wadir 2 -> Direktur
             if ($user->hasRole('kaprodi') && $currentStatus == 'submitted') {
                 $nextStatus = 'approved_kaprodi';
             } elseif ($user->hasRole('wadir1') && $currentStatus == 'approved_kaprodi') {
                 $nextStatus = 'approved_wadir1';
-
-                // KHUSUS DISTRIBUSI: Jika ingin skip Wadir 2, langsung set logic disini
-                // if ($doc->type == 'distribusi_matkul') { $nextStatus = 'approved_wadir2'; } // Skip step
             } elseif ($user->hasRole('wadir2') && $currentStatus == 'approved_wadir1') {
                 $nextStatus = 'approved_wadir2';
             } elseif ($user->hasRole('direktur') && $currentStatus == 'approved_wadir2') {
                 $nextStatus = 'approved_direktur';
             }
-
-            // Override Khusus BKD (Jika ingin BKD sama persis kayak Distribusi/Tanpa Wadir 2)
-            // Hapus komentar ini jika BKD tidak butuh Wadir 2:
-            /*
-            if ($doc->type == 'beban_kerja_dosen' && $user->hasRole('wadir1') && $currentStatus == 'approved_kaprodi') {
-                 // Skip Wadir 2, status langsung dianggap approved_wadir2 agar siap diambil Direktur
-                 // Atau sesuaikan logic 'approved_wadir1' -> Direktur langsung.
-            }
-            */
         }
 
         if (!$nextStatus) {
@@ -166,15 +158,18 @@ class AprovalDocumentController extends Controller
             case 'approved_kaprodi':
                 $nextRole = 'wadir1';
                 break;
+
             case 'approved_wadir1':
-                if (in_array($doc->type, ['jadwal_perkuliahan', 'kalender_akademik'])) {
-                    $nextRole = 'direktur'; // Global docs skip Wadir 2
-                    // } elseif ($doc->type == 'distribusi_matkul') {
-                    //     $nextRole = 'direktur'; // Distribusi biasanya skip Wadir 2
+                $docsDirectToDirector = ['jadwal_perkuliahan', 'kalender_akademik'];
+
+                if (in_array($doc->type, $docsDirectToDirector)) {
+
+                    $nextRole = 'direktur';
                 } else {
-                    $nextRole = 'wadir2';   // Default (termasuk BKD) masuk ke Wadir 2
+                    $nextRole = 'wadir2';
                 }
                 break;
+
             case 'approved_wadir2':
                 $nextRole = 'direktur';
                 break;

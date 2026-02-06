@@ -3,6 +3,7 @@
 @section('title', 'Dashboard - Manajemen Ruangan')
 
 @section('vendor-style')
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap"
         rel="stylesheet">
 
@@ -125,13 +126,82 @@
                         </thead>
                         <tbody>
                             @forelse($pendingBookings as $booking)
-                                {{-- ... isi row ... --}}
+                                <tr>
+                                    {{-- Kolom 1: Dosen --}}
+                                    <td>
+                                        <div class="d-flex align-items-center">
+                                            <div class="avatar avatar-sm me-2">
+                                                <span class="avatar-initial rounded-circle bg-label-primary">
+                                                    {{ substr($booking->user->name, 0, 2) }}
+                                                </span>
+                                            </div>
+                                            <div>
+                                                <span
+                                                    class="d-block fw-semibold text-dark">{{ $booking->user->name }}</span>
+                                                {{-- Pastikan di Model User ada kolom nidn atau sesuaikan --}}
+                                                <small class="text-muted" style="font-size: 0.75rem;">
+                                                    {{ $booking->user->nidn ?? 'Staff' }}
+                                                </small>
+                                            </div>
+                                        </div>
+                                    </td>
+
+                                    {{-- Kolom 2: Detail Booking (Ruangan & Keperluan) --}}
+                                    <td>
+                                        <span class="badge bg-label-info mb-1">{{ $booking->room->name }}</span>
+                                        <div class="small text-muted text-truncate" style="max-width: 150px;"
+                                            title="{{ $booking->purpose }}">
+                                            {{ $booking->purpose }}
+                                        </div>
+                                    </td>
+
+                                    {{-- Kolom 3: Tanggal & Waktu --}}
+                                    <td>
+                                        <div class="d-flex flex-column">
+                                            <span class="fw-semibold text-dark">
+                                                {{ \Carbon\Carbon::parse($booking->booking_date)->translatedFormat('d M Y') }}
+                                            </span>
+                                            <small class="text-muted">
+                                                @if ($booking->is_full_day)
+                                                    <span class="badge bg-label-primary" style="font-size: 0.7em">Full
+                                                        Day</span>
+                                                @else
+                                                    {{ \Carbon\Carbon::parse($booking->start_time)->format('H:i') }} -
+                                                    {{ \Carbon\Carbon::parse($booking->end_time)->format('H:i') }}
+                                                @endif
+                                            </small>
+                                        </div>
+                                    </td>
+
+                                    {{-- Kolom 4: Aksi (Approve / Reject) --}}
+                                    <td class="text-center">
+                                        <div class="d-flex justify-content-center gap-2">
+                                            {{-- Form Approve --}}
+                                            <form action="{{ route('booking.approve', $booking->id) }}" method="POST">
+                                                @csrf
+                                                @method('PATCH')
+                                                <button type="submit" class="admin-dash-btn-action btn-approve"
+                                                    data-bs-toggle="tooltip" title="Setujui">
+                                                    <i class='bx bx-check'></i>
+                                                </button>
+                                            </form>
+
+                                            {{-- Tombol Trigger Reject (JS) --}}
+                                            <button type="button" onclick="confirmReject({{ $booking->id }})"
+                                                class="admin-dash-btn-action btn-reject" data-bs-toggle="tooltip"
+                                                title="Tolak">
+                                                <i class='bx bx-x'></i>
+                                            </button>
+                                        </div>
+                                    </td>
+                                </tr>
                             @empty
                                 <tr>
                                     <td colspan="4" class="text-center py-5">
-                                        <img src="https://cdni.iconscout.com/illustration/premium/thumb/empty-state-2130362-1800926.png"
-                                            alt="Empty" style="width: 80px; opacity: 0.5;"> {{-- Perkecil gambar --}}
-                                        <p class="text-muted mt-2 small">Tidak ada permintaan booking pending.</p>
+                                        <div class="d-flex flex-column align-items-center">
+                                            <i class='bx bx-check-circle fs-1 text-muted mb-2'></i>
+                                            <p class="text-muted mt-2 small">Tidak ada permintaan booking pending.</p>
+                                        </div>
                                     </td>
                                 </tr>
                             @endforelse
@@ -146,34 +216,43 @@
             <div class="admin-dash-card">
                 <div class="admin-dash-table-header">
                     <h5 class="admin-dash-title">Aktivitas Terkini</h5>
+                    <small class="text-muted">Pantauan Real-time</small>
                 </div>
+
                 <div class="p-4 admin-dash-scroll">
                     <ul class="admin-dash-timeline">
-                        @foreach ($activities as $act)
+                        @forelse ($activities as $act)
                             <li class="admin-dash-timeline-item">
-                                <span class="admin-dash-timeline-point"
-                                    style="background-color: {{ $act->activity_type == 'booking' ? 'var(--ad-primary)' : 'var(--ad-success)' }}">
+                                {{-- Dot Timeline: Warna Dinamis dari Controller --}}
+                                <span class="admin-dash-timeline-point bg-{{ $act->color }}">
                                 </span>
+
                                 <div class="d-flex flex-column">
                                     <div class="d-flex justify-content-between align-items-center mb-1">
-                                        <span
-                                            class="fw-bold text-dark font-small">{{ $act->name ?? $act->user->name }}</span>
+                                        <div class="d-flex align-items-center gap-2">
+                                            {{-- Icon Kecil di sebelah Nama --}}
+                                            <i class='bx {{ $act->icon }} text-{{ $act->color }}'></i>
+                                            <span class="fw-bold text-dark font-small">{{ $act->name }}</span>
+                                        </div>
                                         <small class="text-muted" style="font-size: 0.7rem">
                                             {{ \Carbon\Carbon::parse($act->time)->diffForHumans() }}
                                         </small>
                                     </div>
-                                    <p class="mb-0 text-muted small" style="line-height: 1.4;">
-                                        {{ $act->activity_desc }}
+
+                                    {{-- Deskripsi Aktivitas --}}
+                                    <p class="mb-0 text-muted small ps-4" style="line-height: 1.4;">
+                                        {!! $act->desc !!}
                                     </p>
                                 </div>
                             </li>
-                        @endforeach
+                        @empty
+                            <div class="text-center py-5">
+                                <img src="https://cdni.iconscout.com/illustration/premium/thumb/sleeping-cat-8236374-6632420.png"
+                                    width="80" alt="Sleep" style="opacity: 0.5">
+                                <p class="small text-muted mt-2">Belum ada aktivitas terekam.</p>
+                            </div>
+                        @endforelse
                     </ul>
-                    @if ($activities->isEmpty())
-                        <div class="text-center py-4">
-                            <small class="text-muted">Belum ada aktivitas tercatat.</small>
-                        </div>
-                    @endif
                 </div>
             </div>
         </div>
@@ -187,13 +266,13 @@
 
                     {{-- Filter Form --}}
                     <form action="" method="GET" class="d-flex gap-2">
-                        <select name="campus" class="admin-dash-input" onchange="this.form.submit()">
+                        <select name="campus" class="form-select select2" onchange="this.form.submit()">
                             <option value="">Semua Kampus</option>
                             <option value="kampus_1" {{ $filterCampus == 'kampus_1' ? 'selected' : '' }}>Kampus 1</option>
                             <option value="kampus_2" {{ $filterCampus == 'kampus_2' ? 'selected' : '' }}>Kampus 2</option>
                         </select>
-                        <input type="date" name="date" class="admin-dash-input" value="{{ $filterDate }}"
-                            onchange="this.form.submit()">
+                        <input type="date" name="date" class="form-control flatpickr-date"
+                            value="{{ $filterDate }}" onchange="this.form.submit()">
                     </form>
                 </div>
 
@@ -201,22 +280,45 @@
                     <div class="row g-3">
                         @foreach ($allRooms as $room)
                             <div class="col-6 col-md-4 col-lg-3">
-                                <div class="admin-dash-room-item">
+                                <div class="admin-dash-room-item h-100 d-flex flex-column justify-content-center">
+
                                     {{-- Status Dot --}}
                                     <span class="admin-dash-status-dot"
-                                        style="background-color: {{ $room->status_hari_ini == 'Terpakai' ? 'var(--ad-secondary)' : 'var(--ad-success)' }}">
+                                        style="background-color: {{ $room->status_hari_ini == 'Terpakai' ? 'var(--ad-warning)' : 'var(--ad-success)' }}">
                                     </span>
 
-
-                                    <div class="mb-2">
+                                    <div class="mb-2 mt-2">
                                         <i
-                                            class='bx {{ $room->status_hari_ini == 'Terpakai' ? 'bxs-lock-alt text-secondary' : 'bxs-door-open text-primary' }} fs-1'></i>
+                                            class='bx {{ $room->status_hari_ini == 'Terpakai' ? 'bxs-user-voice text-warning' : 'bxs-check-shield text-success' }} fs-1'></i>
                                     </div>
+
                                     <h6 class="mb-1 fw-bold text-dark">{{ $room->name }}</h6>
-                                    <small
-                                        class="badge {{ $room->status_hari_ini == 'Terpakai' ? 'bg-label-secondary' : 'bg-label-success' }}">
-                                        {{ $room->status_hari_ini }}
-                                    </small>
+
+                                    {{-- LOGIC TAMPILAN POPOVER --}}
+                                    @if ($room->status_hari_ini == 'Terpakai')
+                                        <div class="mt-2 mb-3">
+                                            {{-- Tombol Trigger Popover --}}
+                                            <button type="button"
+                                                class="btn btn-sm btn-label-warning w-100 rounded-pill d-flex align-items-center justify-content-center gap-1"
+                                                data-bs-toggle="popover" data-bs-html="true"
+                                                data-bs-trigger="hover focus" data-bs-placement="top"
+                                                title="<div class='text-center fw-bold'>Detail Pemakaian</div>"
+                                                data-bs-content="{{ $room->popover_content }}">
+                                                <i class='bx bx-list-ul'></i> Lihat Pemakai
+                                            </button>
+                                        </div>
+                                    @else
+                                        <div class="mb-3 mt-2">
+                                            <span class="badge bg-label-success rounded-pill px-3">Available</span>
+                                        </div>
+                                    @endif
+
+                                    {{-- Footer Card --}}
+                                    <div class="mt-auto pt-2 border-top">
+                                        <small class="text-muted" style="font-size: 0.7rem">
+                                            {{ $room->building }} - Lt.{{ $room->floor }}
+                                        </small>
+                                    </div>
                                 </div>
                             </div>
                         @endforeach
@@ -232,7 +334,13 @@
         <input type="hidden" name="reason">
     </form>
 
+@endsection
+@section('page-script')
+    <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
     <script>
+        flatpickr(".flatpickr-date", {
+            dateFormat: "Y-m-d"
+        });
         // Custom Reject Logic (Bisa diganti SweetAlert jika mau)
         function confirmReject(id) {
             let reason = prompt("Silakan masukkan alasan penolakan:");
@@ -243,6 +351,35 @@
                 form.submit();
             }
         }
+        document.addEventListener('DOMContentLoaded', function() {
+            // Inisialisasi semua elemen yang punya atribut data-bs-toggle="popover"
+            var popoverTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="popover"]'))
+            var popoverList = popoverTriggerList.map(function(popoverTriggerEl) {
+                return new bootstrap.Popover(popoverTriggerEl, {
+                    // Opsi tambahan agar popover lebih interaktif
+                    container: 'body',
+                    trigger: 'hover focus' // Muncul saat hover, hilang saat kursor pergi
+                })
+            })
+        });
     </script>
-
+    <script type="module">
+        const initSelect2 = () => {
+            if (typeof $ !== 'undefined' && $.fn.select2) {
+                $('.select2').each(function() {
+                    const $this = $(this);
+                    $this.select2({
+                        placeholder: $this.data('placeholder') || "Pilih...",
+                        allowClear: $this.find('option[value=""]').length >
+                            0,
+                        width: '100%',
+                        minimumResultsForSearch: 10
+                    });
+                });
+            } else {
+                setTimeout(initSelect2, 100);
+            }
+        };
+        initSelect2();
+    </script>
 @endsection

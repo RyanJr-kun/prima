@@ -6,9 +6,12 @@ use Carbon\Carbon;
 use App\Models\Room;
 use App\Models\User;
 use App\Models\Schedule;
+use App\Models\Workload;
 use App\Models\RoomBooking;
-use App\Models\AcademicPeriod;
+use Illuminate\Support\Str;
 use Illuminate\Http\Request;
+use App\Models\AcademicPeriod;
+use App\Models\AprovalDocument;
 use Illuminate\Support\Facades\DB;
 use App\Http\Controllers\Controller;
 use Illuminate\Support\Facades\Auth;
@@ -29,18 +32,17 @@ class AnalisisController extends Controller
 
     $activePeriod = AcademicPeriod::where('is_active', true)->first();
 
-    // ==========================================
+
     // DASHBOARD DOSEN
-    // ==========================================
+
+    /** @var User $user */
     if ($user->hasRole('dosen')) {
 
-      // 1. QUERY JADWAL HARI INI (Diperbaiki agar sama dengan MyScheduleController)
       $todaySchedules = collect([]);
 
       if ($activePeriod) {
         $todaySchedules = Schedule::with(['course', 'studyClass.prodi', 'room'])
           ->where('day', $dayName)
-          // Gunakan logika relasi yang sama persis dengan MyScheduleController
           ->whereHas('courseDistribution', function ($q) use ($activePeriod, $user) {
             $q->where('academic_period_id', $activePeriod->id);
             $q->whereHas('teachingLecturers', function ($teacher) use ($user) {
@@ -52,7 +54,12 @@ class AnalisisController extends Controller
           ->get();
       }
 
-      // 2. LOGIC KETERSEDIAAN RUANGAN (Menampilkan Jam Terpakai)
+      $myBookings = RoomBooking::with('room')
+        ->where('user_id', $user->id)
+        ->orderBy('created_at', 'desc')
+        ->take(5)
+        ->get();
+
       $allRooms = Room::where('is_active', true)
         ->when($filterCampus, function ($q) use ($filterCampus) {
           return $q->where('location', $filterCampus);
@@ -61,51 +68,98 @@ class AnalisisController extends Controller
         ->orderBy('name')
         ->get();
 
+
       $availableRooms = $allRooms->map(function ($room) use ($dayName, $filterDate) {
 
-        // A. Ambil Jadwal Rutin (Schedule)
-        $schedules = Schedule::where('room_id', $room->id)
+        // A. Ambil Jadwal Rutin (Load Dosen & Matkul)
+        $schedules = Schedule::with(['courseDistribution.teachingLecturers', 'course'])
+          ->where('room_id', $room->id)
           ->where('day', $dayName)
           ->get();
 
-        // B. Ambil Booking Insidental (Approved)
-        $bookings = RoomBooking::where('room_id', $room->id)
+        // B. Ambil Booking (Load User)
+        $bookings = RoomBooking::with('user')
+          ->where('room_id', $room->id)
           ->where('booking_date', $filterDate)
           ->where('status', 'approved')
           ->get();
 
-        // C. List Jam Terpakai (Untuk ditampilkan ke user)
-        $busySlots = [];
+        $usageDetails = []; // Penampung data detail
 
-        // Cek dari Jadwal Rutin
+        // 1. Loop Jadwal Rutin
         foreach ($schedules as $sch) {
-          $realTime = $sch->real_time; // accessor getRealTimeAttribute
+          $realTime = $sch->real_time;
           if ($realTime) {
-            $busySlots[] = $realTime['start_formatted'] . '-' . $realTime['end_formatted'];
+            // Ambil nama dosen pertama
+            $dosenName = $sch->courseDistribution->teachingLecturers->first()->name ?? 'Dosen';
+            $courseName = $sch->course->name ?? 'Kuliah';
+
+            $usageDetails[] = [
+              'start' => $realTime['start_formatted'],
+              'end'   => $realTime['end_formatted'],
+              'user'  => $dosenName,
+              'desc'  => $courseName,
+              'type'  => 'Kuliah'
+            ];
           }
         }
 
+        // 2. Loop Booking
         foreach ($bookings as $book) {
           $start = substr($book->start_time, 0, 5);
           $end = substr($book->end_time, 0, 5);
-          $busySlots[] = $start . '-' . $end . ' (Booked)';
-        }
-        sort($busySlots);
 
-        if (empty($busySlots)) {
+          $usageDetails[] = [
+            'start' => $start,
+            'end'   => $end,
+            'user'  => $book->user->name,
+            'desc'  => $book->purpose,
+            'type'  => 'Booking'
+          ];
+        }
+
+        // Urutkan berdasarkan jam mulai
+        usort($usageDetails, function ($a, $b) {
+          return $a['start'] <=> $b['start'];
+        });
+
+        // C. Tentukan Status & HTML Popover
+        if (empty($usageDetails)) {
           $room->availability_status = 'Kosong Sepanjang Hari';
           $room->availability_color = 'success';
           $room->busy_notes = 'Bisa digunakan kapan saja';
+          $room->popover_content = null;
         } else {
           $room->availability_status = 'Terpakai Sebagian';
           $room->availability_color = 'warning';
-          $room->busy_notes = implode(', ', $busySlots);
+
+          // Generate list jam string (untuk keperluan booking modal/simple text)
+          $busyString = array_map(function ($item) {
+            return $item['start'] . '-' . $item['end'];
+          }, $usageDetails);
+          $room->busy_notes = implode(', ', $busyString);
+
+          // Generate HTML List untuk Popover
+          $htmlList = '<ul class="list-group list-group-flush p-0 m-0 text-start">';
+          foreach ($usageDetails as $detail) {
+            $badgeColor = $detail['type'] == 'Kuliah' ? 'bg-label-primary' : 'bg-label-warning';
+            $htmlList .= '
+                    <li class="list-group-item d-flex flex-column px-0 py-2 border-bottom">
+                        <div class="d-flex justify-content-between align-items-center mb-1">
+                            <span class="badge ' . $badgeColor . ' p-1" style="font-size:0.65rem">' . $detail['type'] . '</span>
+                            <span class="fw-bold text-dark small">' . $detail['start'] . ' - ' . $detail['end'] . '</span>
+                        </div>
+                        <span class="fw-semibold text-truncate small" style="max-width:180px">' . htmlspecialchars($detail['user']) . '</span>
+                        <small class="text-muted text-truncate" style="max-width:180px; font-size:0.65rem">' . htmlspecialchars($detail['desc']) . '</small>
+                    </li>';
+          }
+          $htmlList .= '</ul>';
+          $room->popover_content = $htmlList;
         }
         return $room;
       });
       $displayRooms = $availableRooms->take(20);
 
-      // Untuk tab "Terpakai", kita ambil yang memang ada jadwalnya
       $busyRooms = $availableRooms->filter(function ($r) {
         return $r->availability_color == 'warning';
       });
@@ -117,7 +171,8 @@ class AnalisisController extends Controller
         'displayRooms',
         'busyRooms',
         'filterDate',
-        'filterCampus'
+        'filterCampus',
+        'myBookings'
       ));
     }
 
@@ -125,13 +180,13 @@ class AnalisisController extends Controller
     // DASHBOARD ADMIN (Tetap Sama)
     // ==========================================
     else {
+      // 1. Pending Bookings (Tetap)
       $pendingBookings = RoomBooking::with(['user', 'room'])
         ->where('status', 'pending')
         ->orderBy('created_at', 'desc')
         ->get();
 
-      $occupiedRoomIds = $this->getOccupiedRoomIds($filterDate);
-
+      // 2. Monitoring Ruangan (UPDATE LOGIC: Ambil Detail Jam)
       $allRooms = Room::where('is_active', true)
         ->when($filterCampus, function ($q) use ($filterCampus) {
           return $q->where('location', $filterCampus);
@@ -139,28 +194,167 @@ class AnalisisController extends Controller
         ->orderBy('building')
         ->orderBy('name')
         ->get()
-        ->map(function ($room) use ($occupiedRoomIds) {
-          $room->status_hari_ini = in_array($room->id, $occupiedRoomIds) ? 'Terpakai' : 'Kosong';
+        ->map(function ($room) use ($dayName, $filterDate) {
+          $schedules = Schedule::with(['courseDistribution.teachingLecturers']) // Eager load dosen
+            ->where('room_id', $room->id)
+            ->where('day', $dayName)
+            ->get();
+
+          // B. Cek Booking Approved (Load relasi user)
+          $bookings = RoomBooking::with('user') // Eager load user
+            ->where('room_id', $room->id)
+            ->where('booking_date', $filterDate)
+            ->where('status', 'approved')
+            ->get();
+
+          $usageDetails = []; // Array untuk menampung detail
+
+          // 1. Loop Jadwal Rutin
+          foreach ($schedules as $sch) {
+            $realTime = $sch->real_time;
+            if ($realTime) {
+              // Ambil nama dosen pertama (jika team teaching)
+              $dosenName = $sch->courseDistribution->teachingLecturers->first()->name ?? 'Dosen';
+              $courseName = $sch->course->name ?? 'Kuliah';
+
+              $usageDetails[] = [
+                'start' => $realTime['start_formatted'],
+                'end'   => $realTime['end_formatted'],
+                'user'  => $dosenName,
+                'desc'  => $courseName,
+                'type'  => 'Kuliah'
+              ];
+            }
+          }
+
+          // 2. Loop Booking
+          foreach ($bookings as $book) {
+            $start = substr($book->start_time, 0, 5);
+            $end = substr($book->end_time, 0, 5);
+
+            $usageDetails[] = [
+              'start' => $start,
+              'end'   => $end,
+              'user'  => $book->user->name,
+              'desc'  => $book->purpose,
+              'type'  => 'Booking'
+            ];
+          }
+
+          // Urutkan berdasarkan jam mulai
+          usort($usageDetails, function ($a, $b) {
+            return $a['start'] <=> $b['start'];
+          });
+
+          // D. Set Status & Generate HTML untuk Popover
+          if (empty($usageDetails)) {
+            $room->status_hari_ini = 'Kosong';
+            $room->popover_content = null;
+          } else {
+            $room->status_hari_ini = 'Terpakai';
+
+            // Buat HTML string list pemakaian untuk dimasukkan ke data-bs-content
+            $htmlList = '<ul class="list-group list-group-flush p-0 m-0">';
+            foreach ($usageDetails as $detail) {
+              $badgeColor = $detail['type'] == 'Kuliah' ? 'bg-label-primary' : 'bg-label-warning';
+              $htmlList .= '
+                    <li class="list-group-item d-flex flex-column px-0 py-2 border-bottom">
+                        <div class="d-flex justify-content-between align-items-center mb-1">
+                            <span class="badge ' . $badgeColor . ' p-1" style="font-size:0.65rem">' . $detail['type'] . '</span>
+                            <span class="fw-bold text-dark small">' . $detail['start'] . ' - ' . $detail['end'] . '</span>
+                        </div>
+                        <span class="fw-semibold text-truncate small" style="max-width:180px">' . htmlspecialchars($detail['user']) . '</span>
+                        <small class="text-muted text-truncate" style="max-width:180px; font-size:0.65rem">' . htmlspecialchars($detail['desc']) . '</small>
+                    </li>';
+            }
+            $htmlList .= '</ul>';
+
+            $room->popover_content = $htmlList;
+          }
+
           return $room;
         });
 
+      // 3. Aktivitas Terkini (Tetap)
       $recentBookings = RoomBooking::with('user', 'room')->latest()->take(5)->get()
         ->map(function ($item) {
-          $item->activity_type = 'booking';
-          $item->activity_desc = "Mengajukan booking ruang {$item->room->name}";
-          $item->time = $item->created_at;
-          return $item;
+          return (object) [
+            'name'  => $item->user->name,
+            'desc'  => "Mengajukan booking ruang {$item->room->name}",
+            'time'  => $item->created_at,
+            'type'  => 'booking',
+            'icon'  => 'bx-calendar-plus',
+            'color' => 'primary'
+          ];
         });
 
+      // 2. RECENT LOGINS (Format Standar)
       $recentLogins = User::role('dosen')->orderBy('updated_at', 'desc')->take(5)->get()
         ->map(function ($item) {
-          $item->activity_type = 'login';
-          $item->activity_desc = "Login ke dalam sistem";
-          $item->time = $item->updated_at;
-          return $item;
+          return (object) [
+            'name'  => $item->name,
+            'desc'  => "Login ke dalam sistem",
+            'time'  => $item->updated_at,
+            'type'  => 'login',
+            'icon'  => 'bx-log-in-circle',
+            'color' => 'success'
+          ];
         });
 
-      $activities = $recentBookings->concat($recentLogins)->sortByDesc('time')->take(5);
+      // 3. RECENT APPROVALS (Updated sesuai Model AprovalDocument)
+      // Kita ambil dokumen yang "action_by_user_id" nya tidak null (sudah ada aksi)
+      $recentApprovals = AprovalDocument::with(['lastActionUser', 'prodi'])
+        ->whereNotNull('action_by_user_id') // Hanya yang sudah di-acc/reject
+        ->orderBy('updated_at', 'desc')
+        ->take(5)
+        ->get()
+        ->map(function ($item) {
+          // Tentukan kata kerja
+          $isRejected = $item->status == 'rejected';
+          $actionWord = $isRejected ? 'meminta revisi' : 'menyetujui';
+
+          // Ambil info dokumen dari Accessor model
+          $docType = $item->type_label;
+
+          // Konteks Prodi (Jika ada)
+          $context = $item->prodi ? "({$item->prodi->name})" : "(Global)";
+
+          return (object) [
+            'name'  => $item->lastActionUser->name ?? 'Sistem', // Siapa yang ACC
+            'desc'  => "Telah $actionWord dokumen <strong>$docType</strong> $context",
+            'time'  => $item->updated_at,
+            'type'  => 'approval',
+            'icon'  => $isRejected ? 'bx-edit' : 'bx-check-double',
+            'color' => $isRejected ? 'warning' : 'info'
+          ];
+        });
+
+      // 4. RECENT BKD / WORKLOAD (Updated sesuai Model Workload)
+      $recentBkds = Workload::with(['user', 'academicPeriod'])
+        ->latest()
+        ->take(5)
+        ->get()
+        ->map(function ($item) {
+          $period = $item->academicPeriod->name ?? '-';
+
+          return (object) [
+            'name'  => $item->user->name ?? 'Dosen',
+            'desc'  => "Melaporkan BKD Periode $period",
+            'time'  => $item->created_at,
+            'type'  => 'bkd',
+            'icon'  => 'bx-file',
+            'color' => 'danger'
+          ];
+        });
+
+      // GABUNGKAN SEMUA & URUTKAN
+      // Urutan prioritas: Booking -> Approval -> BKD -> Login
+      $activities = $recentBookings
+        ->concat($recentApprovals)
+        ->concat($recentBkds)
+        ->concat($recentLogins)
+        ->sortByDesc('time') // Urutkan berdasarkan waktu kejadian terbaru
+        ->take(8);
 
       return view('content.dashboard.dashboard_admin', compact(
         'user',

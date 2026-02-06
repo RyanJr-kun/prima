@@ -79,7 +79,7 @@ class BookingStatusNotification extends Notification
                 'message' => $this->booking->user->name . " request " . $this->booking->room->name,
                 'icon'    => 'bx-calendar-plus',
                 'color'   => 'primary',
-                'url'     => route(''), // Sesuaikan route dashboard admin
+                'url'     => route('dashboard'), // Sesuaikan route dashboard admin
             ];
         } else {
             return [
@@ -87,7 +87,7 @@ class BookingStatusNotification extends Notification
                 'message' => "Booking " . $this->booking->room->name . " " . ($this->status == 'approved' ? 'Disetujui' : 'Ditolak'),
                 'icon'    => 'bx-calendar-check',
                 'color'   => ($this->status == 'approved' ? 'success' : 'danger'),
-                'url'     => route('dashboard.jadwal-saya'),
+                'url'     => route('dashboard'),
             ];
         }
     }

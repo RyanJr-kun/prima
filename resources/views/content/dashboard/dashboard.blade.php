@@ -176,9 +176,9 @@
                             <small class="text-muted">Cek jam kosong sebelum booking.</small>
                         </div>
                         <form action="" method="GET" class="d-flex gap-2">
-                            <input type="date" class="form-control" name="date" value="{{ $filterDate }}"
-                                onchange="this.form.submit()">
-                            <select name="campus" class="form-select" onchange="this.form.submit()">
+                            <input type="date" class="form-control flatpickr-date" name="date"
+                                value="{{ $filterDate }}" onchange="this.form.submit()">
+                            <select name="campus" class="form-select select2" onchange="this.form.submit()">
                                 <option value="">Semua Kampus</option>
                                 <option value="kampus_1" {{ $filterCampus == 'kampus_1' ? 'selected' : '' }}>Kampus 1
                                 </option>
@@ -219,16 +219,22 @@
                                                 <small class="text-muted d-block mb-2">{{ $room->building }} -
                                                     Lt.{{ $room->floor }}</small>
 
-                                                {{-- INFO JAM TERPAKAI --}}
+                                                {{-- INFO KETERSEDIAAN / TOMBOL POPOVER --}}
                                                 @if ($room->availability_color == 'success')
+                                                    {{-- Jika Kosong --}}
                                                     <div class="alert alert-success py-1 px-2 mb-0 small">
                                                         <i class='bx bx-check-circle me-1'></i> Kosong Seharian
                                                     </div>
                                                 @else
-                                                    <div class="busy-badge">
-                                                        <strong>Terpakai Jam:</strong><br>
-                                                        {{ $room->busy_notes }}
-                                                    </div>
+                                                    {{-- Jika Terpakai: Tampilkan Tombol Popover --}}
+                                                    <button type="button"
+                                                        class="btn btn-sm btn-label-warning w-100 rounded-pill d-flex align-items-center justify-content-center gap-1"
+                                                        data-bs-toggle="popover" data-bs-html="true"
+                                                        data-bs-trigger="hover focus" data-bs-placement="top"
+                                                        title="<div class='text-center fw-bold'>Detail Pemakaian</div>"
+                                                        data-bs-content="{{ $room->popover_content }}">
+                                                        <i class='bx bx-list-ul'></i> Lihat Pemakai
+                                                    </button>
                                                 @endif
                                             </div>
 
@@ -244,6 +250,44 @@
                             </div>
                         </div>
                     </div>
+                </div>
+            </div>
+        </div>
+        {{-- List Booking Saya --}}
+        <div class="col-12 mt-4">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">Riwayat Pengajuan Booking Saya</h5>
+                </div>
+                <div class="table-responsive text-nowrap">
+                    <table class="table">
+                        <thead>
+                            <tr>
+                                <th>Ruangan</th>
+                                <th>Tanggal</th>
+                                <th>Status</th>
+                                <th>Catatan</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach ($myBookings as $booking)
+                                <tr>
+                                    <td>{{ $booking->room->name }}</td>
+                                    <td>{{ \Carbon\Carbon::parse($booking->booking_date)->format('d M Y') }}</td>
+                                    <td>
+                                        @if ($booking->status == 'pending')
+                                            <span class="badge bg-warning">Menunggu</span>
+                                        @elseif($booking->status == 'approved')
+                                            <span class="badge bg-success">Disetujui</span>
+                                        @else
+                                            <span class="badge bg-danger">Ditolak</span>
+                                        @endif
+                                    </td>
+                                    <td>{{ $booking->rejection_note ?? '-' }}</td>
+                                </tr>
+                            @endforeach
+                        </tbody>
+                    </table>
                 </div>
             </div>
         </div>
@@ -337,5 +381,34 @@
                 }
             });
         });
+        document.addEventListener('DOMContentLoaded', function() {
+            // Inisialisasi Popover
+            var popoverTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="popover"]'))
+            var popoverList = popoverTriggerList.map(function(popoverTriggerEl) {
+                return new bootstrap.Popover(popoverTriggerEl, {
+                    container: 'body', // Penting agar tidak terpotong overflow card
+                    trigger: 'hover focus'
+                })
+            })
+        });
+    </script>
+    <script type="module">
+        const initSelect2 = () => {
+            if (typeof $ !== 'undefined' && $.fn.select2) {
+                $('.select2').each(function() {
+                    const $this = $(this);
+                    $this.select2({
+                        placeholder: $this.data('placeholder') || "Pilih...",
+                        allowClear: $this.find('option[value=""]').length >
+                            0,
+                        width: '100%',
+                        minimumResultsForSearch: 10
+                    });
+                });
+            } else {
+                setTimeout(initSelect2, 100);
+            }
+        };
+        initSelect2();
     </script>
 @endsection

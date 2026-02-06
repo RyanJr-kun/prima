@@ -187,7 +187,7 @@ class SiakadSyncService
             $count = 0;
 
             foreach ($dataSiakad as $row) {
-                // 1. Cari Prodi ID Lokal
+
                 $prodi = Prodi::where('code', $row['kode_prodi'])->first();
                 if (!$prodi) continue; // Skip jika prodi tidak ada
 
