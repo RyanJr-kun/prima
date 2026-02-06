@@ -188,9 +188,9 @@
                                                     <i class='bx bx-check'></i>
                                                 </button>
                                             </form>
-                                            <button type="button" onclick="confirmReject({{ $booking->id }})"
-                                                class="admin-dash-btn-action btn-reject" data-bs-toggle="tooltip"
-                                                title="Tolak">
+                                            <button type="button" class="admin-dash-btn-action btn-reject"
+                                                data-bs-toggle="modal" data-bs-target="#modalReject"
+                                                data-id="{{ $booking->id }}" title="Tolak Permintaan">
                                                 <i class='bx bx-x'></i>
                                             </button>
                                         </div>
@@ -327,11 +327,37 @@
         </div>
     </div>
 
-    {{-- Form Reject Hidden --}}
-    <form id="rejectForm" method="POST" style="display:none">
-        @csrf @method('PATCH')
-        <input type="hidden" name="reason">
-    </form>
+    {{-- MODAL REJECT --}}
+    <div class="modal fade" id="modalReject" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <form id="formReject" class="modal-content" method="POST" action="">
+                @csrf
+                @method('PATCH')
+                <div class="modal-header">
+                    <h5 class="modal-title fw-bold text-danger">Tolak Permintaan Booking</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label for="reason" class="form-label fw-semibold">Alasan Penolakan</label>
+                        <textarea class="form-control" id="reason" name="reason" rows="3"
+                            placeholder="Contoh: Ruangan sedang direnovasi, atau Jadwal bentrok dengan acara Rektorat..." required></textarea>
+                        <div class="form-text text-muted">
+                            Alasan ini akan dikirimkan ke email pemohon.
+                        </div>
+                    </div>
+                </div>
+
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-label-secondary" data-bs-dismiss="modal">Batal</button>
+                    <button type="submit" class="btn btn-danger">
+                        <i class='bx bx-x-circle me-1'></i> Tolak Booking
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
 
 @endsection
 @section('page-script')
@@ -341,15 +367,6 @@
             dateFormat: "Y-m-d"
         });
 
-        function confirmReject(id) {
-            let reason = prompt("Silakan masukkan alasan penolakan:");
-            if (reason) {
-                let form = document.getElementById('rejectForm');
-                form.action = "/booking/" + id + "/reject";
-                form.querySelector('input[name="reason"]').value = reason;
-                form.submit();
-            }
-        }
         document.addEventListener('DOMContentLoaded', function() {
             var popoverTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="popover"]'))
             var popoverList = popoverTriggerList.map(function(popoverTriggerEl) {
@@ -358,6 +375,14 @@
                     trigger: 'hover focus'
                 })
             })
+
+            const modalReject = document.getElementById('modalReject');
+            modalReject.addEventListener('show.bs.modal', function(event) {
+                const button = event.relatedTarget;
+                const bookingId = button.getAttribute('data-id');
+                const form = document.getElementById('formReject');
+                form.action = '/booking/' + bookingId + '/reject';
+            });
 
             const successToast = document.getElementById('successToast');
             if (successToast) {
