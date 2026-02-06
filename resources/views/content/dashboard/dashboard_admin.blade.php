@@ -32,14 +32,38 @@
 @endsection
 
 @section('content')
+    {{-- Toast Notification --}}
+    <div class="toast-container position-fixed bottom-0 end-0 p-3" style="z-index: 1100;">
+        @if (session('success'))
+            <div id="successToast" class="bs-toast bg-primary toast fade hide" role="alert" aria-live="assertive"
+                aria-atomic="true">
+                <div class="toast-header">
+                    <i class="icon-base bx bx-bell icon-xs me-2"></i>
+                    <span class="fw-medium me-auto">Notifikasi</span>
+                    <small>Baru Saja!</small>
+                    <button type="button" class="btn-close" data-bs-dismiss="toast" aria-label="Close"></button>
+                </div>
+                <div class="toast-body">{{ session('success') }}</div>
+            </div>
+        @endif
 
+        @if (session('error'))
+            <div id="errorToast" class="bs-toast bg-danger toast fade hide" role="alert" aria-live="assertive"
+                aria-atomic="true">
+                <div class="toast-header">
+                    <i class="icon-base bx bx-bell icon-xs me-2"></i>
+                    <span class="fw-medium me-auto">Notifikasi</span>
+                    <small>Baru Saja!</small>
+                    <button type="button" class="btn-close" data-bs-dismiss="toast" aria-label="Close"></button>
+                </div>
+                <div class="toast-body">{{ session('error') }}</div>
+            </div>
+        @endif
+    </div>
 
-    {{-- SECTION 2: MAIN CONTENT SPLIT --}}
     <div class="row g-4">
         <div class="col-12">
-            {{-- SECTION 1: HEADER & STATS --}}
-            <div class="row g-4 mb-4 align-items-stretch"> {{-- align-items-stretch penting agar tinggi sama --}}
-                {{-- 1. Welcome Card --}}
+            <div class="row g-4 mb-4 align-items-stretch">
                 <div class="col-12 col-xl-8">
                     <div class="admin-header-card admin-header-welcome">
                         <div class="admin-header-welcome-content">
@@ -53,21 +77,15 @@
                                 Tinjau Sekarang <i class='bx bx-right-arrow-alt ms-1'></i>
                             </a>
                         </div>
-
-                        {{-- Gambar Ilustrasi --}}
                         <div class="d-none d-md-block">
                             <img src="{{ asset('assets\img\illustrations\man-with-laptop.png') }}" alt="Admin Illustration"
                                 class="admin-header-img">
                         </div>
                     </div>
                 </div>
-
-                {{-- 2. Mini Stats Column --}}
                 <div class="col-12 col-xl-4">
-                    <div class="row g-4 h-100"> {{-- h-100 agar row mengisi penuh tinggi parent --}}
-
-                        {{-- Stat 1: Total Ruangan --}}
-                        <div class="col-sm-6 col-xl-12" style="height: 50%;"> {{-- Bagi tinggi jadi 50% di desktop --}}
+                    <div class="row g-4 h-100">
+                        <div class="col-sm-6 col-xl-12" style="height: 50%;">
                             <div class="admin-header-card admin-header-stat">
                                 <div class="admin-header-icon icon-soft-primary">
                                     <i class='bx bx-buildings'></i>
@@ -79,7 +97,6 @@
                             </div>
                         </div>
 
-                        {{-- Stat 2: Pending Approval --}}
                         <div class="col-sm-6 col-xl-12" style="height: 50%;">
                             <div class="admin-header-card admin-header-stat">
                                 <div class="admin-header-icon icon-soft-warning">
@@ -96,10 +113,7 @@
                 </div>
             </div>
         </div>
-        {{-- LEFT COLUMN: APPROVAL & MONITORING (8/12) --}}
         <div class="col-lg-8">
-
-            {{-- 2A. TABLE APPROVAL --}}
             <div class="admin-dash-card" id="pendingTable">
                 <div class="admin-dash-table-header">
                     <div>
@@ -112,8 +126,6 @@
                         <span class="badge bg-label-success rounded-pill px-3">Semua Beres</span>
                     @endif
                 </div>
-
-                {{-- WRAPPER SCROLL DI SINI --}}
                 <div class="table-responsive admin-dash-scroll">
                     <table class="admin-dash-table">
                         <thead>
@@ -127,7 +139,6 @@
                         <tbody>
                             @forelse($pendingBookings as $booking)
                                 <tr>
-                                    {{-- Kolom 1: Dosen --}}
                                     <td>
                                         <div class="d-flex align-items-center">
                                             <div class="avatar avatar-sm me-2">
@@ -138,15 +149,12 @@
                                             <div>
                                                 <span
                                                     class="d-block fw-semibold text-dark">{{ $booking->user->name }}</span>
-                                                {{-- Pastikan di Model User ada kolom nidn atau sesuaikan --}}
                                                 <small class="text-muted" style="font-size: 0.75rem;">
                                                     {{ $booking->user->nidn ?? 'Staff' }}
                                                 </small>
                                             </div>
                                         </div>
                                     </td>
-
-                                    {{-- Kolom 2: Detail Booking (Ruangan & Keperluan) --}}
                                     <td>
                                         <span class="badge bg-label-info mb-1">{{ $booking->room->name }}</span>
                                         <div class="small text-muted text-truncate" style="max-width: 150px;"
@@ -154,8 +162,6 @@
                                             {{ $booking->purpose }}
                                         </div>
                                     </td>
-
-                                    {{-- Kolom 3: Tanggal & Waktu --}}
                                     <td>
                                         <div class="d-flex flex-column">
                                             <span class="fw-semibold text-dark">
@@ -172,11 +178,8 @@
                                             </small>
                                         </div>
                                     </td>
-
-                                    {{-- Kolom 4: Aksi (Approve / Reject) --}}
                                     <td class="text-center">
                                         <div class="d-flex justify-content-center gap-2">
-                                            {{-- Form Approve --}}
                                             <form action="{{ route('booking.approve', $booking->id) }}" method="POST">
                                                 @csrf
                                                 @method('PATCH')
@@ -185,8 +188,6 @@
                                                     <i class='bx bx-check'></i>
                                                 </button>
                                             </form>
-
-                                            {{-- Tombol Trigger Reject (JS) --}}
                                             <button type="button" onclick="confirmReject({{ $booking->id }})"
                                                 class="admin-dash-btn-action btn-reject" data-bs-toggle="tooltip"
                                                 title="Tolak">
@@ -223,14 +224,12 @@
                     <ul class="admin-dash-timeline">
                         @forelse ($activities as $act)
                             <li class="admin-dash-timeline-item">
-                                {{-- Dot Timeline: Warna Dinamis dari Controller --}}
                                 <span class="admin-dash-timeline-point bg-{{ $act->color }}">
                                 </span>
 
                                 <div class="d-flex flex-column">
                                     <div class="d-flex justify-content-between align-items-center mb-1">
                                         <div class="d-flex align-items-center gap-2">
-                                            {{-- Icon Kecil di sebelah Nama --}}
                                             <i class='bx {{ $act->icon }} text-{{ $act->color }}'></i>
                                             <span class="fw-bold text-dark font-small">{{ $act->name }}</span>
                                         </div>
@@ -341,7 +340,7 @@
         flatpickr(".flatpickr-date", {
             dateFormat: "Y-m-d"
         });
-        // Custom Reject Logic (Bisa diganti SweetAlert jika mau)
+
         function confirmReject(id) {
             let reason = prompt("Silakan masukkan alasan penolakan:");
             if (reason) {
@@ -352,15 +351,26 @@
             }
         }
         document.addEventListener('DOMContentLoaded', function() {
-            // Inisialisasi semua elemen yang punya atribut data-bs-toggle="popover"
             var popoverTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="popover"]'))
             var popoverList = popoverTriggerList.map(function(popoverTriggerEl) {
                 return new bootstrap.Popover(popoverTriggerEl, {
-                    // Opsi tambahan agar popover lebih interaktif
                     container: 'body',
-                    trigger: 'hover focus' // Muncul saat hover, hilang saat kursor pergi
+                    trigger: 'hover focus'
                 })
             })
+
+            const successToast = document.getElementById('successToast');
+            if (successToast) {
+                new bootstrap.Toast(successToast, {
+                    delay: 3000
+                }).show();
+            }
+            const errorToast = document.getElementById('errorToast');
+            if (errorToast) {
+                new bootstrap.Toast(errorToast, {
+                    delay: 3000
+                }).show();
+            }
         });
     </script>
     <script type="module">

@@ -84,7 +84,38 @@
     </style>
 @endsection
 
+
 @section('content')
+
+    {{-- Toast Notification --}}
+    <div class="toast-container position-fixed bottom-0 end-0 p-3" style="z-index: 1100;">
+        @if (session('success'))
+            <div id="successToast" class="bs-toast bg-primary toast fade hide" role="alert" aria-live="assertive"
+                aria-atomic="true">
+                <div class="toast-header">
+                    <i class="icon-base bx bx-bell icon-xs me-2"></i>
+                    <span class="fw-medium me-auto">Notifikasi</span>
+                    <small>Baru Saja!</small>
+                    <button type="button" class="btn-close" data-bs-dismiss="toast" aria-label="Close"></button>
+                </div>
+                <div class="toast-body">{{ session('success') }}</div>
+            </div>
+        @endif
+
+        @if (session('error'))
+            <div id="errorToast" class="bs-toast bg-danger toast fade hide" role="alert" aria-live="assertive"
+                aria-atomic="true">
+                <div class="toast-header">
+                    <i class="icon-base bx bx-bell icon-xs me-2"></i>
+                    <span class="fw-medium me-auto">Notifikasi</span>
+                    <small>Baru Saja!</small>
+                    <button type="button" class="btn-close" data-bs-dismiss="toast" aria-label="Close"></button>
+                </div>
+                <div class="toast-body">{{ session('error') }}</div>
+            </div>
+        @endif
+    </div>
+
     <div class="row">
         {{-- 1. WELCOME --}}
         <div class="col-lg-12 mb-4">
@@ -219,14 +250,11 @@
                                                 <small class="text-muted d-block mb-2">{{ $room->building }} -
                                                     Lt.{{ $room->floor }}</small>
 
-                                                {{-- INFO KETERSEDIAAN / TOMBOL POPOVER --}}
                                                 @if ($room->availability_color == 'success')
-                                                    {{-- Jika Kosong --}}
                                                     <div class="alert alert-success py-1 px-2 mb-0 small">
                                                         <i class='bx bx-check-circle me-1'></i> Kosong Seharian
                                                     </div>
                                                 @else
-                                                    {{-- Jika Terpakai: Tampilkan Tombol Popover --}}
                                                     <button type="button"
                                                         class="btn btn-sm btn-label-warning w-100 rounded-pill d-flex align-items-center justify-content-center gap-1"
                                                         data-bs-toggle="popover" data-bs-html="true"
@@ -293,7 +321,6 @@
         </div>
     </div>
 
-    {{-- MODAL BOOKING --}}
     <div class="modal fade" id="modalBooking" tabindex="-1" aria-hidden="true">
         <div class="modal-dialog modal-dialog-centered">
             <form class="modal-content" action="{{ route('booking.store') }}" method="POST">
@@ -307,7 +334,6 @@
                 <div class="modal-body">
                     <div class="text-center mb-4">
                         <h5 id="displayRoomName" class="mb-1 text-primary fw-bold">Pilih Ruangan</h5>
-                        {{-- ALERT INFO JAM SIBUK DI MODAL --}}
                         <div id="modalBusyAlert" class="alert alert-warning d-none text-start mx-auto mt-2"
                             style="max-width: 90%;">
                             <small><strong><i class='bx bx-info-circle'></i> Perhatian:</strong> Ruangan ini sudah terpakai
@@ -326,13 +352,15 @@
                     <div class="row g-2 mb-3">
                         <div class="col-6">
                             <label class="form-label">Jam Mulai</label>
-                            <input type="text" name="start_time" class="form-control flatpickr-time"
+                            <input type="text" name="start_time" class="form-control form-control-sm flatpickr-time"
                                 placeholder="00:00">
+
                         </div>
                         <div class="col-6">
                             <label class="form-label">Jam Selesai</label>
-                            <input type="text" name="end_time" class="form-control flatpickr-time"
+                            <input type="text" name="end_time" class="form-control form-control-sm flatpickr-time"
                                 placeholder="00:00">
+
                         </div>
                     </div>
                     <div class="mb-3">
@@ -390,6 +418,19 @@
                     trigger: 'hover focus'
                 })
             })
+
+            const successToast = document.getElementById('successToast');
+            if (successToast) {
+                new bootstrap.Toast(successToast, {
+                    delay: 3000
+                }).show();
+            }
+            const errorToast = document.getElementById('errorToast');
+            if (errorToast) {
+                new bootstrap.Toast(errorToast, {
+                    delay: 3000
+                }).show();
+            }
         });
     </script>
     <script type="module">
@@ -411,4 +452,5 @@
         };
         initSelect2();
     </script>
+
 @endsection
