@@ -27,22 +27,34 @@ class DistributionController extends Controller
 {
     public function index(Request $request)
     {
+        $user = Auth::user();
         $periods = AcademicPeriod::orderBy('name', 'desc')->get();
 
+        // 1. Tentukan Periode Aktif
         if ($request->has('period_id')) {
             $activePeriod = $periods->find($request->period_id);
         } else {
-            $activePeriod = $periods->where('is_active', true)->first();
-        }
-
-        if (!$activePeriod) {
-            $activePeriod = $periods->first();
+            $activePeriod = $periods->where('is_active', true)->first() ?? $periods->first();
         }
 
         if (!$activePeriod) {
             return redirect()->back()->with('error', 'Belum ada Periode Akademik yang tersedia!');
         }
+        /** @var User $user */
+        $isKaprodi = $user->hasRole('kaprodi');
+        $managedProdiId = null;
 
+        if ($isKaprodi) {
+            // Asumsi relasi managedProdi ada di Model User
+            $managedProdi = $user->managedProdi;
+            if ($managedProdi) {
+                $managedProdiId = $managedProdi->id;
+                // Paksa request untuk menggunakan Prodi si Kaprodi
+                $request->merge(['prodi_id' => $managedProdiId]);
+            }
+        }
+
+        // 3. Query Data Distribusi
         $query = CourseDistribution::query()
             ->with([
                 'studyClass.prodi',
@@ -54,7 +66,7 @@ class DistributionController extends Controller
             ])
             ->where('academic_period_id', $activePeriod->id);
 
-        // Filter Prodi
+        // Filter Prodi admin kalo kaprodi otomatis.
         if ($request->filled('prodi_id')) {
             $query->whereHas('studyClass', function ($q) use ($request) {
                 $q->where('prodi_id', $request->prodi_id);
@@ -68,29 +80,40 @@ class DistributionController extends Controller
             });
         }
 
-        $rawDistributions = $query->get();
+        $distributions = $query->get()->sortBy([
+            ['studyClass.prodi_id', 'asc'],
+            ['studyClass.semester', 'asc'],
+            ['studyClass.name', 'asc'],
+            ['course.name', 'asc'],
+        ]);
 
-        $distributions = $rawDistributions->groupBy(function ($item) {
-            return $item->studyClass->prodi_id . '-' .
-                $item->studyClass->semester . '-' .
-                $item->studyClass->angkatan . '-' .
-                $item->studyClass->shift;
-        });
-
-        $classes = StudyClass::with('prodi')
-            ->where('academic_period_id', $activePeriod->id)
-            ->get();
-
-        $prodis = Prodi::all();
-        $dosens = User::role('dosen')->select('id', 'name')->orderBy('name')->get();
-
-        $documentStatus = 'draft';
-        $documentData = null;
+        // Data kelas sesuai filter
+        $classesQuery = StudyClass::with('prodi')
+            ->where('academic_period_id', $activePeriod->id);
 
         if ($request->filled('prodi_id')) {
+            $classesQuery->where('prodi_id', $request->prodi_id);
+        }
+        $classes = $classesQuery->orderBy('name')->get(); // Data untuk Modal Generate
+
+        // Data Prodi sesuai Filter
+        if ($isKaprodi && $managedProdiId) {
+            $prodis = Prodi::where('id', $managedProdiId)->get();
+        } else {
+            $prodis = Prodi::all();
+        }
+
+        $dosens = User::role('dosen')->select('id', 'name')->orderBy('name')->get();
+
+        // Cek Status Dokumen Approval
+        $documentStatus = 'draft';
+        $documentData = null;
+        $checkProdiId = $request->prodi_id;
+
+        if ($checkProdiId) {
             $documentData = AprovalDocument::where([
                 'academic_period_id' => $activePeriod->id,
-                'prodi_id'           => $request->prodi_id,
+                'prodi_id'           => $checkProdiId,
                 'type'               => 'distribusi_matkul'
             ])->first();
 
@@ -107,23 +130,22 @@ class DistributionController extends Controller
             'dosens',
             'classes',
             'documentData',
-            'documentStatus'
+            'documentStatus',
+            'isKaprodi'
         ));
-    }
-
-    public function create()
-    {
-        //
     }
 
     public function store(Request $request)
     {
+        // 1. Validasi Input (Perhatikan study_class_ids harus array)
         $request->validate([
-            'study_class_id' => 'required|exists:study_classes,id',
-            'course_id'      => 'required|exists:courses,id',
-            'user_id'        => 'nullable|exists:users,id',
-            'referensi'      => 'nullable|string',
-            'luaran'         => 'nullable|string',
+            'study_class_ids'   => 'required|array',             // Wajib Array
+            'study_class_ids.*' => 'exists:study_classes,id',    // Cek tiap item valid
+            'course_id'         => 'required|exists:courses,id',
+            'teaching_ids'      => 'nullable|array',             // Array Dosen Pengajar
+            'pddikti_ids'       => 'nullable|array',             // Array Dosen PDDIKTI
+            'referensi'         => 'nullable|string',
+            'luaran'            => 'nullable|string',
         ]);
 
         $activePeriod = AcademicPeriod::where('is_active', true)->first();
@@ -131,47 +153,151 @@ class DistributionController extends Controller
             return back()->with('error', 'Gagal: Tidak ada Periode Akademik yang aktif.');
         }
 
-        $exists = CourseDistribution::where([
-            'academic_period_id' => $activePeriod->id,
-            'study_class_id'     => $request->study_class_id,
-            'course_id'          => $request->course_id,
-        ])->exists();
-
-        if ($exists) {
-            return back()->with('error', 'Mata kuliah ini sudah didistribusikan di kelas tersebut!');
-        }
-
         DB::beginTransaction();
 
+        $successCount = 0;
+        $skippedCount = 0;
+
         try {
-            $dist = CourseDistribution::create([
-                'academic_period_id' => $activePeriod->id,
-                'study_class_id'     => $request->study_class_id,
-                'course_id'          => $request->course_id,
-                'referensi'          => $request->referensi,
-                'luaran'             => $request->luaran,
-            ]);
+            // 2. LOOPING SETIAP KELAS YANG DIPILIH
+            foreach ($request->study_class_ids as $classId) {
 
-            if ($request->filled('user_id')) {
-                $dist->teachingLecturers()->attach($request->user_id, [
-                    'category' => 'real_teaching'
+                // A. Cek Duplikasi (Agar tidak double matkul di kelas yg sama)
+                $exists = CourseDistribution::where([
+                    'academic_period_id' => $activePeriod->id,
+                    'study_class_id'     => $classId,
+                    'course_id'          => $request->course_id,
+                ])->exists();
+
+                if ($exists) {
+                    $skippedCount++;
+                    continue; // Lewati kelas ini jika sudah ada
+                }
+
+                // B. Buat Data Distribusi Utama
+                $dist = CourseDistribution::create([
+                    'academic_period_id' => $activePeriod->id,
+                    'study_class_id'     => $classId,
+                    'course_id'          => $request->course_id,
+                    'referensi'          => $request->referensi,
+                    'luaran'             => $request->luaran,
+                    // 'user_id' dihapus atau dibiarkan null jika kita full pakai pivot
                 ]);
 
-                $dist->pddiktiLecturers()->attach($request->user_id, [
-                    'category' => 'pddikti_reporting'
-                ]);
+                // C. Simpan Dosen ke Pivot Table
+                // 1. Dosen Pengajar (Real Teaching)
+                if ($request->teaching_ids) {
+                    foreach ($request->teaching_ids as $uid) {
+                        $dist->teachingLecturers()->attach($uid, ['category' => 'real_teaching']);
+                    }
+                }
+
+                // 2. Dosen Pelapor (PDDIKTI)
+                if ($request->pddikti_ids) {
+                    foreach ($request->pddikti_ids as $uid) {
+                        // Gunakan try-catch atau syncWithoutDetaching untuk hindari error unique constraint
+                        // jika dosen yg sama dipilih sbg pengajar & pelapor (biasanya boleh)
+                        try {
+                            $dist->pddiktiLecturers()->attach($uid, ['category' => 'pddikti_reporting']);
+                        } catch (\Exception $e) {
+                            // Ignore jika duplicate entry error (safety)
+                        }
+                    }
+                }
+
+                $successCount++;
             }
 
             DB::commit();
 
+            // 3. Feedback ke User
+            if ($successCount == 0 && $skippedCount > 0) {
+                return back()->with('error', 'Semua data gagal ditambahkan karena mata kuliah tersebut sudah ada di semua kelas yang dipilih.');
+            }
+
+            $msg = "Berhasil menambahkan $successCount distribusi.";
+            if ($skippedCount > 0) {
+                $msg .= " ($skippedCount data dilewati karena sudah ada).";
+            }
+
             return redirect()
                 ->route('distribusi-mata-kuliah.index')
-                ->with('success', 'Distribusi berhasil ditambahkan!');
+                ->with('success', $msg);
         } catch (\Exception $e) {
             DB::rollBack();
             return back()
                 ->withInput()
                 ->with('error', 'Terjadi kesalahan server: ' . $e->getMessage());
+        }
+    }
+
+    public function update(Request $request, $id)
+    {
+        $request->validate([
+            'study_class_ids' => 'required|array',
+            'original_ids'    => 'nullable|array',
+            'course_id'       => 'required',
+            'teaching_ids'   => 'array',
+            'pddikti_ids'    => 'array',
+            'teaching_ids.*' => 'exists:users,id',
+            'pddikti_ids.*'  => 'exists:users,id',
+
+        ]);
+        try {
+            $dist = CourseDistribution::findOrFail($id);
+            $newClassId = $request->study_class_ids[0];
+
+            $dist->update([
+                'study_class_id' => $newClassId, // Bisa pindah kelas
+                'course_id'      => $request->course_id,
+                'referensi'      => $request->referensi,
+                'luaran'         => $request->luaran,
+            ]);
+
+            // Sync Pivot Dosen (Pakai helper sync yang sudah ada atau manual)
+            // Hapus lama
+            $dist->allLecturers()->detach();
+
+            // Pasang Baru
+            if ($request->teaching_ids) {
+                foreach ($request->teaching_ids as $uid) {
+                    $dist->teachingLecturers()->attach($uid, ['category' => 'real_teaching']);
+                }
+            }
+            if ($request->pddikti_ids) {
+                foreach ($request->pddikti_ids as $uid) {
+                    try {
+                        $dist->pddiktiLecturers()->attach($uid, ['category' => 'pddikti_reporting']);
+                    } catch (\Exception $e) {
+                    }
+                }
+            }
+
+            return back()->with('success', 'Data berhasil diperbarui!');
+        } catch (\Exception $e) {
+            return back()->with('error', 'Gagal update: ' . $e->getMessage());
+        }
+    }
+
+    private function syncLecturers($dist, $request)
+    {
+        $dist->allLecturers()->detach();
+
+        // Pasang Dosen Pengajar
+        if ($request->teaching_ids) {
+            foreach ($request->teaching_ids as $uid) {
+                $dist->teachingLecturers()->attach($uid, ['category' => 'real_teaching']);
+            }
+        }
+        // Pasang Dosen PDDIKTI
+        if ($request->pddikti_ids) {
+            foreach ($request->pddikti_ids as $uid) {
+                // Cek unique agar tidak error jika dosen sama
+                try {
+                    $dist->pddiktiLecturers()->attach($uid, ['category' => 'pddikti_reporting']);
+                } catch (\Exception $e) {
+                }
+            }
         }
     }
 
@@ -198,61 +324,9 @@ class DistributionController extends Controller
         return response()->json($distribution);
     }
 
-    public function update(Request $request, $id)
+    public function create()
     {
-        $request->validate([
-            'teaching_ids'   => 'array',
-            'pddikti_ids'    => 'array',
-            'teaching_ids.*' => 'exists:users,id',
-            'pddikti_ids.*'  => 'exists:users,id',
-
-        ]);
-
-        try {
-            $distribution = CourseDistribution::findOrFail($id);
-
-            $distribution->update([
-                'referensi' => $request->referensi,
-                'luaran'    => $request->luaran,
-            ]);
-
-            DB::table('course_lecturers')->where('course_distribution_id', $id)->delete();
-            $pivotData = [];
-            if ($request->teaching_ids) {
-                foreach ($request->teaching_ids as $uid) {
-                    $pivotData[] = [
-                        'course_distribution_id' => $id,
-                        'user_id' => $uid,
-                        'category' => 'real_teaching',
-                        'created_at' => now(),
-                        'updated_at' => now()
-                    ];
-                }
-            }
-
-            // 4. Masukkan Pelapor PDDIKTI
-            if ($request->pddikti_ids) {
-                foreach ($request->pddikti_ids as $uid) {
-                    $pivotData[] = [
-                        'course_distribution_id' => $id,
-                        'user_id' => $uid,
-                        'category' => 'pddikti_reporting',
-                        'created_at' => now(),
-                        'updated_at' => now()
-                    ];
-                }
-            }
-
-            if (!empty($pivotData)) {
-                DB::table('course_lecturers')->insert($pivotData);
-            }
-
-            DB::commit();
-            return back()->with('success', 'Data Tim Pengajar berhasil diperbarui!');
-        } catch (\Exception $e) {
-            DB::rollBack();
-            return back()->with('error', 'Gagal update: ' . $e->getMessage());
-        }
+        //
     }
 
     public function destroy($id)
@@ -344,25 +418,33 @@ class DistributionController extends Controller
 
     public function generate(Request $request)
     {
-        $request->validate(['period_id' => 'required|exists:academic_periods,id']);
-        $classes = StudyClass::where('academic_period_id', $request->period_id)->get();
+        $request->validate([
+            'period_id' => 'required|exists:academic_periods,id',
+            'class_ids' => 'required|array',
+            'class_ids.*' => 'exists:study_classes,id'
+        ]);
+
+        $classes = StudyClass::whereIn('id', $request->class_ids)
+            ->where('academic_period_id', $request->period_id)
+            ->get();
 
         if ($classes->isEmpty()) {
-            return back()->with('error', 'Tidak ada kelas pada periode ini. Import kelas dulu!');
+            return back()->with('error', 'Tidak ada data kelas valid yang dipilih.');
         }
 
         $createdCount = 0;
         $existingCount = 0;
 
-        \Illuminate\Support\Facades\DB::beginTransaction();
+        DB::beginTransaction();
 
         try {
             $groupedClasses = $classes->groupBy(function ($item) {
-                return $item->kurikulum_id . '-' . $item->semester . '-' . $item->prodi_id;
+                return $item->kurikulum_id . '-' . $item->semester;
             });
 
             foreach ($groupedClasses as $groupKey => $classList) {
                 $sampleClass = $classList->first();
+
                 $courses = Course::where('kurikulum_id', $sampleClass->kurikulum_id)
                     ->where('semester', $sampleClass->semester)
                     ->get();
@@ -378,7 +460,7 @@ class DistributionController extends Controller
                                 'course_id'          => $course->id,
                             ],
                             [
-                                //
+                                // Optional: default values (user_id kosong dulu)
                             ]
                         );
 
@@ -391,17 +473,17 @@ class DistributionController extends Controller
                 }
             }
 
-            \Illuminate\Support\Facades\DB::commit();
+            DB::commit();
 
-            $message = "Sinkronisasi selesai! $createdCount data baru ditambahkan.";
+            $message = "Generate sukses! $createdCount item baru.";
             if ($existingCount > 0) {
-                $message .= " ($existingCount data sudah ada/terupdate).";
+                $message .= " ($existingCount item dilewati karena sudah ada).";
             }
 
             return back()->with('success', $message);
         } catch (\Exception $e) {
-            \Illuminate\Support\Facades\DB::rollBack();
-            return back()->with('error', 'Gagal generate: ' . $e->getMessage());
+            DB::rollBack();
+            return back()->with('error', 'Terjadi kesalahan: ' . $e->getMessage());
         }
     }
 

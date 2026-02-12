@@ -9,14 +9,14 @@
             <div class="d-flex justify-content-between align-items-center">
                 <div>
                     <h5 class="fw-bold mb-1 text-primary">
-                        <i class="bx bx-file-find me-2"></i>Review Dokumen BKD
+                        Review Dokumen BKD
                     </h5>
                     <span class="text-muted">
                         {{ $doc->prodi->jenjang }} {{ $doc->prodi->name }} | Periode {{ $doc->academicPeriod->name }}
                     </span>
                 </div>
                 <div class="d-flex gap-2">
-                    <a href="{{ route('beban-kerja-dosen.rekap') }}" class="btn btn-label-secondary">
+                    <a href="{{ route('documents.index') }}" class="btn bg-label-secondary">
                         <i class="bx bx-arrow-back me-1"></i> Kembali
                     </a>
                     {{-- <a href="{{ route('beban-kerja-dosen.print-doc', $doc->id) }}" target="_blank" class="btn btn-danger">
@@ -80,19 +80,19 @@
         <div class="card-body p-0">
             <div class="table-responsive">
                 <table class="table table-bordered table-striped mb-0" style="font-size: 0.85rem;">
-                    <thead class="table-dark text-center align-middle">
-                        <tr>
-                            <th width="5%">No</th>
+                    <thead>
+                        <tr class="table-dark text-center align-middle">
+                            <th width="4%">No</th>
                             <th width="15%">Dosen</th>
                             <th width="20%">Mata Kuliah</th>
                             <th width="5%">Kelas</th>
-                            <th width="10%">Semester/Kelas</th>
-                            <th width="5%">SKS</th>
-                            <th width="5%">Jml<br>Kelas</th>
-                            <th width="5%">Jml<br>SKS</th>
-                            <th width="5%">Pertemuan</th>
-                            <th width="10%">Ujian</th>
-                            <th width="5%">SKS<br>Real</th>
+                            <th width="8%">Smt/Kelas</th>
+                            <th width="8%">SKS Matkul</th>
+                            <th width="8%">Jml Kelas</th>
+                            <th width="8%">Jml SKS</th>
+                            <th width="8%">Pertemuan</th>
+                            <th width="8%">Ujian</th>
+                            <th width="8%">SKS Real</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -124,16 +124,33 @@
                                         <td class="text-center">{{ $mk['jml_kelas'] }}</td>
                                         <td class="text-center">{{ $mk['jml_sks_total'] }}</td>
                                         <td class="text-center">{{ $mk['pertemuan'] }}</td>
-                                        <td class="text-center small">{{ $mk['ujian'] }}</td>
+                                        <td class="text-center">
+                                            @php
+                                                $ujian = [];
+                                                if ($mk['is_uts']) {
+                                                    $ujian[] = 'UTS';
+                                                }
+                                                if ($mk['is_uas']) {
+                                                    $ujian[] = 'UAS';
+                                                }
+                                            @endphp
+
+                                            @if (count($ujian) > 0)
+                                                {{ implode(', ', $ujian) }}
+                                            @else
+                                                -
+                                            @endif
+                                        </td>
+
                                         <td class="text-center fw-bold">{{ $mk['sks_real'] }}</td>
                                     </tr>
                                 @endforeach
 
                                 {{-- BARIS TOTAL PER DOSEN --}}
                                 <tr class="bg-label-secondary fw-bold">
-                                    <td colspan="6" class="text-end">Total BKD</td>
+                                    <td colspan="5" class="text-end">Total BKD</td>
                                     <td class="text-center">{{ $dosen['total_sks_bkd'] }}</td>
-                                    <td colspan="1"></td>
+                                    <td colspan="2"></td>
                                     <td class="text-center text-primary">{{ $dosen['total_sks_real'] }}</td>
                                 </tr>
                             @else

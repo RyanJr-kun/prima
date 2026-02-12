@@ -48,13 +48,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/notifikasi/read-all', [NotifController::class, 'markAllRead'])->name('notifikasi.readAll');
     Route::delete('/pengaturan/delete-avatar', [PengaturanController::class, 'deleteAvatar'])->name('pengaturan.deleteAvatar');
 
-    /*
-    |--------------------------------------------------------------------------
-    | 1. DOSEN AREA (Role: Dosen)
-    |--------------------------------------------------------------------------
-    | Akses untuk melihat jadwal mengajar sendiri & mengisi BKD.
-    | Note: Kaprodi/Wadir yang mengajar harus punya role 'dosen' juga.
-    */
+
     Route::middleware(['role:admin|baak|dosen'])->group(function () {
         Route::post('/booking/store', [RoomBookingController::class, 'store'])->name('booking.store');
         Route::patch('/booking/{id}/approve', [RoomBookingController::class, 'approve'])->name('booking.approve');
@@ -66,27 +60,19 @@ Route::middleware(['auth', 'verified'])->group(function () {
             Route::post('/jadwal-saya/pic', [MyScheduleController::class, 'storePic'])->name('jadwal-saya.pic');
         });
 
-        // Input BKD (Halaman Utama)
-        Route::get('/beban-kerja-dosen', [WorkloadController::class, 'index'])->name('beban-kerja-dosen.index');
-        Route::post('/beban-kerja-dosen/generate', [WorkloadController::class, 'generate'])->name('beban-kerja-dosen.generate');
-        Route::put('/beban-kerja-dosen/update-all', [WorkloadController::class, 'updateAllActivities'])->name('beban-kerja-dosen.update-all');
+        // Beban Kerja Dosen Pibadi
+        Route::get('/bkd-saya', [WorkloadController::class, 'myWorkload'])->name('bkd.saya');
     });
 
-    /*
-    |--------------------------------------------------------------------------
-    | 4. MANAGEMENT & APPROVAL (Role: Admin, BAAK, Kaprodi, Pejabat)
-    |--------------------------------------------------------------------------
-    */
 
-    // --- Monitoring & Approval BKD ---
-    // Diakses oleh Admin, BAAK, Kaprodi, dan Para Wadir/Direktur
     Route::middleware(['role:admin|baak|kaprodi|wadir1|wadir2|wadir3|direktur'])->group(function () {
+        // Beban Kerja Dosen
         Route::prefix('beban-kerja-dosen')->name('beban-kerja-dosen.')->group(function () {
-            Route::get('/rekapitulasi', [WorkloadController::class, 'rekapIndex'])->name('rekap');
             Route::get('/document/{id}', [WorkloadController::class, 'showDoc'])->name('show-doc');
             Route::get('/document/{id}/print', [WorkloadController::class, 'printDoc'])->name('print-doc');
-            Route::post('/submit', [WorkloadController::class, 'submit'])->name('submit');
         });
+        Route::get('/monitoring-bkd', [WorkloadController::class, 'monitoringIndex'])->name('monitoring.bkd');
+        Route::get('/api/dosen-stats/{userId}', [WorkloadController::class, 'getDosenStats'])->name('api.dosen-stats');
 
         // Approval Document System (Global)
         Route::resource('documents', AprovalDocumentController::class)->only(['index', 'show']);
@@ -104,9 +90,18 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::get('kalender-akademik/{id}/print', [AcademicCalendarController::class, 'printPdf'])->name('kalender-akademik.print');
     });
 
-    // --- Distribusi Mata Kuliah ---
-    // Biasanya Kaprodi yang menyusun, Admin/BAAK membantu
+
     Route::middleware(['role:admin|baak|kaprodi'])->group(function () {
+        // Beban Kerja Dosen
+        Route::prefix('bkd-dosen')->name('bkd-dosen.')->group(function () {
+            Route::get('/list-dosen', [WorkloadController::class, 'listDosenProdi'])->name('list');
+            Route::get('/{userId}/edit', [WorkloadController::class, 'editDosenWorkload'])->name('edit');
+            Route::post('/generate', [WorkloadController::class, 'generate'])->name('generate');
+            Route::put('/update-all', [WorkloadController::class, 'updateAllActivities'])->name('update-all');
+            Route::post('/submit-document', [WorkloadController::class, 'submit'])->name('submit');
+        });
+
+        // Distribusi Mata Kuliah
         Route::prefix('distribusi-mata-kuliah')->name('distribusi-mata-kuliah.')->group(function () {
             Route::delete('/bulk-destroy', [DistributionController::class, 'bulkDestroy'])->name('bulk-destroy');
             Route::get('/template', [DistributionController::class, 'downloadTemplate'])->name('template');

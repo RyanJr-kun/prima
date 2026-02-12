@@ -14,8 +14,10 @@ class WorkloadActivitie extends Model
         'activity_name',
         'sks_load',
         'sks_real',
+        'sks_assigned',
+        'is_uts_maker',
+        'is_uas_maker',
         'realisasi_pertemuan',
-        'jenis_ujian',
         'description',
         'document_path'
     ];

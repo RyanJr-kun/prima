@@ -10,7 +10,7 @@
                     <h5 class="fw-bold mb-1">Kalender Akademik : <span
                             class="fw-bold ">{{ $doc->academicPeriod->name }}</span></h5>
                     <div class="text-muted">
-                        Status: <span class="badge small bg-{{ $doc->status_color }}">{{ $doc->status_text }}</span>
+                        Status: <span class="badge small bg-{{ $doc->status_color }}">{{ $doc->status_pendek }}</span>
                     </div>
                 </div>
                 <a href="{{ route('documents.index') }}" class="btn btn-secondary">

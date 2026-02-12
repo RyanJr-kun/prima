@@ -17,13 +17,15 @@
             "url": "/dashboard/jadwal-saya",
             "name": "Jadwal Mengajar",
             "icon": "menu-icon icon-base bx bx-schedule",
-            "slug": "dashboard.jadwal-saya"
+            "slug": "dashboard.jadwal-saya",
+            "role": ["dosen"]
         },
         {
-            "url": "/beban-kerja-dosen",
+            "url": "/bkd-saya",
             "name": "Beban Kerja Dosen",
             "icon": "menu-icon icon-base bx bx-edit",
-            "slug": "beban-kerja-dosen.index"
+            "slug": "bkd.saya",
+            "role": ["dosen"]
         },
         {
         "menuHeader": "Akademik",
@@ -41,15 +43,21 @@
             "name": "Distribusi Mata Kuliah",
             "icon": "menu-icon icon-base bx bx-calendar-v2",
             "slug": "distribusi-mata-kuliah.index",
-            "role": ["admin", "baak"]
+            "role": ["admin", "baak", "kaprodi"]
         },
-        
         {
-            "url": "/beban-kerja-dosen/rekapitulasi",
+            "url": "/bkd-dosen/list-dosen",
+            "name": "Managemen BKD",
+            "icon": "menu-icon icon-base  bx bx-edit",
+            "slug": "bkd-dosen.list",
+            "role": ["kaprodi"]
+        },
+        {
+            "url": "/monitoring-bkd",
             "name": "Monitoring BKD",
             "icon": "menu-icon icon-base bx bx-bar-chart-alt-2",
-            "slug": "beban-kerja-dosen.rekap",
-            "role": ["admin", "baak", "kaprodi"]
+            "slug": "monitoring.bkd",
+            "role": ["admin", "baak", "kaprodi", "wadir1", "wadir2", "wadir3", "direktur"]
         },
         {
             "url": "/jadwal-perkuliahan",

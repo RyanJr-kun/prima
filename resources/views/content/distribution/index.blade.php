@@ -57,8 +57,12 @@
                     </div>
                     <div class="col-md-4">
                         <label class="form-label">Program Studi</label>
-                        <select name="prodi_id" class="form-select select2" data-placeholder="Pilih Program Studi ...">
-                            <option value="">Semua Program Studi</option>
+                        <select name="prodi_id" class="form-select select2" {{ $isKaprodi ? 'disabled' : '' }}>
+
+                            @if (!$isKaprodi)
+                                <option value="">Semua Program Studi</option>
+                            @endif
+
                             @foreach ($prodis as $prodi)
                                 <option value="{{ $prodi->id }}"
                                     {{ request('prodi_id') == $prodi->id ? 'selected' : '' }}>
@@ -66,6 +70,9 @@
                                 </option>
                             @endforeach
                         </select>
+                        @if ($isKaprodi)
+                            <input type="hidden" name="prodi_id" value="{{ request('prodi_id') }}">
+                        @endif
                     </div>
                     <div class="col-md-3">
                         <label class="form-label">Semester</label>
@@ -88,7 +95,8 @@
     </div>
     {{-- LOGIC STATUS DOKUMEN & TOMBOL SUBMIT Versi Desktop --}}
     @if (request('prodi_id') && $activePeriod)
-        <div class="card shadow mb-4 d-none d-md-block bg-label-{{ $documentData ? $documentData->status_color : '' }}">
+        <div
+            class="card shadow mb-4 d-none d-md-block bg-label-{{ $documentData ? $documentData->status_color : 'secondary' }}">
             <div class="card-body d-flex justify-content-between align-items-center">
                 <div>
                     <h5 class="mb-0 fw-bold">Status Dokumen :
@@ -118,8 +126,8 @@
                             <input type="hidden" name="period_id" value="{{ $activePeriod->id }}">
                             <input type="hidden" name="prodi_id" value="{{ request('prodi_id') }}">
 
-                            <button type="button" class="btn btn-primary" id="btnSubmitDistribusi">
-                                <i class='bx bx-send me-1'></i> Ajukan ke Kaprodi
+                            <button type="button" class="btn btn-outline-primary" id="btnSubmitDistribusi">
+                                <i class='bx bx-send me-1'></i> Ajukan
                             </button>
                         </form>
                     @else
@@ -191,8 +199,8 @@
                         <input type="hidden" name="period_id" value="{{ $activePeriod->id }}">
                         <input type="hidden" name="prodi_id" value="{{ request('prodi_id') }}">
 
-                        <button type="button" class="btn btn-primary w-100" id="btnSubmitDistribusiMobile">
-                            <i class='bx bx-send me-1'></i> Ajukan ke Kaprodi
+                        <button type="button" class="btn btn-outline-primary w-100" id="btnSubmitDistribusiMobile">
+                            <i class='bx bx-send me-1'></i> Ajukan
                         </button>
                     </form>
                 @else
@@ -233,7 +241,8 @@
     {{-- Nama Periode dan tools --}}
     <div class="card mb-4">
         <div class="card-body">
-            <div class="d-flex justify-content-between align-items-center">
+            {{-- Desktop View --}}
+            <div class="d-none d-md-flex justify-content-between align-items-center">
                 <div>
                     <h5 class="fw-bold mb-0">Distribusi Perkuliahan</h5>
                     <small class="d-block mb-3 border-bottom">Management Distribusi Mata Kuliah</small>
@@ -246,7 +255,8 @@
                             <form action="{{ route('distributions.generate') }}" method="POST" id="generateForm">
                                 @csrf
                                 <input type="hidden" name="period_id" value="{{ $activePeriod->id }}">
-                                <button type="button" class="btn btn-warning" id="btnGenerate">
+                                <button type="button" class="btn btn-warning" data-bs-toggle="modal"
+                                    data-bs-target="#generateModal">
                                     <i class="bx bx-cog me-1"></i> Generate
                                 </button>
                             </form>
@@ -261,90 +271,105 @@
                             data-bs-target="#updateModal">
                             <i class="bx bx-upload me-1"></i> Import
                         </button>
-                        <button class="btn btn-primary add-new" type="button" data-bs-toggle="offcanvas"
-                            data-bs-target="#offcanvasAddDistribusi" id="btnCreate">
-                            <span><i class="bx bx-plus me-2"></i>Distribusi</span>
-                        </button>
                     @endif
+                    <button class="btn btn-primary add-new" type="button" data-bs-toggle="offcanvas"
+                        data-bs-target="#offcanvasAddDistribusi" id="btnCreate">
+                        <span><i class="bx bx-plus me-2"></i>Distribusi</span>
+                    </button>
+                </div>
+            </div>
+
+            {{-- Mobile View --}}
+            <div class="d-md-none">
+                <div class="d-flex justify-content-between align-items-start mb-3">
+                    <div>
+                        <h5 class="fw-bold mb-1">Distribusi Perkuliahan</h5>
+                        <small class="text-muted d-block">Management Distribusi</small>
+                    </div>
+                    <span class="badge bg-label-primary rounded-pill">
+                        <i class="bx bx-calendar"></i> {{ $activePeriod->name ?? '-' }}
+                    </span>
+                </div>
+
+                <div class="row g-2">
+                    @if (!$isLocked)
+                        @if ($activePeriod)
+                            <div class="col-4">
+                                <button type="button"
+                                    class="btn btn-label-warning w-100 h-100 p-2 d-flex flex-column align-items-center justify-content-center gap-1"
+                                    data-bs-toggle="modal" data-bs-target="#generateModal">
+                                    <i class="bx bx-cog fs-4"></i>
+                                    <span class="small fw-medium">Generate</span>
+                                </button>
+                            </div>
+                            <div class="col-4">
+                                <a href="{{ route('distributions.export', array_merge(['period_id' => $activePeriod->id], request()->all())) }}"
+                                    class="btn btn-label-success w-100 h-100 p-2 d-flex flex-column align-items-center justify-content-center gap-1">
+                                    <i class="bx bx-download fs-4"></i>
+                                    <span class="small fw-medium">Export</span>
+                                </a>
+                            </div>
+                        @endif
+                        <div class="col-4">
+                            <button type="button"
+                                class="btn btn-label-primary w-100 h-100 p-2 d-flex flex-column align-items-center justify-content-center gap-1"
+                                data-bs-toggle="modal" data-bs-target="#updateModal">
+                                <i class="bx bx-upload fs-4"></i>
+                                <span class="small fw-medium">Import</span>
+                            </button>
+                        </div>
+                    @endif
+                    <div class="col-12">
+                        <button class="btn btn-primary w-100 add-new p-2 shadow-sm" type="button"
+                            data-bs-toggle="offcanvas" data-bs-target="#offcanvasAddDistribusi">
+                            <i class="bx bx-plus-circle me-1"></i> Tambah Distribusi Baru
+                        </button>
+                    </div>
                 </div>
             </div>
         </div>
     </div>
 
-    {{-- tools buat import/kelas + tambah satuan --}}
-    {{-- <div class="card mb-4">
-        <div class="card-body">
-            <div class="row">
-                <div class="col-6">
-                    
-                <div class="col-6 text-end">
-                     <button type="button" class="btn btn-success me-2" data-bs-toggle="modal"
-                        data-bs-target="#importModal">
-                        <i class="bx bx-spreadsheet me-1"></i> Import
-                    </button>
+    @php
+        $groupedByClass = $distributions->groupBy('study_class_id');
+    @endphp
 
-                </div>
-            </div>
-
-        </div>
-    </div> --}}
-
-    @forelse($distributions as $groupKey => $groupItems)
+    @forelse($groupedByClass as $classId => $items)
         @php
-            $sample = $groupItems->first()->studyClass;
-            $listKelas = $groupItems->unique('study_class_id')->map(function ($item) {
-                return $item->studyClass;
-            });
-            $kurikulumName = $sample->kurikulum->tanggal ?? '-';
-            preg_match('/\d{4}/', $kurikulumName, $matches);
-            $tahunKurikulum = $matches[0] ?? $kurikulumName;
+            $kelas = $items->first()->studyClass;
         @endphp
+        <div class="card mb-4 shadow-sm border">
 
-        <div class="card mb-4 shadow-sm">
-            <div class="card-header bg-label-primary p-3">
-                <div class="row align-items-center">
-                    <div class="col-md-5 mb-2 mb-md-0">
-                        <h4 class="text-primary fw-bold mb-1">
-                            <i class='bx bx-building'></i> {{ $sample->prodi->name }}
-                        </h4>
-                        <div class="fs-6 text-secondary">
-                            <span class="badge bg-primary me-1">Semester {{ $sample->semester }}</span>
-                            <span class="badge bg-label-secondary">Angkatan {{ $sample->angkatan }}</span>
-                            <span class="badge bg-label-danger">{{ ucfirst($sample->shift) }}</span>
-                        </div>
-                    </div>
-                    <div class="col-md-5 mb-2 mb-md-0 border-start ps-md-4">
-                        <small class="text-uppercase text-muted fw-bold" style="font-size: 0.7rem;">Daftar Kelas:</small>
-                        <ul class="list-unstyled mb-0 mt-1">
-                            @foreach ($listKelas as $kelas)
-                                <li class="mb-1 d-flex align-items-center text-body">
-                                    <span class="fw-bold me-2">{{ $kelas->name }}</span>
-                                    <small class="text-muted me-2">({{ $kelas->total_students }} Mhs)</small>
-                                    <small class="text-muted fst-italic">
-                                        <i class='bx bx-user-voice' style="font-size: 0.8rem"></i>
-                                        PA: {{ $kelas->academicAdvisor->name ?? 'Belum diset' }}
-                                    </small>
-                                </li>
-                            @endforeach
-                        </ul>
-                    </div>
-                    <div class="col-md-2 text-md-end">
-                        <small class="d-block text-muted">Kurikulum</small>
-                        <span class="fw-bold fs-5">{{ $tahunKurikulum }}</span>
+            <div class="card-header bg-white p-4 border-bottom d-flex justify-content-between">
+                <div>
+                    <h5 class="mb-1 fw-bold text-primary display-6" style="font-size: 1.2rem;">
+                        <i class='bx bx-chalkboard me-2'></i>{{ $kelas->full_name ?? $kelas->name }}
+                    </h5>
+                    <div class="text-muted d-flex gap-3 small flex-wrap">
+                        <span><i class='bx bx-building'></i> {{ $kelas->prodi->name }}</span>
+                        <span><i class='bx bx-calendar'></i> Semester {{ $kelas->semester }}
+                            ({{ ucfirst($kelas->shift) }})
+                        </span>
+                        <span><i class='bx bx-group'></i> {{ $kelas->total_students }} Mhs</span>
+                        <span class="text-info"><i class='bx bx-user-voice'></i> PA:
+                            {{ $kelas->academicAdvisor->name ?? 'Belum diset' }}</span>
                     </div>
                 </div>
+                <div>
+                    <span class="badge bg-label-primary fs-6">{{ $items->count() }} Mata Kuliah</span>
+                </div>
             </div>
-            <div class="table-responsive text-nowrap ">
+
+            {{-- BODY CARD: TABEL MATKUL --}}
+            <div class="table-responsive text-nowrap">
                 <table class="table table-hover">
                     <thead>
                         <tr>
-                            @if (!$isLocked)
-                                <th width="5%" class="text-center py-0 border-none">
-                                    <input type="checkbox" class="form-check-input select-all-group"
-                                        data-bs-toggle="tooltip" title="Pilih semua di kelas ini">
-                                </th>
-                            @endif
-                            <th rowspan="2" class="text-center fw-bold" width="5%">No</th>
+                            <th width="4%" rowspan="2" class="text-center align-center">
+                                <input type="checkbox" class="form-check-input select-all-group" data-bs-toggle="tooltip"
+                                    title="Pilih semua di kelas ini">
+                            </th>
+                            <th rowspan="2" class="text-center fw-bold" width="4%">No</th>
                             <th rowspan="2" class="fw-bold">Kode</th>
                             <th rowspan="2" class="fw-bold">Mata Kuliah</th>
                             <th colspan="4" class="text-center border-start border-end py-0 fw-bold">SKS</th>
@@ -352,106 +377,91 @@
                             <th rowspan="2" class="fw-bold">Dosen Team / PDDIKTI</th>
                             <th rowspan="2" class="fw-bold">Referensi</th>
                             <th rowspan="2" class="fw-bold">Luaran</th>
-                            @if (!$isLocked)
-                                <th rowspan="2" class="fw-bold text-center">Aksi</th>
-                            @endif
+                            <th width="4%" rowspan="2" class="fw-bold text-center">Aksi</th>
                         </tr>
                         <tr>
-                            @if (!$isLocked)
-                                <th class="py-0 border-none"></th>
-                            @endif
-                            <th class="text-center border-start border-top py-0" width="5%"><small>T</small></th>
-                            <th class="text-center border py-0" width="5%"><small>P</small></th>
-                            <th class="text-center border py-0" width="5%"><small>L</small></th>
-                            <th class="text-center border py-0" width="5%"><small>JML</small></th>
+                            <th class="text-center border-start border-top py-0" width="3%"><small>T</small></th>
+                            <th class="text-center border py-0" width="3%"><small>P</small></th>
+                            <th class="text-center border py-0" width="3%"><small>L</small></th>
+                            <th class="text-center border py-0" width="3%"><small>JML</small></th>
                         </tr>
                     </thead>
-
                     <tbody>
-                        @foreach ($groupItems->groupBy('course_id') as $courseId => $dists)
-                            @php
-                                $dist = $dists->first();
-                            @endphp
+                        @foreach ($items as $dist)
                             <tr>
-                                @if (!$isLocked)
-                                    <td class="text-center">
-                                        <input type="checkbox" class="form-check-input item-checkbox"
-                                            value="{{ $dist->id }}">
-                                    </td>
-                                @endif
-                                <td class="text-center">{{ $loop->iteration }}</td>
-                                <td><span class="badge bg-label-dark">{{ $dist->course->code ?? '-' }}</span></td>
-                                <td>
-                                    <strong class="text-muted"
-                                        title="{{ $dist->course->name ?? '-' }}">{{ \Illuminate\Support\Str::limit($dist->course->name ?? '-', 25) }}</strong>
+
+                                <td class="text-center">
+                                    <input type="checkbox" class="form-check-input item-checkbox"
+                                        value="{{ $dist->id }}">
                                 </td>
+
+                                <td class="text-center">{{ $loop->iteration }}</td>
+                                <td><span
+                                        class="badge bg-label-secondary font-monospace">{{ $dist->course->code ?? '-' }}</span>
+                                </td>
+                                <td><strong class="text-dark">{{ $dist->course->name ?? '-' }}</strong></td>
                                 <td class="text-center border">{{ $dist->course->sks_teori }}</td>
                                 <td class="text-center border">{{ $dist->course->sks_praktik }}</td>
                                 <td class="text-center border">{{ $dist->course->sks_lapangan }}</td>
-                                <td class="text-center fw-bold border">{{ $dist->course->sksTotal }}</td>
+                                <td class="text-center border">{{ $dist->course->sksTotal }}</td>
                                 <td>
-                                    @if ($dist->user)
-                                        <small>{{ $dist->user->name }}</small>
-                                    @endif
                                     @if ($dist->teachingLecturers->count() > 0)
                                         <ul class="list-unstyled mb-0 small">
                                             @foreach ($dist->teachingLecturers as $dosen)
-                                                @if ($dist->user_id !== $dosen->id)
-                                                    <li>• {{ $dosen->name }}</li>
-                                                @endif
-                                            @endforeach
-                                        </ul>
-                                    @else
-                                        <span class="text-danger small">- Belum Ada Pengajar -</span>
-                                    @endif
-                                </td>
-                                <td>
-                                    @if ($dist->pddiktiLecturers->count() > 0)
-                                        <ul class="list-unstyled mb-0 small text-secondary">
-                                            @foreach ($dist->pddiktiLecturers as $dosen)
-                                                <li><i class="bx bx-check-circle text-success"
-                                                        style="font-size: 0.8rem"></i> {{ $dosen->name }}
+                                                <li class="d-flex align-items-center mb-1">
+                                                    <i class="bx bx-user-circle me-1 text-primary"></i>
+                                                    <span class="text-truncate" style="max-width: 180px;"
+                                                        title="{{ $dosen->name }}">
+                                                        {{ $dosen->name }}
+                                                    </span>
                                                 </li>
                                             @endforeach
                                         </ul>
                                     @else
-                                        <span class="badge bg-label-warning">Belum Lapor</span>
+                                        <span class="badge bg-label-danger small fst-italic">Belum Ada</span>
+                                    @endif
+                                </td>
+                                <td>
+                                    @if ($dist->pddiktiLecturers->count() > 0)
+                                        <ul class="list-unstyled mb-0 small text-muted">
+                                            @foreach ($dist->pddiktiLecturers as $dosen)
+                                                <li class="text-truncate" style="max-width: 180px;">
+                                                    <i
+                                                        class="bx bx-check-double me-1 text-success"></i>{{ $dosen->name }}
+                                                </li>
+                                            @endforeach
+                                        </ul>
+                                    @else
+                                        <span class="text-warning small fst-italic">- Belum Ada -</span>
                                     @endif
                                 </td>
 
                                 <td>{{ $dist->referensi ?? '-' }}</td>
                                 <td>{{ $dist->luaran ?? '-' }}</td>
 
-                                @if (!$isLocked)
-                                    <td>
-                                        <div class="d-flex align-items-center">
-                                            <a href="javascript:;" class="text-body edit-record me-2"
-                                                data-bs-toggle="offcanvas" data-bs-target="#offcanvasAddDistribusi"
-                                                data-id="{{ $dist->id }}"
-                                                data-study-class-id="{{ $dist->study_class_id }}"
-                                                data-course-id="{{ $dist->course_id }}"
-                                                data-referensi="{{ $dist->referensi }}"
-                                                data-luaran="{{ $dist->luaran }}"
-                                                data-teaching-ids="{{ $dist->teachingLecturers->pluck('id') }}"
-                                                data-pddikti-ids="{{ $dist->pddiktiLecturers->pluck('id') }}"
-                                                data-url="{{ route('distribusi-mata-kuliah.edit', $dist->id) }}"
-                                                data-action="{{ route('distribusi-mata-kuliah.update', $dist->id) }}">
-                                                <i class="bx bx-edit"></i>
-                                            </a>
-                                            </a>
-                                            <form action="{{ route('distribusi-mata-kuliah.destroy', $dist->id) }}"
-                                                method="POST" class="d-inline">
-                                                @csrf @method('DELETE')
-                                                <a href="javascript:;" class="text-body  delete-record"
-                                                    data-bs-toggle="tooltip" data-bs-offset="0,6"
-                                                    data-bs-placement="bottom" data-bs-html="true"
-                                                    title="Delete Distribusi">
-                                                    <i class="bx bx-trash text-danger bx-sm"></i>
-                                                </a>
-                                            </form>
-                                        </div>
-                                    </td>
-                                @endif
+                                <td class="text-center">
+                                    <div class="d-flex justify-content-center">
+                                        <button type="button" class="btn btn-sm btn-icon btn-label-warning edit-record"
+                                            data-bs-toggle="offcanvas" data-bs-target="#offcanvasAddDistribusi"
+                                            data-id="{{ $dist->id }}" data-class-id="{{ $dist->study_class_id }}"
+                                            data-course-id="{{ $dist->course_id }}"
+                                            data-referensi="{{ $dist->referensi }}" data-luaran="{{ $dist->luaran }}"
+                                            data-teaching-ids="{{ json_encode($dist->teachingLecturers->pluck('id')) }}"
+                                            data-pddikti-ids="{{ json_encode($dist->pddiktiLecturers->pluck('id')) }}"
+                                            data-action="{{ route('distribusi-mata-kuliah.update', $dist->id) }}">
+                                            <i class="bx bx-edit"></i>
+                                        </button>
+                                        <form action="{{ route('distribusi-mata-kuliah.destroy', $dist->id) }}"
+                                            method="POST">
+                                            @csrf @method('DELETE')
+                                            <button type="button"
+                                                class="btn btn-sm btn-icon btn-label-danger delete-record"
+                                                data-bs-toggle="tooltip" title="Hapus">
+                                                <i class="bx bx-trash"></i>
+                                            </button>
+                                        </form>
+                                    </div>
+                                </td>
                             </tr>
                         @endforeach
                     </tbody>
@@ -459,13 +469,19 @@
             </div>
         </div>
     @empty
-        <div class="alert alert-warning d-flex align-items-center" role="alert">
-            <i class="bx bx-error-circle me-2"></i>
-            <div>Belum ada data distribusi mata kuliah untuk periode ini. Silakan Generate atau Import data.</div>
+        <div class="card p-5 text-center">
+            <div class="mb-3">
+                <span class="badge bg-label-warning p-3 rounded-circle">
+                    <i class="bx bx-data fs-1"></i>
+                </span>
+            </div>
+            <h4>Belum Ada Data Distribusi</h4>
+            <p class="text-muted">Silakan klik tombol <strong>Generate</strong> atau <strong>Tambah Distribusi</strong>
+                untuk memulai.</p>
         </div>
     @endforelse
 
-    {{-- FLOATING ACTION BAR FOR MASS DELETE --}}
+    {{--  Delete masal --}}
     <div id="bulkDeleteBar"
         class="card position-fixed bottom-0 start-50 translate-middle-x mb-4 shadow-lg border-primary d-none"
         style="z-index: 1050; width: 90%; max-width: 600px; border-top: 5px solid #696cff;">
@@ -490,9 +506,66 @@
         </div>
     </div>
 
+    {{-- opsi generate --}}
+    <div class="modal fade" id="generateModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <form action="{{ route('distributions.generate') }}" method="POST" class="modal-content"
+                id="formGenerate">
+                @csrf
+                <input type="hidden" name="period_id" value="{{ $activePeriod->id }}">
+
+                <div class="modal-header bg-warning">
+                    <h5 class="modal-title text-white mb-2"><i class="bx bx-cog me-2"></i>Generate Distribusi</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"
+                        aria-label="Close"></button>
+                </div>
+
+                <div class="modal-body">
+                    <div class="alert alert-warning text-start small">
+                        <i class="bx bx-info-circle me-1"></i>
+                        Sistem akan membuatkan slot mata kuliah untuk kelas yang dipilih berdasarkan Kurikulum.
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Pilih Kelas:</label>
+                        <div class="d-flex justify-content-between mb-2">
+                            <small class="text-muted">Cari kelas atau pilih berdasarkan semester</small>
+                            <div class="btn-group btn-group-xs">
+                                <button type="button" class="btn btn-outline-primary" id="btnSelectAllGen">Pilih
+                                    Semua</button>
+                                <button type="button" class="btn btn-outline-secondary" id="btnClearGen">Reset</button>
+                            </div>
+                        </div>
+
+                        {{-- Ganti Checkbox dengan Select2 Multiple --}}
+                        <select name="class_ids[]" id="selectKelasGenerate" class="form-select" multiple="multiple"
+                            style="width: 100%" required>
+                            {{-- Grouping berdasarkan Semester agar rapi --}}
+                            @foreach ($classes->groupBy('semester') as $smt => $items)
+                                <optgroup label="Semester {{ $smt }}">
+                                    @foreach ($items as $kls)
+                                        <option value="{{ $kls->id }}" data-prodi="{{ $kls->prodi->code }}"
+                                            data-shift="{{ ucfirst($kls->shift) }}"
+                                            data-students="{{ $kls->total_students }}">
+                                            {{ $kls->name }}
+                                        </option>
+                                    @endforeach
+                                </optgroup>
+                            @endforeach
+                        </select>
+                    </div>
+                </div>
+
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-label-secondary" data-bs-dismiss="modal">Batal</button>
+                    <button type="submit" class="btn btn-warning">Mulai Generate</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
     {{-- edit manual --}}
-    <div class="offcanvas offcanvas-end" tabindex="-1" id="offcanvasAddDistribusi"
-        aria-labelledby="offcanvasAddDistribusiLabel">
+    <div class="offcanvas offcanvas-end" id="offcanvasAddDistribusi" aria-labelledby="offcanvasAddDistribusiLabel">
         <div class="offcanvas-header border-bottom">
             <h5 id="offcanvasAddDistribusiLabel" class="offcanvas-title">Tambah Distribusi Mata Kuliah</h5>
             <button type="button" class="btn-close text-reset" data-bs-dismiss="offcanvas" aria-label="Close"></button>
@@ -503,15 +576,13 @@
                 @csrf
                 <div class="mb-3">
                     <label class="form-label">Kelas</label>
-                    <select name="study_class_id" id="selectKelas" class="form-select select2"
-                        data-placeholder="Pilih Kelas ..." required>
-                        <option value="">Pilih Kelas</option>
+                    <select name="study_class_ids[]" id="selectKelas" class="form-select select2"
+                        data-placeholder="Pilih Kelas (Bisa Lebih dari Satu)..." multiple required>
                         @foreach ($classes as $kelas)
-                            <option value="{{ $kelas->id }}">
-                                {{ $kelas->full_name }}
-                            </option>
+                            <option value="{{ $kelas->id }}">{{ $kelas->full_name }}</option>
                         @endforeach
                     </select>
+                    <div id="editIdsContainer"></div>
                 </div>
                 <div class="mb-3">
                     <label class="form-label">Mata Kuliah</label>
@@ -561,47 +632,6 @@
         </div>
     </div>
 
-    {{-- modal import data biasa --}}
-    {{-- <div class="modal fade" id="importModal" tabindex="-1">
-        <div class="modal-dialog">
-            <form action="{{ route('distribusi-mata-kuliah.import') }}" method="POST" enctype="multipart/form-data">
-                @csrf
-                <div class="modal-content">
-                    <div class="modal-header">
-                        <h5 class="modal-title">Import Data</h5>
-                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                    </div>
-                    <div class="modal-body">
-                        <div class="alert alert-info">
-                            <small>Download format excel: <a href="{{ route('distribusi-mata-kuliah.template') }}"
-                                    class="fw-bold">Klik Disini</a></small>
-                        </div>
-
-                        <div class="mb-3">
-                            <label class="form-label">Target Kelas</label>
-                            <select name="study_class_id" class="form-select select2-import" required>
-                                <option value="">-- Pilih Kelas --</option>
-                                @foreach ($study_classes as $kls)
-                                    <option value="{{ $kls->id }}">{{ $kls->prodi->jenjang }}
-                                        {{ $kls->prodi->code }} - {{ $kls->name }} ({{ ucfirst($kls->shift) }})
-                                    </option>
-                                @endforeach
-                            </select>
-                        </div>
-
-                        <div class="mb-3">
-                            <label class="form-label">File Excel</label>
-                            <input type="file" name="file" class="form-control" required>
-                        </div>
-                    </div>
-                    <div class="modal-footer">
-                        <button type="submit" class="btn btn-primary">Upload</button>
-                    </div>
-                </div>
-            </form>
-        </div>
-    </div> --}}
-
     {{-- modal import update dosen --}}
     <div class="modal fade" id="updateModal" tabindex="-1">
         <div class="modal-dialog">
@@ -638,207 +668,323 @@
 @endsection
 
 @section('page-script')
-    <script type="module">
-        // Fungsi inisialisasi
-        const initSelect2 = () => {
-            // Cek apakah jQuery dan Select2 sudah siap
-            if (typeof $ !== 'undefined' && $.fn.select2) {
-
-                // Targetkan select2 di dalam Offcanvas secara spesifik
-                $('#offcanvasAddDistribusi .select2').each(function() {
-                    const $this = $(this);
-                    $this.select2({
-                        placeholder: $this.data('placeholder') || "Pilih...",
-                        allowClear: true,
-                        dropdownParent: $('#offcanvasAddDistribusi'), // <--- INI KUNCINYA
-                        width: '100%', // Paksa lebar agar tidak menyempit
-                        templateSelection: function(data) {
-                            if (!data.id) {
-                                return data.text;
-                            }
-                            // Gunakan data-code jika ada (untuk prodi), jika tidak gunakan text biasa
-                            const code = $(data.element).data('code');
-                            return code ? code : data.text;
-                        }
-                    });
-                });
-
-                $('.select2').not('#offcanvasAddUser .select2').each(function() {
-                    const $this = $(this);
-                    $this.select2({
-                        placeholder: $this.data('placeholder') || "Pilih...",
-                        allowClear: true,
-                        width: '100%'
-                    });
-                });
-
-            } else {
-                // Jika belum siap, coba lagi dalam 100ms
-                setTimeout(initSelect2, 100);
-            }
-        };
-
-        // Jalankan saat script dimuat
-        initSelect2();
-
-        // PENTING: Jalankan ulang saat Offcanvas dibuka (untuk jaga-jaga rendering error)
-        const offcanvasElement = document.getElementById('offcanvasAddDistribusi');
-        offcanvasElement.addEventListener('shown.bs.offcanvas', function() {
-            initSelect2();
-        });
-    </script>
     <script>
         document.addEventListener('DOMContentLoaded', function() {
-            $('body').on('click', '.edit-record', function() {
-                var button = $(this);
-                var id = button.data('id');
-                var fetchUrl = button.data('url');
-                var submitUrl = button.data('action');
+            const CONFIG = {
+                formId: '#addNewDistribusiForm',
+                offcanvasId: '#offcanvasAddDistribusi',
+                selectKelasId: '#selectKelas', // ID yang benar sesuai HTML
+                selectMatkulId: '#selectMatkul',
+                urlStore: "{{ route('distribusi-mata-kuliah.store') }}",
+                urlAjaxCourses: "{{ route('ajax.courses', ['classId' => 'PLACEHOLDER']) }}"
+            };
 
-                $('#addNewDistribusiForm').attr('action', submitUrl);
-                $('#offcanvasAddDistribusiLabel').text('Edit Distribusi Mata Kuliah');
-                $('#saveBtn').text('Simpan Perubahan');
+            // ==========================================
+            // 2. HELPER FUNCTIONS (MODULAR)
+            // ==========================================
 
-                let methodInput = $('#addNewDistribusiForm').find('input[name="_method"]');
-                if (methodInput.length === 0) {
-                    $('#addNewDistribusiForm').append('<input type="hidden" name="_method" value="PUT">');
-                }
-
-                $.ajax({
-                    url: fetchUrl,
-                    type: 'GET',
-                    success: function(response) {
-                        $('#edit_referensi').val(response.referensi);
-                        $('#edit_luaran').val(response.luaran);
-                        $('#selectKelas').val(response.study_class_id).trigger('change');
-
-                        loadCourses(response.study_class_id, response.course_id);
-
-                        let teachingIds = response.teaching_lecturers.map(item => item.id);
-                        let pddiktiIds = response.pddikti_lecturers.map(item => item.id);
-
-                        $('#edit_teaching_ids').val(teachingIds).trigger('change');
-                        $('#edit_pddikti_ids').val(pddiktiIds).trigger('change');
-                    },
-                    error: function(xhr) {
-                        console.error(xhr);
-                        alert('Gagal mengambil data distribusi.');
-                    }
-                });
-            });
-
-            initSelect2();
-        });
-    </script>
-    <script>
-        document.addEventListener('DOMContentLoaded', function() {
-
-            const form = document.getElementById('addNewDistribusiForm');
-            const offcanvasEl = document.getElementById('offcanvasAddDistribusi');
-            const offcanvasTitle = document.getElementById('offcanvasAddDistribusiLabel');
-            const saveBtn = document.getElementById('saveBtn');
-            const defaultAction = "{{ route('distribusi-mata-kuliah.store') }}";
-
-            function loadCourses(classId, selectedCourseId = null) {
-                const courseSelect = $('#selectMatkul');
-
-                // Reset dulu
-                courseSelect.empty().append('<option value="">Memuat data...</option>');
-
-                if (!classId) {
-                    courseSelect.empty().append('<option value="">Pilih Kelas Terlebih Dahulu</option>');
+            /**
+             * Inisialisasi Select2 dengan penanganan Error
+             */
+            const initSelect2 = () => {
+                if (typeof $ === 'undefined' || !$.fn.select2) {
+                    console.warn('jQuery atau Select2 belum siap, mencoba ulang...');
+                    setTimeout(initSelect2, 500);
                     return;
                 }
 
+                // A. Select2 di dalam Offcanvas (Wajib dropdownParent)
+                $(`${CONFIG.offcanvasId} .select2`).select2({
+                    dropdownParent: $(CONFIG.offcanvasId),
+                    width: '100%',
+                    allowClear: true,
+                    placeholder: function() {
+                        return $(this).data('placeholder');
+                    }
+                });
+
+                // B. Select2 Global lainnya (Filter, dll)
+                $('.select2').not(`${CONFIG.offcanvasId} .select2`).select2({
+                    width: '100%',
+                    allowClear: true,
+                    placeholder: function() {
+                        return $(this).data('placeholder');
+                    }
+                });
+            };
+
+            /**
+             * Load Mata Kuliah via AJAX
+             */
+            const loadCourses = (classId, selectedCourseId = null) => {
+                const $courseSelect = $(CONFIG.selectMatkulId);
+                const $form = $(CONFIG.formId);
+
+                // Jangan reset jika classId kosong saat mode edit (menghindari clear data tak sengaja)
+                if (!classId) {
+                    if (!$form.data('isLoadingData')) {
+                        $courseSelect.empty().append('<option value="">Pilih Kelas Terlebih Dahulu</option>');
+                    }
+                    return;
+                }
+
+                // Set status loading
+                $courseSelect.empty().append('<option value="">Memuat data...</option>').prop('disabled', true);
+
+                // Ganti PLACEHOLDER dengan ID Kelas yang sebenarnya
+                const url = CONFIG.urlAjaxCourses.replace('PLACEHOLDER', classId);
+
                 $.ajax({
-                    url: '/ajax/get-courses-by-class/' + classId,
+                    url: url,
                     type: 'GET',
                     success: function(data) {
-                        courseSelect.empty();
-                        courseSelect.append('<option value="">-- Pilih Mata Kuliah --</option>');
+                        $courseSelect.empty();
+                        $courseSelect.append('<option value="">-- Pilih Mata Kuliah --</option>');
 
                         if (data.length === 0) {
-                            courseSelect.append(
+                            $courseSelect.append(
                                 '<option value="" disabled>Tidak ada matkul di kurikulum ini</option>'
                             );
+                        } else {
+                            $.each(data, function(key, val) {
+                                // Cek apakah matkul ini yang harus dipilih (Mode Edit)
+                                let isSelected = (selectedCourseId == val.id) ? 'selected' :
+                                    '';
+                                let optionText =
+                                    `[${val.code}] ${val.name} (Smt ${val.semester})`;
+                                $courseSelect.append(
+                                    `<option value="${val.id}" ${isSelected}>${optionText}</option>`
+                                );
+                            });
                         }
 
-                        $.each(data, function(key, val) {
-                            let optionText = `[${val.code}] ${val.name} (Smt ${val.semester})`;
-                            let isSelected = (selectedCourseId && selectedCourseId == val.id) ?
-                                'selected' : '';
-
-                            courseSelect.append(
-                                `<option value="${val.id}" ${isSelected}>${optionText}</option>`
-                            );
-                        });
-
-                        courseSelect.trigger('change');
+                        $courseSelect.prop('disabled', false);
+                        $courseSelect.trigger('change'); // Refresh UI Select2
                     },
                     error: function(xhr) {
                         console.error('Error fetching courses:', xhr);
-                        courseSelect.empty().append('<option value="">Gagal memuat data</option>');
+                        $courseSelect.empty().append('<option value="">Gagal memuat data</option>')
+                            .prop('disabled', false);
                     }
                 });
-            }
+            };
 
-            if (typeof $ !== 'undefined') {
-                $('#selectKelas').on('change', function() {
-                    const classId = $(this).val();
-                    if (!form.dataset.isEditing) {
+            // ==========================================
+            // 3. MAIN EXECUTION (DOCUMENT READY)
+            // ==========================================
+            $(function() {
+                initSelect2();
+
+                // Variable DOM
+                const $form = $(CONFIG.formId);
+                const $offcanvas = $(CONFIG.offcanvasId);
+                const $selectKelas = $(CONFIG.selectKelasId);
+                const bsOffcanvas = new bootstrap.Offcanvas(document.querySelector(CONFIG.offcanvasId));
+
+                // --- EVENT A: Ganti Kelas (Trigger Load Matkul) ---
+                $selectKelas.on('change', function() {
+                    // Hanya jalankan jika BUKAN sedang proses loading data edit otomatis
+                    if (!$form.data('isLoadingData')) {
+                        const val = $(this).val();
+                        // Ambil ID pertama dari array (karena matkul kurikulum sama satu kelas)
+                        const classId = Array.isArray(val) ? val[0] : val;
                         loadCourses(classId);
                     }
                 });
-            }
 
-            document.body.addEventListener('click', function(e) {
-                const editBtn = e.target.closest('.edit-record');
-                if (editBtn) {
-                    const d = editBtn.dataset;
+                // --- EVENT B: Tombol Edit Klik ---
+                $('body').on('click', '.edit-record', function() {
+                    const button = $(this);
+                    const submitUrl = button.data('action');
 
-                    offcanvasTitle.textContent = 'Edit Distribusi Mata Kuliah';
-                    saveBtn.textContent = 'Simpan Perubahan';
-                    form.action = d.action;
-                    form.dataset.isEditing = true;
+                    // Flagging: Beritahu sistem kita sedang mengisi data secara otomatis
+                    $form.data('isLoadingData', true);
 
-                    let methodInput = form.querySelector('input[name="_method"]');
-                    if (!methodInput) {
-                        methodInput = document.createElement('input');
-                        methodInput.type = 'hidden';
-                        methodInput.name = '_method';
-                        methodInput.value = 'PUT';
-                        form.appendChild(methodInput);
+                    // 1. Setup UI Form
+                    $('#offcanvasAddDistribusiLabel').text('Edit Distribusi (Single)');
+                    $('#saveBtn').text('Simpan Perubahan');
+                    $form.attr('action', submitUrl);
+
+                    // 2. Tambah Method PUT
+                    if ($form.find('input[name="_method"]').length === 0) {
+                        $form.append('<input type="hidden" name="_method" value="PUT">');
                     }
 
-                    document.getElementById('edit_referensi').value = d.referensi || '';
-                    document.getElementById('edit_luaran').value = d.luaran || '';
+                    // 3. Isi Input Text
+                    $('#edit_referensi').val(button.data('referensi'));
+                    $('#edit_luaran').val(button.data('luaran'));
 
-                    if (window.$) {
-                        $('#selectKelas').val(d.studyClassId).trigger('change');
-                        loadCourses(d.studyClassId, d.courseId);
+                    // 4. Isi Select Kelas (PENTING: Gunakan Array untuk Select2 Multiple)
+                    const classId = button.data('class-id');
+                    // Kita bungkus dalam array [classId] agar select2 membacanya sebagai selected item
+                    $selectKelas.val([classId]).trigger('change');
 
-                        if (d.teachingIds) {
-                            var teachingIds = JSON.parse(d.teachingIds);
-                            $('#edit_teaching_ids').val(teachingIds).trigger('change');
-                        }
+                    // 5. Load Data Matkul & Dosen
+                    const courseId = button.data('course-id');
+                    const teachingIds = button.data('teaching-ids');
+                    const pddiktiIds = button.data('pddikti-ids');
 
-                        if (d.pddiktiIds) {
-                            var pddiktiIds = JSON.parse(d.pddiktiIds);
-                            $('#edit_pddikti_ids').val(pddiktiIds).trigger('change');
-                        }
+                    // Panggil Load Courses manual dengan parameter courseId agar terpilih
+                    if (classId) {
+                        loadCourses(classId, courseId);
                     }
+
+                    $('#edit_teaching_ids').val(teachingIds).trigger('change');
+                    $('#edit_pddikti_ids').val(pddiktiIds).trigger('change');
+
+                    // 6. Buka Offcanvas
+                    bsOffcanvas.show();
+
+                    // 7. Lepas Flag Loading
+                    setTimeout(() => {
+                        $form.data('isLoadingData', false);
+                    }, 500);
+                });
+
+                // --- EVENT C: Tombol Tambah Baru Klik ---
+                $('.add-new').on('click', function() {
+                    $form.data('isLoadingData', false);
+
+                    // Reset Total
+                    $form[0].reset(); // Reset native form
+                    $selectKelas.val(null).trigger('change'); // Reset Select2 Kelas
+                    $(CONFIG.selectMatkulId).empty().trigger('change'); // Reset Select2 Matkul
+                    $('#edit_teaching_ids').val(null).trigger('change');
+                    $('#edit_pddikti_ids').val(null).trigger('change');
+                    $('input[name="_method"]').remove(); // Hapus method PUT
+
+                    $('#offcanvasAddDistribusiLabel').text('Tambah Distribusi Mata Kuliah');
+                    $('#saveBtn').text('Simpan');
+                    $form.attr('action', CONFIG.urlStore);
+
+                    bsOffcanvas.show();
+                });
+            });
+
+            // --- Script Bulk Delete ---
+            const bulkDeleteBar = document.getElementById('bulkDeleteBar');
+            const selectedCountSpan = document.getElementById('selectedCount');
+            const bulkDeleteInputs = document.getElementById('bulkDeleteInputs');
+            const bulkDeleteForm = document.getElementById('bulkDeleteForm');
+            let selectedIds = new Set();
+
+            // Handle Select All per Group
+            document.querySelectorAll('.select-all-group').forEach(headerCheckbox => {
+                headerCheckbox.addEventListener('change', function() {
+                    const table = this.closest('table');
+                    const checkboxes = table.querySelectorAll('.item-checkbox');
+                    checkboxes.forEach(cb => {
+                        cb.checked = this.checked;
+                        updateSelection(cb.value, this.checked);
+                    });
+                    updateUI();
+                });
+            });
+
+            // Handle Individual Checkbox
+            document.body.addEventListener('change', function(e) {
+                if (e.target.classList.contains('item-checkbox')) {
+                    updateSelection(e.target.value, e.target.checked);
+                    updateUI();
+
+                    // Uncheck header jika ada yg di-uncheck
+                    const table = e.target.closest('table');
+                    const headerCheckbox = table.querySelector('.select-all-group');
+                    if (!e.target.checked && headerCheckbox) headerCheckbox.checked = false;
                 }
             });
 
-            const btnGenerate = document.getElementById('btnGenerate');
-            if (btnGenerate) {
-                btnGenerate.addEventListener('click', function() {
+            function updateSelection(val, isSelected) {
+                // Value bisa berupa string "1,2,3" (karena grouping ID)
+                // Kita harus memecahnya menjadi ID tunggal
+                const ids = val.toString().split(',');
+                ids.forEach(id => {
+                    if (isSelected) selectedIds.add(id);
+                    else selectedIds.delete(id);
+                });
+            }
+
+            function updateUI() {
+                selectedCountSpan.textContent = selectedIds.size;
+                if (selectedIds.size > 0) {
+                    bulkDeleteBar.classList.remove('d-none');
+                    bulkDeleteBar.classList.add('d-flex');
+                } else {
+                    bulkDeleteBar.classList.add('d-none');
+                    bulkDeleteBar.classList.remove('d-flex');
+                }
+            }
+
+            document.getElementById('btnCancelBulk').addEventListener('click', function() {
+                selectedIds.clear();
+                document.querySelectorAll('.item-checkbox, .select-all-group').forEach(cb => cb.checked =
+                    false);
+                updateUI();
+            });
+
+            document.getElementById('btnConfirmBulk').addEventListener('click', function() {
+                Swal.fire({
+                    title: 'Hapus ' + selectedIds.size + ' Data?',
+                    text: "Data yang dihapus tidak dapat dikembalikan!",
+                    icon: 'warning',
+                    showCancelButton: true,
+                    confirmButtonText: 'Ya, Hapus!',
+                    cancelButtonText: 'Batal',
+                    customClass: {
+                        confirmButton: 'btn btn-danger me-3',
+                        cancelButton: 'btn btn-secondary'
+                    },
+                    buttonsStyling: false
+                }).then((result) => {
+                    if (result.isConfirmed) {
+                        bulkDeleteInputs.innerHTML = '';
+                        selectedIds.forEach(id => {
+                            const input = document.createElement('input');
+                            input.type = 'hidden';
+                            input.name = 'ids[]';
+                            input.value = id;
+                            bulkDeleteInputs.appendChild(input);
+                        });
+                        bulkDeleteForm.submit();
+                    }
+                });
+            });
+
+            // --- Script Generate Modal (Select2) ---
+            const generateModal = document.getElementById('generateModal');
+            if (generateModal) {
+                generateModal.addEventListener('shown.bs.modal', function() {
+                    $('#selectKelasGenerate').select2({
+                        placeholder: "Pilih kelas...",
+                        dropdownParent: $('#generateModal'),
+                        closeOnSelect: false,
+                        allowClear: true,
+                        // (Opsional) Format template result/selection Anda bisa dimasukkan disini
+                    });
+                });
+            }
+            $('#btnSelectAllGen').click(function() {
+                let allValues = [];
+                $('#selectKelasGenerate option').each(function() {
+                    if ($(this).val()) allValues.push($(this).val());
+                });
+                $('#selectKelasGenerate').val(allValues).trigger('change');
+            });
+            $('#btnClearGen').click(function() {
+                $('#selectKelasGenerate').val(null).trigger('change');
+            });
+
+            document.body.addEventListener('click', function(e) {
+                const deleteBtn = e.target.closest('.delete-record');
+                if (deleteBtn) {
+                    e.preventDefault();
+                    const form = deleteBtn.closest('form');
                     Swal.fire({
-                        title: 'Generate Distribusi?',
-                        text: "Sistem akan membuat draft distribusi mata kuliah berdasarkan data kelas & kurikulum.",
+                        title: 'Apakah Anda yakin?',
+                        text: "Data yang dihapus tidak dapat dikembalikan!",
                         icon: 'warning',
                         showCancelButton: true,
-                        confirmButtonText: 'Ya, Generate!',
+                        confirmButtonText: 'Ya, hapus!',
                         cancelButtonText: 'Batal',
                         customClass: {
                             title: 'my-0 py-0',
@@ -848,39 +994,23 @@
                         },
                         buttonsStyling: false
                     }).then((result) => {
-                        if (result.isConfirmed) {
-                            Swal.fire({
-                                title: 'Sedang Memproses...',
-                                text: 'Mohon tunggu, sedang generate data.',
-                                allowOutsideClick: false,
-                                showConfirmButton: false,
-                                didOpen: () => {
-                                    Swal.showLoading();
-                                }
-                            });
-                            document.getElementById('generateForm').submit();
-                        }
+                        if (result.isConfirmed) form.submit();
                     });
-                });
-            }
-
-            offcanvasEl.addEventListener('hidden.bs.offcanvas', function() {
-                offcanvasTitle.textContent = 'Tambah Distribusi Mata Kuliah';
-                saveBtn.textContent = 'Simpan';
-                form.action = defaultAction;
-                form.reset();
-                delete form.dataset.isEditing;
-
-                const methodInput = form.querySelector('input[name="_method"]');
-                if (methodInput) methodInput.remove();
-
-                if (window.$) {
-                    $('#selectKelas').val('').trigger('change');
-                    $('#selectMatkul').empty().trigger('change');
-                    $('#edit_teaching_ids').val(null).trigger('change');
-                    $('#edit_pddikti_ids').val(null).trigger('change');
                 }
             });
+
+            const successToast = document.getElementById('successToast');
+            if (successToast) {
+                new bootstrap.Toast(successToast, {
+                    delay: 5000
+                }).show();
+            }
+            const errorToast = document.getElementById('errorToast');
+            if (errorToast) {
+                new bootstrap.Toast(errorToast, {
+                    delay: 5000
+                }).show();
+            }
 
             // Handler Submit Distribusi (Ajukan ke Kaprodi)
             const btnSubmitDistribusi = document.getElementById('btnSubmitDistribusi');
@@ -934,158 +1064,11 @@
                 });
             }
 
-            // --- SweetAlert Delete Logic (Tetap Sama) ---
-            document.body.addEventListener('click', function(e) {
-                const deleteBtn = e.target.closest('.delete-record');
-                if (deleteBtn) {
-                    e.preventDefault();
-                    const form = deleteBtn.closest('form');
-                    Swal.fire({
-                        title: 'Apakah Anda yakin?',
-                        text: "Data yang dihapus tidak dapat dikembalikan!",
-                        icon: 'warning',
-                        showCancelButton: true,
-                        confirmButtonText: 'Ya, hapus!',
-                        cancelButtonText: 'Batal',
-                        customClass: {
-                            title: 'my-0 py-0',
-                            htmlContainer: 'py-0 my-0',
-                            confirmButton: 'btn btn-primary me-3',
-                            cancelButton: 'btn btn-secondary'
-                        },
-                        buttonsStyling: false
-                    }).then((result) => {
-                        if (result.isConfirmed) form.submit();
-                    });
-                }
-            });
 
-            const successToast = document.getElementById('successToast');
-            if (successToast) {
-                new bootstrap.Toast(successToast, {
-                    delay: 5000
-                }).show();
-            }
-            const errorToast = document.getElementById('errorToast');
-            if (errorToast) {
-                new bootstrap.Toast(errorToast, {
-                    delay: 5000
-                }).show();
-            }
-
-            // --- Auto Show Error (Tetap Sama) ---
             @if ($errors->any())
                 const offcanvasError = new bootstrap.Offcanvas(offcanvasEl);
                 offcanvasError.show();
             @endif
-
-            // const scrollContainers = document.querySelectorAll('.horizontal-scroll');
-            // scrollContainers.forEach(container => {
-            //     new PerfectScrollbar(container, {
-            //         suppressScrollY: true,
-            //         wheelPropagation: false
-            //     });
-            // });
-        });
-    </script>
-    <script>
-        document.addEventListener('DOMContentLoaded', function() {
-            const bulkDeleteBar = document.getElementById('bulkDeleteBar');
-            const selectedCountSpan = document.getElementById('selectedCount');
-            const bulkDeleteInputs = document.getElementById('bulkDeleteInputs');
-            const bulkDeleteForm = document.getElementById('bulkDeleteForm');
-            let selectedIds = new Set();
-
-            // 1. Handle Select All per Group (Per Kelas)
-            document.querySelectorAll('.select-all-group').forEach(headerCheckbox => {
-                headerCheckbox.addEventListener('change', function() {
-                    const table = this.closest('table');
-                    const checkboxes = table.querySelectorAll('.item-checkbox');
-
-                    checkboxes.forEach(cb => {
-                        cb.checked = this.checked;
-                        updateSelection(cb.value, this.checked);
-                    });
-                    updateUI();
-                });
-            });
-
-            // 2. Handle Individual Checkbox
-            document.body.addEventListener('change', function(e) {
-                if (e.target.classList.contains('item-checkbox')) {
-                    updateSelection(e.target.value, e.target.checked);
-                    updateUI();
-
-                    // Uncheck header "Select All" jika ada satu item diuncheck
-                    const table = e.target.closest('table');
-                    const headerCheckbox = table.querySelector('.select-all-group');
-                    if (!e.target.checked && headerCheckbox) {
-                        headerCheckbox.checked = false;
-                    }
-                }
-            });
-
-            // Helper: Update Set ID
-            function updateSelection(id, isSelected) {
-                if (isSelected) {
-                    selectedIds.add(id);
-                } else {
-                    selectedIds.delete(id);
-                }
-            }
-
-            // Helper: Update Tampilan Bar
-            function updateUI() {
-                selectedCountSpan.textContent = selectedIds.size;
-
-                if (selectedIds.size > 0) {
-                    bulkDeleteBar.classList.remove('d-none');
-                    bulkDeleteBar.classList.add('d-flex'); // Supaya flexbox jalan
-                } else {
-                    bulkDeleteBar.classList.add('d-none');
-                    bulkDeleteBar.classList.remove('d-flex');
-                }
-            }
-
-            // 3. Tombol Batal
-            document.getElementById('btnCancelBulk').addEventListener('click', function() {
-                selectedIds.clear();
-                document.querySelectorAll('.item-checkbox, .select-all-group').forEach(cb => cb.checked =
-                    false);
-                updateUI();
-            });
-
-            // 4. Tombol Konfirmasi Hapus (SweetAlert)
-            document.getElementById('btnConfirmBulk').addEventListener('click', function() {
-                Swal.fire({
-                    title: 'Hapus ' + selectedIds.size + ' Data?',
-                    text: "Anda akan menghapus distribusi mata kuliah yang dipilih. Data yang sudah ada jadwalnya mungkin tidak akan terhapus.",
-                    icon: 'warning',
-                    showCancelButton: true,
-                    confirmButtonText: 'Ya, Hapus Semua!',
-                    cancelButtonText: 'Batal',
-                    customClass: {
-                        confirmButton: 'btn btn-danger me-3',
-                        cancelButton: 'btn btn-secondary'
-                    },
-                    buttonsStyling: false
-                }).then((result) => {
-                    if (result.isConfirmed) {
-                        // Masukkan ID ke form
-                        bulkDeleteInputs.innerHTML = '';
-                        selectedIds.forEach(id => {
-                            const input = document.createElement('input');
-                            input.type = 'hidden';
-                            input.name = 'ids[]';
-                            input.value = id;
-                            bulkDeleteInputs.appendChild(input);
-                        });
-
-                        // Submit
-                        bulkDeleteForm.submit();
-                    }
-                });
-            });
         });
     </script>
 @endsection

@@ -48,7 +48,7 @@
                         @if ($approvalDoc)
                             <div class="text-end">
                                 <span class="badge bg-{{ $approvalDoc->status_color }} mb-1">
-                                    {{ strtoupper($approvalDoc->status_text) }}
+                                    {{ strtoupper($approvalDoc->status_pendek) }}
                                 </span>
                                 <div class="small text-muted">
                                     Last update: {{ $approvalDoc->updated_at->diffForHumans() }}

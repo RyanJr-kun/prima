@@ -20,6 +20,7 @@ return new class extends Migration
             $table->decimal('total_sks_pengabdian', 5, 2)->default(0);
             $table->decimal('total_sks_penunjang', 5, 2)->default(0);
             $table->enum('conclusion', ['memenuhi', 'tidak_memenuhi', 'belum_dihitung'])->default('belum_dihitung');
+            $table->boolean('is_verified')->default(false);
             $table->timestamps();
             $table->unique(['academic_period_id', 'user_id']);
         });

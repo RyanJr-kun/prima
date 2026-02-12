@@ -18,8 +18,10 @@ return new class extends Migration
             $table->string('activity_name');
             $table->decimal('sks_load', 5, 2)->default(0);
             $table->decimal('sks_real', 5, 2)->default(0);
+            $table->decimal('sks_assigned', 5, 2)->default(0);
             $table->integer('realisasi_pertemuan')->nullable()->default(14);
-            $table->string('jenis_ujian')->nullable()->default('UTS, UAS');
+            $table->boolean('is_uts_maker')->default(false);
+            $table->boolean('is_uas_maker')->default(false);
             $table->string('description')->nullable();
             $table->string('document_path')->nullable();
             $table->timestamps();

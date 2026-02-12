@@ -13,7 +13,7 @@
                 </div>
                 <div class="col-md-4">
                     @if (!$isKaprodi)
-                        <form action="{{ route('beban-kerja-dosen.rekap') }}" method="GET"
+                        <form action="{{ route('beban-kerja-dosen.show-doc') }}" method="GET"
                             class="d-flex gap-2 justify-content-md-end">
                             <select name="prodi_id" class="form-select select2" onchange="this.form.submit()">
                                 <option value="">-- Pilih Prodi --</option>

@@ -26,23 +26,30 @@
         @endphp
 
         <div class="card mb-4">
-            <div class="card-header bg-label-primary py-2 d-flex justify-content-between align-items-center">
-                {{-- Nama Kelas --}}
-                <h6 class="mb-0 text-primary">
-                    <i class="bx bx-chalkboard me-2"></i> Kelas {{ $className }}
-                </h6>
-
-                {{-- Angkatan --}}
-                <span class="badge bg-white text-primary">
-                    Angkatan {{ $kelas->angkatan ?? '-' }}
-                </span>
+            <div class="card-header bg-white p-4 border-bottom d-flex justify-content-between">
+                <div>
+                    <h5 class="mb-1 fw-bold text-primary display-6" style="font-size: 1.2rem;">
+                        <i class='bx bx-chalkboard me-2'></i>{{ $kelas->full_name ?? $kelas->name }}
+                    </h5>
+                    <div class="text-muted d-flex gap-3 small flex-wrap">
+                        <span><i class='bx bx-building'></i> {{ $kelas->prodi->name }}</span>
+                        <span><i class='bx bx-calendar'></i> Semester {{ $kelas->semester }}
+                            ({{ ucfirst($kelas->shift) }})
+                        </span>
+                        <span><i class='bx bx-group'></i> {{ $kelas->total_students }} Mhs</span>
+                        <span class="text-info"><i class='bx bx-user-voice'></i> PA:
+                            {{ $kelas->academicAdvisor->name ?? 'Belum diset' }}</span>
+                    </div>
+                </div>
+                <div>
+                    <span class="badge bg-label-primary fs-6">{{ $items->count() }} Mata Kuliah</span>
+                </div>
             </div>
-
             <div class="table-responsive">
-                <table class="table table-sm table-striped">
+                <table class="table table-sm">
                     <thead>
                         <tr>
-                            <th rowspan="2" class="text-center fw-bold" width="5%">No</th>
+                            <th rowspan="2" class="text-center fw-bold" width="4%">No</th>
                             <th rowspan="2" class="fw-bold">Kode</th>
                             <th rowspan="2" class="fw-bold">Mata Kuliah</th>
                             <th colspan="4" class="text-center border py-0 fw-bold">SKS</th>
@@ -52,10 +59,10 @@
                             <th rowspan="2" class="fw-bold">Luaran</th>
                         </tr>
                         <tr>
-                            <th class="text-center border py-0" width="5%"><small>T</small></th>
-                            <th class="text-center border py-0" width="5%"><small>P</small></th>
-                            <th class="text-center border py-0" width="5%"><small>L</small></th>
-                            <th class="text-center border py-0" width="5%"><small>JML</small></th>
+                            <th class="text-center border py-0" width="3%"><small>T</small></th>
+                            <th class="text-center border py-0" width="3%"><small>P</small></th>
+                            <th class="text-center border py-0" width="3%"><small>L</small></th>
+                            <th class="text-center border py-0" width="3%"><small>JML</small></th>
                         </tr>
                     </thead>
                     <tbody>
@@ -64,10 +71,10 @@
                                 <td class="text-center">{{ $loop->iteration }}</td>
                                 <td>{{ $dist->course->code }}</td>
                                 <td>{{ \Illuminate\Support\Str::limit($dist->course->name ?? '-', 40) }}</td>
-                                <td class="text-center">{{ $dist->course->sks_teori ?? 0 }}</td>
-                                <td class="text-center">{{ $dist->course->sks_praktik ?? 0 }}</td>
-                                <td class="text-center">{{ $dist->course->sks_lapangan ?? 0 }}</td>
-                                <td class="text-center">{{ $dist->course->sks_total ?? 0 }}</td>
+                                <td class="text-center border">{{ $dist->course->sks_teori ?? 0 }}</td>
+                                <td class="text-center border">{{ $dist->course->sks_praktik ?? 0 }}</td>
+                                <td class="text-center border">{{ $dist->course->sks_lapangan ?? 0 }}</td>
+                                <td class="text-center border">{{ $dist->course->sks_total ?? 0 }}</td>
 
                                 <td>
                                     @if ($dist->user)

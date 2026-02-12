@@ -15,8 +15,8 @@ class Workload extends Model
         'total_sks_penelitian',
         'total_sks_pengabdian',
         'total_sks_penunjang',
-
-        'conclusion'
+        'conclusion',
+        'is_verified'
     ];
 
     public function academicPeriod()
