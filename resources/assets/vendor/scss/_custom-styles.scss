@@ -686,3 +686,27 @@ $academic-light: #f5f5f9;
     text-align: center;
     font-weight: 600;
 }
+
+ /* Mengatur tinggi kalender agar pas di layar */
+        #calendar {
+            max-width: 100%;
+            margin: 0 auto;
+            height: 80vh;
+            background: white;
+            padding: 0px;
+            border-radius: 8px;
+        }
+
+
+        /* Styling Event di dalam kalender */
+        .fc-event {
+            cursor: pointer;
+            font-size: 0.85rem;
+        }
+
+        /* Warna latar header jam/ruangan */
+        .fc-timeline-slot-cushion,
+        .fc-resource-area-header {
+            background-color: #f5f5f9;
+            color: #566a7f;
+        }

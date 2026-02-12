@@ -246,60 +246,46 @@
         });
     </script>
     <script>
+        function editEvent(button) {
+            const formEvent = document.getElementById('formEvent');
+            const methodContainer = document.getElementById('methodInputContainer');
+            const modalTitle = document.querySelector('#addEventModal .modal-title');
+
+            // Ubah Judul Modal
+            modalTitle.innerText = "Edit Agenda";
+
+            // Ubah Action URL Form ke Route Update
+            formEvent.action = button.dataset.url;
+
+            // Tambahkan method PUT untuk Laravel Resource
+            methodContainer.innerHTML = '<input type="hidden" name="_method" value="PUT">';
+
+            // Isi Value Input dari Dataset Tombol
+            // Pastikan nama attribute di dataset (camelCase) sesuai dengan data- attribute di HTML
+            formEvent.elements['name'].value = button.dataset.name;
+            formEvent.elements['start_date'].value = button.dataset.startDate;
+            formEvent.elements['end_date'].value = button.dataset.endDate;
+            formEvent.elements['description'].value = button.dataset.description || '';
+
+            // CATATAN: Kita TIDAK menyentuh target_semesters. 
+            // Input hidden semester akan tetap terkirim sesuai yang digenerate oleh Blade (Looping).
+        }
         document.addEventListener('DOMContentLoaded', function() {
-            const form = document.getElementById('addNewKurikulumForm');
-            const offcanvasEl = document.getElementById('offcanvasAddKurikulum');
-            const offcanvasTitle = document.getElementById('offcanvasAddKurikulumLabel');
-            const saveBtn = document.getElementById('saveBtn');
-            const defaultAction = form.action;
-            document.body.addEventListener('click', function(e) {
-                const editBtn = e.target.closest('.edit-record');
-                if (editBtn) {
-                    const d = editBtn.dataset;
+            const addEventModal = document.getElementById('addEventModal');
+            if (addEventModal) {
+                addEventModal.addEventListener('hidden.bs.modal', function() {
+                    const formEvent = document.getElementById('formEvent');
+                    const methodContainer = document.getElementById('methodInputContainer');
+                    const modalTitle = document.querySelector('#addEventModal .modal-title');
 
-
-                    offcanvasTitle.textContent = 'Edit Kurikulum';
-                    saveBtn.textContent = 'Simpan Perubahan';
-                    form.action = d.action;
-
-
-                    let methodInput = form.querySelector('input[name="_method"]');
-                    if (!methodInput) {
-                        methodInput = document.createElement('input');
-                        methodInput.type = 'hidden';
-                        methodInput.name = '_method';
-                        methodInput.value = 'PUT';
-                        form.appendChild(methodInput);
-                    }
-
-
-                    document.getElementById('add-name-kurikulum').value = d.name;
-                    document.getElementById('Tanggal').value = d.tanggal;
-                    document.getElementById('status').checked = d.isActive == '1';
-
-
-                    if (window.$) {
-                        $('#prodi_id').val(d.prodiId).trigger('change');
-                    } else {
-                        document.getElementById('prodi_id').value = d.prodiId;
-                    }
-                }
-            });
-            offcanvasEl.addEventListener('hidden.bs.offcanvas', function() {
-                offcanvasTitle.textContent = 'Tambah Kurikulum';
-                saveBtn.textContent = 'Submit';
-                form.action = defaultAction;
-                form.reset();
-
-
-                const methodInput = form.querySelector('input[name="_method"]');
-                if (methodInput) methodInput.remove();
-
-
-                if (window.$) {
-                    $('#prodi_id').val('').trigger('change');
-                }
-            });
+                    modalTitle.innerText = "Agenda Baru";
+                    // Reset ke Route Store
+                    formEvent.action = "{{ route('kalender-akademik.store') }}";
+                    // Hapus method PUT
+                    methodContainer.innerHTML = '';
+                    formEvent.reset();
+                });
+            }
 
             document.body.addEventListener('click', function(e) {
                 const deleteBtn = e.target.closest('.delete-record');

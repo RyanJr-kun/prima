@@ -2,33 +2,7 @@
 @section('title', 'Jadwal Perkuliahan - PRIMA')
 
 @section('page-style')
-    {{-- 1. Load CSS FullCalendar Scheduler --}}
     <script src='https://cdn.jsdelivr.net/npm/fullcalendar-scheduler@6.1.11/index.global.min.js'></script>
-    <style>
-        /* Mengatur tinggi kalender agar pas di layar */
-        #calendar {
-            max-width: 100%;
-            margin: 0 auto;
-            height: 80vh;
-            background: white;
-            padding: 10px;
-            border-radius: 8px;
-        }
-
-
-        /* Styling Event di dalam kalender */
-        .fc-event {
-            cursor: pointer;
-            font-size: 0.85rem;
-        }
-
-        /* Warna latar header jam/ruangan */
-        .fc-timeline-slot-cushion,
-        .fc-resource-area-header {
-            background-color: #f5f5f9;
-            color: #566a7f;
-        }
-    </style>
 @endsection
 
 @section('content')
@@ -112,14 +86,12 @@
                                 </span>
 
                                 @if (in_array($document->status, ['draft', 'rejected']))
-                                    <form action="{{ route('jadwal-perkuliahan.submit') }}" method="POST"
-                                        onsubmit="return confirm('Yakin jadwal {{ $campus }} shift {{ $shift }} sudah final dan siap diajukan?')">
+                                    <form id="resubmitScheduleForm" action="{{ route('jadwal-perkuliahan.submit') }}"
+                                        method="POST">
                                         @csrf
-
                                         <input type="hidden" name="campus" value="{{ $campus }}">
                                         <input type="hidden" name="shift" value="{{ $shift }}">
-
-                                        <button type="submit" class="btn btn-sm btn-primary ms-2">
+                                        <button type="button" id="btnResubmitSchedule" class="btn btn-sm btn-primary ms-2">
                                             <i class='bx bx-send'></i> Ajukan Validasi
                                         </button>
                                     </form>
@@ -132,7 +104,6 @@
                                 @endif
                             @else
                                 <span class="badge bg-label-secondary">DRAFT</span>
-
                                 <form id="submitScheduleForm" action="{{ route('jadwal-perkuliahan.submit') }}"
                                     method="POST">
                                     @csrf
@@ -140,7 +111,7 @@
                                     <input type="hidden" name="shift" value="{{ $shift }}">
 
                                     <button type="button" class="btn btn-primary" id="btnSubmitSchedule">
-                                        <i class='bx bx-send'></i> Ajukan
+                                        <i class='bx bx-send'></i> Ajukan Validasi
                                     </button>
                                 </form>
                             @endif
@@ -170,7 +141,7 @@
                                 <input type="hidden" name="shift" value="{{ $shift }}">
                                 {{-- <input type="hidden" name="prodi_id" value="{{ $prodiId }}"> --}}
                                 <button type="button" class="btn btn-outline-warning" id="btnAuto">
-                                    <i class='bx bx-bot me-1'></i> Auto Generate
+                                    <i class='bx bx-bot me-1'></i> Generate
                                 </button>
                             </form>
                         @endif
@@ -291,6 +262,508 @@
         initSelect2();
     </script>
     <script>
+        // Helper Toast
+        function showJsToast(type, message) {
+            const toastEl = document.getElementById('jsToast');
+            const toastBody = document.getElementById('jsToastBody');
+            const toastTitle = document.getElementById('jsToastTitle');
+
+            if (!toastEl) return; // Safety check
+
+            toastEl.classList.remove('bg-primary', 'bg-danger');
+            if (type === 'success') {
+                toastEl.classList.add('bg-primary');
+                toastTitle.textContent = 'Berhasil';
+            } else {
+                toastEl.classList.add('bg-danger');
+                toastTitle.textContent = 'Gagal';
+            }
+            toastBody.textContent = message;
+            new bootstrap.Toast(toastEl).show();
+        }
+
+        document.addEventListener('DOMContentLoaded', function() {
+            var calendarEl = document.getElementById('calendar');
+            var containerEl = document.getElementById('external-events');
+
+            // 1. Inisialisasi Draggable (Sidebar)
+            if (containerEl) {
+                new FullCalendar.Draggable(containerEl, {
+                    itemSelector: '.fc-event',
+                    eventData: function(eventEl) {
+                        // Safe Parsing JSON
+                        var lecturersRaw = eventEl.getAttribute('data-lecturers');
+                        var lecturers = [];
+                        try {
+                            lecturers = JSON.parse(lecturersRaw) || [];
+                        } catch (e) {
+                            console.error("Gagal parse lecturers JSON", e);
+                        }
+
+                        return {
+                            title: eventEl.getAttribute('data-title'),
+                            duration: eventEl.getAttribute('data-duration'),
+                            extendedProps: {
+                                distributionId: eventEl.getAttribute('data-distribution-id'),
+                                courseId: eventEl.getAttribute('data-course-id'),
+                                classId: eventEl.getAttribute('data-class-id'),
+                                lecturers: lecturers, // Array Dosen
+                                lecturerId: eventEl.getAttribute(
+                                    'data-lecturer-id'), // Primary ID (Backup)
+                                dosenName: eventEl.getAttribute('data-dosen-text'),
+                                className: eventEl.getAttribute('data-class-name')
+                            }
+                        };
+                    }
+                });
+            }
+
+            // 2. Inisialisasi Kalender
+            var calendar = new FullCalendar.Calendar(calendarEl, {
+                schedulerLicenseKey: 'CC-Attribution-NonCommercial-NoDerivatives',
+                initialView: 'resourceTimelineDay',
+                headerToolbar: {
+                    left: 'prev,next today',
+                    center: 'title',
+                    right: 'resourceTimelineDay,resourceTimeGridDay'
+                },
+
+                // Pastikan Resources di-encode dengan benar
+                // Jika resources kosong, berikan array kosong agar tidak error
+                resources: {!! !empty($resources) ? json_encode($resources) : '[]' !!},
+
+                // Gunakan Route Laravel untuk events agar URL absolut & aman
+                events: "{{ route('jadwal-perkuliahan.get-events') }}",
+                titleFormat: {
+                    weekday: 'long' // Ini yang memunculkan "Senin", "Selasa", dst.
+                },
+
+                locale: 'id',
+                slotMinTime: '08:00:00',
+                slotMaxTime: '21:00:00',
+                slotLabelInterval: '00:50:00',
+                slotDuration: '00:10:00', // Granularitas 10 menit
+                editable: true,
+                droppable: true,
+                eventDurationEditable: true,
+
+                // --- EVENT: TERIMA DROP DARI SIDEBAR ---
+                eventReceive: function(info) {
+                    var props = info.event.extendedProps;
+                    var lecturers = props.lecturers || [];
+
+                    // Jika dosen > 1, Tampilkan Modal Pilih Dosen
+                    if (lecturers.length > 1) {
+                        let optionsHtml = '';
+                        lecturers.forEach(l => {
+                            optionsHtml += `
+                                <div class="form-check text-start">
+                                    <input class="form-check-input" type="radio" name="selected_lecturer" value="${l.id}" id="lec_${l.id}" checked>
+                                    <label class="form-check-label" for="lec_${l.id}">${l.name}</label>
+                                </div>`;
+                        });
+
+                        Swal.fire({
+                            title: 'Pilih Pengajar Sesi Ini',
+                            html: `<div class="p-2">${optionsHtml}</div>`,
+                            icon: 'question',
+                            showCancelButton: true,
+                            confirmButtonText: 'Simpan',
+                            preConfirm: () => {
+                                const selected = document.querySelector(
+                                    'input[name="selected_lecturer"]:checked');
+                                return selected ? selected.value : null;
+                            }
+                        }).then((result) => {
+                            if (result.isConfirmed && result.value) {
+                                saveEventToDB(info, result.value);
+                            } else {
+                                info.revert(); // Batal Drop
+                            }
+                        });
+                    } else {
+                        // Jika cuma 1 dosen (atau 0), langsung simpan pakai ID default
+                        var defaultId = props.lecturerId || (lecturers[0] ? lecturers[0].id : null);
+                        saveEventToDB(info, defaultId);
+                    }
+                },
+
+                // --- EVENT: PINDAH JADWAL (DRAG DI KALENDER) ---
+                eventDrop: function(info) {
+                    updateEventInDB(info);
+                },
+
+                // --- EVENT: RESIZE DURASI ---
+                eventResize: function(info) {
+                    resizeEventInDB(info);
+                },
+
+                // --- EVENT: KLIK EVENT (DETAIL/HAPUS) ---
+                eventClick: function(info) {
+                    showEventDetail(info);
+                }
+            });
+
+            calendar.render();
+
+            // ==========================================
+            // FUNGSI AJAX HELPER (DIPISAH AGAR RAPI)
+            // ==========================================
+
+            function saveEventToDB(info, userId) {
+                var props = info.event.extendedProps;
+                var resourceId = info.event.getResources()[0].id;
+
+                showLoading(true);
+
+                fetch("{{ route('jadwal-perkuliahan.store') }}", {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Accept': 'application/json',
+                            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
+                        },
+                        body: JSON.stringify({
+                            course_distribution_id: props.distributionId,
+                            course_id: props.courseId,
+                            study_class_id: props.classId,
+                            room_id: resourceId,
+                            start_time: info.event.startStr,
+                            user_id: userId // Single ID sesuai request Anda
+                        })
+                    })
+                    .then(res => res.json())
+                    .then(data => {
+                        showLoading(false);
+                        if (data.success) {
+                            info.event.setProp('id', data.schedule_id); // Update ID Event Real dari DB
+
+                            // Hapus dari sidebar jika sukses
+                            if (info.draggedEl && info.draggedEl.parentNode) {
+                                info.draggedEl.parentNode.removeChild(info.draggedEl);
+                            }
+                            showJsToast('success', 'Jadwal tersimpan!');
+                        } else {
+                            info.revert();
+                            Swal.fire('Gagal', data.message, 'error');
+                        }
+                    })
+                    .catch(err => {
+                        showLoading(false);
+                        info.revert();
+                        console.error(err);
+                        showJsToast('error', 'Terjadi kesalahan server.');
+                    });
+            }
+
+            function updateEventInDB(info) {
+                var scheduleId = info.event.id;
+                // GENERATE URL UPDATE YANG BENAR (SAFE URL)
+                var url = "{{ route('jadwal-perkuliahan.update', ':id') }}".replace(':id', scheduleId);
+
+                showLoading(true);
+
+                fetch(url, {
+                        method: 'PUT',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Accept': 'application/json',
+                            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
+                        },
+                        body: JSON.stringify({
+                            room_id: info.event.getResources()[0].id,
+                            start_time: info.event.startStr
+                        })
+                    })
+                    .then(res => res.json())
+                    .then(data => {
+                        showLoading(false);
+                        if (data.success) {
+                            showJsToast('success', 'Jadwal dipindahkan!');
+                        } else {
+                            info.revert();
+                            showJsToast('error', data.message);
+                        }
+                    })
+                    .catch(err => {
+                        showLoading(false);
+                        info.revert();
+                        showJsToast('error', 'Gagal update jadwal.');
+                    });
+            }
+
+            function resizeEventInDB(info) {
+                var scheduleId = info.event.id;
+                // GENERATE URL RESIZE (Pastikan route ini ada di web.php)
+                // Route::patch('/jadwal-perkuliahan/{id}/resize', ...)
+                var url = "/jadwal-perkuliahan/" + scheduleId + "/resize";
+
+                showLoading(true);
+
+                fetch(url, {
+                        method: 'PATCH',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Accept': 'application/json',
+                            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
+                        },
+                        body: JSON.stringify({
+                            start_time: info.event.startStr,
+                            end_time: info.event.endStr
+                        })
+                    })
+                    .then(res => res.json())
+                    .then(data => {
+                        showLoading(false);
+                        if (data.success) {
+                            showJsToast('success', 'Durasi diupdate!');
+                        } else {
+                            info.revert();
+                            showJsToast('error', data.message);
+                        }
+                    })
+                    .catch(err => {
+                        showLoading(false);
+                        info.revert();
+                        showJsToast('error', 'Gagal resize.');
+                    });
+            }
+
+            function showEventDetail(info) {
+                var eventObj = info.event;
+                var props = eventObj.extendedProps;
+                var scheduleId = eventObj.id;
+                var content = `
+                    <div class="text-start fs-6">
+                        <table class="table table-sm table-borderless">
+                            <tr><td class="fw-bold" width="30%">Matkul</td><td>: ${props.courseName}</td></tr>
+                            <tr><td class="fw-bold">Kelas</td><td>: ${props.fullClassName}</td></tr>
+                            <tr><td class="fw-bold">Dosen</td><td>: ${props.dosenName}</td></tr>
+                            <tr><td class="fw-bold">Waktu</td><td>: ${props.jam_mulai} - ${props.jam_selesai}</td></tr>
+                            <tr><td class="fw-bold">Lokasi</td><td>: ${props.location}</td></tr>
+                        </table>
+                    </div>
+                `;
+
+                Swal.fire({
+                    title: 'Detail Jadwal',
+                    html: content,
+                    icon: 'info',
+                    showDenyButton: true, // Tombol Hapus
+                    showCancelButton: true, // Tombol Ganti Dosen
+                    confirmButtonText: 'Tutup',
+                    denyButtonText: 'Hapus Jadwal',
+                    cancelButtonText: 'Ganti Pengajar', // <--- UBAH TEXT INI
+                    denyButtonColor: '#ff3e1d',
+                    cancelButtonColor: '#ff9f43', // Warna Kuning/Orange
+                    customClass: {
+                        title: 'my-0 py-0',
+                        htmlContainer: 'py-0 my-0 fs-7',
+                        confirmButton: 'btn btn-sm btn-primary me-3',
+                        cancelButton: 'btn btn-sm btn-secondary',
+                        denyButton: 'btn btn-sm btn-danger'
+                    },
+                }).then((result) => {
+                    if (result.isDenied) {
+                        // Hapus Jadwal
+                        deleteSchedule(scheduleId);
+                    } else if (result.dismiss === Swal.DismissReason.cancel) {
+                        // Ganti Pengajar Diklik
+                        handleChangeLecturer(scheduleId, props);
+                    }
+                });
+            }
+
+            function deleteSchedule(id) {
+                Swal.fire({
+                    title: 'Hapus Jadwal?',
+                    text: 'Jadwal akan dikembalikan ke antrean.',
+                    icon: 'warning',
+                    showCancelButton: true,
+                    confirmButtonText: 'Ya, Hapus'
+                }).then((res) => {
+                    if (res.isConfirmed) {
+                        var url = "{{ route('jadwal-perkuliahan.destroy', ':id') }}".replace(':id', id);
+
+                        showLoading(true);
+                        fetch(url, {
+                                method: 'DELETE',
+                                headers: {
+                                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')
+                                        .content,
+                                    'Accept': 'application/json'
+                                }
+                            })
+                            .then(r => r.json())
+                            .then(d => {
+                                if (d.success) {
+                                    showJsToast('success', 'Terhapus!');
+                                    setTimeout(() => location.reload(),
+                                        5000); // Reload untuk refresh sidebar
+                                } else {
+                                    showJsToast('error', d.message);
+                                }
+                            });
+                    }
+                });
+            }
+
+            function showLoading(show) {
+                const el = document.getElementById('loadingIndicator');
+                if (el) el.style.display = show ? 'block' : 'none';
+            }
+
+            function handleChangeLecturer(scheduleId, props) {
+                var team = props.teamTeaching;
+
+                // Cek jika data team teaching kosong atau cuma 1
+                if (!team || team.length <= 1) {
+                    Swal.fire('Info', 'Mata kuliah ini hanya memiliki satu pengajar.', 'info');
+                    return;
+                }
+
+                // 1. GENERATE HTML CUSTOM (User Card Style)
+                let optionsHtml = '<div class="d-flex flex-column gap-3 text-start">';
+
+                team.forEach(t => {
+                    // Cek apakah ini dosen yang sedang aktif (untuk default checked)
+                    const isChecked = t.id == props.lecturerId ? 'checked' : '';
+
+                    // Style awal (Active vs Inactive)
+                    const wrapperClass = t.id == props.lecturerId ?
+                        'border-primary bg-label-primary shadow-sm' :
+                        'border-light bg-white';
+
+                    optionsHtml += `
+            <label class="cursor-pointer card-selection-wrapper position-relative w-100">
+                <input type="radio" class="btn-check" name="swal_lecturer_id" id="lec_${t.id}" value="${t.id}" ${isChecked}>
+                
+                <div class="card-selection-content p-3 border rounded-3 d-flex align-items-center transition-all ${wrapperClass}">
+                    <div class="avatar avatar-md me-3">
+                        <span class="avatar-initial rounded-circle bg-label-primary">
+                            <i class='bx bx-user fs-4'></i>
+                        </span>
+                    </div>
+                    <div class="flex-grow-1">
+                        <span class="d-block fw-semibold text-heading mb-0">${t.name}</span>
+                        <small class="text-muted d-block mt-1">
+                            <i class='bx bx-id-card me-1'></i> NIDN: ${t.nidn}
+                        </small>
+                    </div>
+                    <div class="selection-indicator">
+                        ${isChecked ? "<i class='bx bxs-check-circle text-primary fs-4'></i>" : "<i class='bx bx-circle text-muted fs-4'></i>"}
+                    </div>
+                </div>
+            </label>
+        `;
+                });
+                optionsHtml += '</div>';
+
+                // 2. TAMPILKAN SWEETALERT
+                Swal.fire({
+                    title: 'Pilih Dosen Pengajar',
+                    html: optionsHtml, // Render HTML Custom di sini
+                    showCancelButton: true,
+                    confirmButtonText: 'Simpan Perubahan',
+                    cancelButtonText: 'Batal',
+
+                    customClass: {
+                        title: 'fs-4 fw-bold mb-4',
+                        htmlContainer: 'overflow-hidden m-0 p-0 text-start',
+                        popup: 'p-4 rounded-4 w-md-500px',
+                        confirmButton: 'btn btn-sm btn-primary px-4',
+                        cancelButton: 'btn btn-sm btn-secondary px-4'
+                    },
+
+                    // --- LOGIKA VALIDASI & AMBIL DATA (PENGGANTI inputValidator) ---
+                    preConfirm: () => {
+                        const selected = document.querySelector(
+                            'input[name="swal_lecturer_id"]:checked');
+                        if (!selected) {
+                            Swal.showValidationMessage('Silakan pilih salah satu dosen!');
+                            return false;
+                        }
+                        return selected.value; // Return ID Dosen
+                    },
+
+                    // --- LOGIKA UI (HIGHLIGHT CARD SAAT DIKLIK) ---
+                    didOpen: () => {
+                        const container = Swal.getHtmlContainer();
+                        const inputs = container.querySelectorAll('input[type="radio"]');
+
+                        inputs.forEach(input => {
+                            input.addEventListener('change', function() {
+                                // Reset semua card ke tampilan default (putih)
+                                container.querySelectorAll('.card-selection-content')
+                                    .forEach(el => {
+                                        el.classList.remove('border-primary',
+                                            'bg-label-primary', 'shadow-sm');
+                                        el.classList.add('border-light',
+                                            'bg-white');
+                                        // Reset icon kanan jadi lingkaran kosong
+                                        el.querySelector('.selection-indicator')
+                                            .innerHTML =
+                                            "<i class='bx bx-circle text-muted fs-4'></i>";
+                                    });
+
+                                // Highlight card yang dipilih (biru)
+                                const selectedWrapper = this
+                                    .nextElementSibling; // div.card-selection-content
+                                selectedWrapper.classList.remove('border-light',
+                                    'bg-white');
+                                selectedWrapper.classList.add('border-primary',
+                                    'bg-label-primary', 'shadow-sm');
+                                // Ubah icon kanan jadi checkmark
+                                selectedWrapper.querySelector('.selection-indicator')
+                                    .innerHTML =
+                                    "<i class='bx bxs-check-circle text-primary fs-4'></i>";
+                            });
+                        });
+                    }
+
+                }).then((res) => {
+                    // 3. PROSES SIMPAN (AJAX)
+                    if (res.isConfirmed) {
+                        var newUserId = res.value;
+                        var url = "{{ route('jadwal-perkuliahan.update', ':id') }}".replace(':id',
+                            scheduleId);
+
+                        document.getElementById('loadingIndicator').style.display = 'block';
+
+                        fetch(url, {
+                                method: 'PUT',
+                                headers: {
+                                    'Content-Type': 'application/json',
+                                    'Accept': 'application/json',
+                                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')
+                                        .content
+                                },
+                                body: JSON.stringify({
+                                    user_id: newUserId
+                                })
+                            })
+                            .then(r => r.json())
+                            .then(d => {
+                                document.getElementById('loadingIndicator').style.display = 'none';
+                                if (d.success) {
+                                    showJsToast('success', 'Pengajar Berhasil Diganti!');
+                                    setTimeout(() => location.reload(),
+                                        5000);
+                                } else {
+                                    Swal.fire('Gagal', d.message, 'error');
+                                }
+                            })
+                            .catch(e => {
+                                document.getElementById('loadingIndicator').style.display = 'none';
+                                console.error(e);
+                                Swal.fire('Error', 'Terjadi kesalahan sistem.', 'error');
+                            });
+                    }
+                });
+            }
+        });
+    </script>
+    <script>
         // Fungsi Helper untuk menampilkan Toast dari JS
         function showJsToast(type, message) {
             const toastEl = document.getElementById('jsToast');
@@ -322,12 +795,19 @@
 
                 Swal.fire({
                     title: 'Konfirmasi Auto Generate',
-                    text: 'PERINGATAN: Fitur ini akan mengisi jadwal secara otomatis untuk matkul yang BELUM terjadwal. Sistem akan mencari slot kosong berdasarkan SKS dan kapasitas ruangan. Lanjutkan?',
+                    text: 'Fitur ini akan mengisi jadwal secara otomatis untuk matkul yang BELUM terjadwal',
                     icon: 'warning',
                     showCancelButton: true,
                     confirmButtonText: 'Lanjutkan',
                     cancelButtonText: 'Batal',
                     showLoaderOnConfirm: true,
+                    customClass: {
+                        title: 'fs-4 fw-bold mb-4',
+                        htmlContainer: 'overflow-hidden m-0 p-0',
+                        popup: 'p-4 rounded-4 w-md-500px',
+                        confirmButton: 'btn btn-sm btn-primary px-4',
+                        cancelButton: 'btn btn-sm btn-secondary px-4'
+                    },
                     preConfirm: () => {
                         return new Promise((resolve) => {
                             autoGenerateForm.submit();
@@ -337,6 +817,41 @@
                     allowOutsideClick: () => !Swal.isLoading()
                 });
             });
+
+            // Fungsi Helper untuk Konfirmasi Submit
+            const setupSubmitConfirmation = (btnId, formId, title, text) => {
+                const btn = document.getElementById(btnId);
+                const form = document.getElementById(formId);
+
+                if (btn && form) {
+                    btn.addEventListener('click', function() {
+                        Swal.fire({
+                            title: title,
+                            text: text,
+                            icon: 'question',
+                            showCancelButton: true,
+                            confirmButtonText: 'Ya, Ajukan',
+                            cancelButtonText: 'Batal',
+                            customClass: {
+                                title: 'my-0 py-0',
+                                htmlContainer: 'py-0 my-0 fs-7',
+                                confirmButton: 'btn btn-sm btn-primary me-3',
+                                cancelButton: 'btn btn-sm btn-secondary'
+                            },
+                            buttonsStyling: false
+                        }).then((result) => {
+                            if (result.isConfirmed) form.submit();
+                        });
+                    });
+                }
+            };
+
+            // Terapkan konfirmasi pada tombol Ajukan (Baru) & Ajukan Validasi (Revisi)
+            setupSubmitConfirmation('btnSubmitSchedule', 'submitScheduleForm', 'Ajukan Jadwal?',
+                'Pastikan jadwal sudah final dan siap diajukan.');
+            setupSubmitConfirmation('btnResubmitSchedule', 'resubmitScheduleForm', 'Ajukan Validasi?',
+                'Jadwal revisi akan dikirim untuk divalidasi ulang.');
+
             // Toast Notification Logic
             const successToast = document.getElementById('successToast');
             if (successToast) {
@@ -349,359 +864,6 @@
                 new bootstrap.Toast(errorToast, {
                     delay: 3000
                 }).show();
-            }
-        });
-    </script>
-    <script>
-        document.addEventListener('DOMContentLoaded', function() {
-            var calendarEl = document.getElementById('calendar');
-            var containerEl = document.getElementById('external-events');
-
-            new FullCalendar.Draggable(containerEl, {
-                itemSelector: '.fc-event',
-                eventData: function(eventEl) {
-                    // Ambil data dari atribut HTML
-                    return {
-                        title: eventEl.querySelector('h6').innerText,
-                        duration: eventEl.getAttribute('data-duration'), // Durasi otomatis sesuai SKS!
-                        extendedProps: {
-                            distributionId: eventEl.getAttribute('data-distribution-id'),
-                            courseId: eventEl.getAttribute('data-course-id'),
-                            classId: eventEl.getAttribute('data-class-id'),
-                            lecturerId: eventEl.getAttribute('data-lecturer-id'),
-                            dosenName: eventEl.getAttribute('data-dosen'),
-                            className: eventEl.getAttribute('data-class-name')
-                        }
-                    };
-                }
-            });
-
-            // var isReadOnly = @json($isReadOnly ?? true);
-            // var canEdit = hasProdi && !isReadOnly;
-
-            var calendar = new FullCalendar.Calendar(calendarEl, {
-                schedulerLicenseKey: 'CC-Attribution-NonCommercial-NoDerivatives',
-                initialView: 'resourceTimelineDay',
-                headerToolbar: {
-                    left: 'prev,next today',
-                    center: 'title',
-                    right: 'resourceTimelineDay,resourceTimeGridDay'
-                },
-                resources: {!! json_encode($resources) !!},
-                events: "{{ route('jadwal-perkuliahan.get-events') }}",
-
-                views: {
-                    resourceTimeGridDay: {
-                        dayMinWidth: 250
-                    }
-                },
-
-                locale: 'id',
-
-                titleFormat: {
-                    year: 'numeric',
-                    month: 'long',
-                    day: 'numeric',
-                    weekday: 'long'
-                },
-
-                slotLabelFormat: {
-                    hour: '2-digit',
-                    minute: '2-digit',
-                    hour12: false,
-                    meridiem: false
-                },
-                eventTimeFormat: {
-                    hour: '2-digit',
-                    minute: '2-digit',
-                    hour12: false
-                },
-
-
-                slotMinTime: '08:00:00',
-                slotMaxTime: '21:00:00',
-                slotLabelInterval: '00:50:00',
-                slotDuration: '00:10:00',
-
-                editable: true,
-                droppable: true,
-                eventDurationEditable: true,
-
-                eventReceive: function(info) {
-                    var eventData = info.event;
-                    var resourceId = info.event.getResources()[0].id;
-                    var startTime = info.event.startStr;
-                    var props = eventData.extendedProps;
-
-                    document.getElementById('loadingIndicator').style.display = 'block';
-                    fetch("{{ route('jadwal-perkuliahan.store') }}", {
-                            method: 'POST',
-                            headers: {
-                                'Content-Type': 'application/json',
-                                'Accept': 'application/json',
-                                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')
-                                    .getAttribute('content')
-                            },
-                            body: JSON.stringify({
-                                course_distribution_id: props.distributionId,
-                                course_id: props.courseId,
-                                study_class_id: props.classId,
-                                user_id: props.lecturerId,
-                                room_id: resourceId,
-                                start_time: startTime
-                            })
-                        })
-                        .then(response => response.json())
-
-                        .then(data => {
-                            document.getElementById('loadingIndicator').style.display = 'none';
-                            if (data.success) {
-                                info.draggedEl.parentNode.removeChild(info.draggedEl);
-                                info.event.setProp('id', data.schedule_id);
-                                showJsToast('success', 'Jadwal Berhasil Disimpan!');
-                            } else {
-                                info.revert();
-                                showJsToast('error', 'Gagal: ' + data.message);
-                            }
-                        })
-                        .catch(error => {
-                            info.revert();
-                            document.getElementById('loadingIndicator').style.display = 'none';
-                            showJsToast('error', 'Terjadi kesalahan sistem.');
-                            console.error(error);
-                        });
-                },
-
-                eventDrop: function(info) {
-                    //showJsToast('success', 'Jadwal dipindah ke ' + info.event.startStr);
-                    var eventData = info.event;
-                    var resourceId = info.event.getResources()[0].id;
-                    var startTime = info.event.startStr;
-                    var scheduleId = info.event.id; // ID Jadwal yang ada di database
-
-                    document.getElementById('loadingIndicator').style.display = 'block';
-                    fetch(`/jadwal-perkuliahan/${scheduleId}`, { // Gunakan template literal
-                            method: 'PUT', // Atau PATCH, tergantung kebutuhan API Anda
-                            headers: {
-                                'Content-Type': 'application/json',
-                                'Accept': 'application/json',
-                                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')
-                                    .getAttribute('content')
-                            },
-                            body: JSON.stringify({
-                                room_id: resourceId,
-                                start_time: startTime
-                            })
-                        })
-                        .then(response => response.json())
-                        .then(data => {
-                            document.getElementById('loadingIndicator').style.display = 'none';
-                            if (data.success) {
-                                showJsToast('success', 'Jadwal Berhasil Dipindahkan!');
-                            } else {
-                                info.revert();
-                                showJsToast('error', 'Gagal: ' + data.message);
-                            }
-                        })
-                        .catch(error => {
-                            info.revert();
-                            document.getElementById('loadingIndicator').style.display = 'none';
-                            showJsToast('error', 'Terjadi kesalahan sistem.');
-                        });
-                },
-
-                eventResize: function(info) {
-                    var scheduleId = info.event.id;
-                    var newStart = info.event.startStr;
-                    var newEnd = info.event.endStr;
-
-                    // Tampilkan Loading
-                    document.getElementById('loadingIndicator').style.display = 'block';
-
-                    // Panggil API Resize
-                    fetch(`/jadwal-perkuliahan/${scheduleId}/resize`, {
-                            method: 'PATCH',
-                            headers: {
-                                'Content-Type': 'application/json',
-                                'Accept': 'application/json',
-                                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')
-                                    .getAttribute('content')
-                            },
-                            body: JSON.stringify({
-                                start_time: newStart,
-                                end_time: newEnd
-                            })
-                        })
-                        .then(response => response.json())
-                        .then(data => {
-                            document.getElementById('loadingIndicator').style.display = 'none';
-                            if (data.success) {
-                                showJsToast('success', 'Durasi Berhasil Diupdate!');
-                            } else {
-                                info.revert(); // Balikkan ukuran jika gagal
-                                showJsToast('error', data.message);
-                            }
-                        })
-                        .catch(error => {
-                            info.revert();
-                            document.getElementById('loadingIndicator').style.display = 'none';
-                            console.error(error);
-                            showJsToast('error', 'Terjadi kesalahan saat resize.');
-                        });
-                },
-
-                eventClick: function(info) {
-                    var eventObj = info.event;
-                    var props = eventObj.extendedProps;
-
-                    // Tampilkan SweetAlert dengan Detail Lengkap
-                    Swal.fire({
-                        title: 'Detail Perkuliahan',
-                        html: `
-                        <div class="text-start">
-                            <table class="table table-sm table-borderless fs-6">
-                                <tr>
-                                    <td class="fw-bold" style="width: 35%;">Mata Kuliah</td>
-                                    <td>: ${props.courseName} <br><small class="text-muted">(${props.courseCode})</small></td>
-                                </tr>
-                                <tr>
-                                    <td class="fw-bold">Kelas</td>
-                                    <td>: <span class="badge bg-label-primary">${props.fullClassName}</span></td>
-                                </tr>
-                                <tr>
-                                    <td class="fw-bold">Dosen</td>
-                                    <td>: ${props.dosenName}</td>
-                                </tr>
-                                <tr>
-                                    <td class="fw-bold">Waktu</td>
-                                    <td>: ${props.jam_mulai} - ${props.jam_selesai} WIB</td>
-                                </tr>
-                                <tr>
-                                    <td class="fw-bold">Durasi</td>
-                                    <td>: ${props.durasi} (${props.sks} SKS)</td>
-                                </tr>
-                                <tr>
-                                    <td class="fw-bold">Lokasi</td>
-                                    <td>: ${props.location}</td>
-                                </tr>
-                            </table>
-                        </div>
-                    `,
-                        icon: 'info',
-                        showCancelButton: true,
-                        showDenyButton: true, // Tombol Hapus kita pindah ke sini
-                        confirmButtonText: 'Tutup',
-                        denyButtonText: 'Hapus Jadwal', // Tombol Merah
-                        cancelButtonText: 'Edit (Geser)', // Opsional
-                        customClass: {
-                            title: 'my-0 py-0',
-                            htmlContainer: 'py-0 my-0',
-                            popup: 'text-start',
-                            confirmButton: 'btn btn-primary me-2 btn-sm',
-                            denyButton: 'btn btn-danger btn-sm',
-                            cancelButton: 'btn btn-secondary d-none btn-sm' // Sembunyikan tombol cancel jika tidak perlu
-                        },
-                        buttonsStyling: false
-                    }).then((result) => {
-                        // Jika tombol "Hapus Jadwal" diklik
-                        if (result.isDenied) {
-
-                            // Konfirmasi Ulang (Double Check)
-                            Swal.fire({
-                                title: 'Yakin hapus jadwal ini?',
-                                text: "Matkul akan dikembalikan ke daftar antrean.",
-                                icon: 'warning',
-                                showCancelButton: true,
-                                confirmButtonText: 'Ya, Hapus',
-                                cancelButtonText: 'Batal',
-                                customClass: {
-                                    title: 'my-0 py-0',
-                                    htmlContainer: 'py-0 my-0',
-                                    confirmButton: 'btn btn-primary btn-sm me-3',
-                                    cancelButton: 'btn btn-secondary btn-sm'
-                                },
-                                buttonsStyling: false
-                            }).then((resDelete) => {
-                                if (resDelete.isConfirmed) {
-                                    deleteSchedule(eventObj
-                                        .id); // Panggil fungsi delete yang sudah ada
-                                }
-                            });
-                        }
-                    });
-                },
-
-            });
-
-            calendar.render();
-
-        });
-
-        function deleteSchedule(id) {
-            // Tampilkan Loading (Optional)
-            document.getElementById('loadingIndicator').style.display = 'inline-block';
-
-            // URL Route: /jadwal-perkuliahan/{id}
-            // Kita harus buat URL manual karena di JS tidak bisa pakai route() parameter dinamis dengan mudah
-            let url = "{{ route('jadwal-perkuliahan.destroy', ':id') }}";
-            url = url.replace(':id', id);
-
-            fetch(url, {
-                    method: 'DELETE',
-                    headers: {
-                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
-                        'Accept': 'application/json',
-                        'Content-Type': 'application/json'
-                    }
-                })
-                .then(response => response.json())
-                .then(data => {
-                    if (data.success) {
-                        // Berhasil
-                        showJsToast('success', data.message);
-
-                        // PENTING: Reload halaman agar kartu matkul KEMBALI ke Sidebar
-                        // Kita beri jeda sedikit agar user sempat baca toast
-                        setTimeout(() => {
-                            location.reload();
-                        }, 1000);
-
-                    } else {
-                        showJsToast('error', data.message);
-                        document.getElementById('loadingIndicator').style.display = 'none';
-                    }
-                })
-                .catch(error => {
-                    console.error(error);
-                    showJsToast('error', 'Terjadi kesalahan sistem.');
-                    document.getElementById('loadingIndicator').style.display = 'none';
-                });
-        }
-
-        document.addEventListener('DOMContentLoaded', function() {
-            const btnSubmitCalendar = document.getElementById('btnSubmitSchedule');
-            if (btnSubmitCalendar) {
-                btnSubmitCalendar.addEventListener('click', function() {
-                    Swal.fire({
-                        title: 'Apakah Anda yakin?',
-                        text: "Data tidak bisa diubah setelah diajukan!",
-                        icon: 'warning',
-                        showCancelButton: true,
-                        confirmButtonText: 'Ya, Ajukan!',
-                        cancelButtonText: 'Batal',
-                        customClass: {
-                            title: 'my-0 py-0',
-                            htmlContainer: 'py-0 my-0',
-                            confirmButton: 'btn btn-sm btn-primary me-3',
-                            cancelButton: 'btn btn-sm btn-secondary'
-                        },
-                        buttonsStyling: false
-                    }).then((result) => {
-                        if (result.isConfirmed) {
-                            document.getElementById('submitScheduleForm').submit();
-                        }
-                    });
-                });
             }
         });
     </script>

@@ -43,11 +43,9 @@ class AnalisisController extends Controller
       if ($activePeriod) {
         $todaySchedules = Schedule::with(['course', 'studyClass.prodi', 'room'])
           ->where('day', $dayName)
-          ->whereHas('courseDistribution', function ($q) use ($activePeriod, $user) {
+          ->where('user_id', $user->id)
+          ->whereHas('courseDistribution', function ($q) use ($activePeriod) {
             $q->where('academic_period_id', $activePeriod->id);
-            $q->whereHas('teachingLecturers', function ($teacher) use ($user) {
-              $teacher->where('users.id', $user->id);
-            });
           })
           ->orderBy('time_slot_ids')
           ->take(3)
