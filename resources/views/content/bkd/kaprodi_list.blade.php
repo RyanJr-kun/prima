@@ -116,7 +116,7 @@
 
                     @if ($currentStatus == 'draft' || $currentStatus == 'rejected')
                         {{-- Form Submit (Tetap sama) --}}
-                        <form action="{{ route('prodi.bkd.submit') }}" method="POST"
+                        <form action="{{ route('bkd-dosen.submit') }}" method="POST"
                             onsubmit="return confirm('Ajukan dokumen rekapitulasi BKD ke Wadir?')">
                             @csrf
                             <input type="hidden" name="prodi_id" value="{{ $prodi->id }}">

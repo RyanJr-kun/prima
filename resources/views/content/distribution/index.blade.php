@@ -132,11 +132,7 @@
                         </form>
                     @else
                         {{-- Info Terkunci --}}
-
-                        <button class="btn btn-secondary" disabled>
-                            <i class='bx bx-lock-alt me-1'></i> Menungggu acc...
-                        </button>
-                        <div class="text-end small text-muted mt-1">
+                        {{-- <div class="text-end small text-muted mt-1">
                             Menunggu:
                             @switch($documentStatus)
                                 @case('submitted')
@@ -159,7 +155,7 @@
                                     Selesai
                                 @break
                             @endswitch
-                        </div>
+                        </div> --}}
                     @endif
                 </div>
             </div>

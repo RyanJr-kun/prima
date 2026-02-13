@@ -46,12 +46,10 @@ class WorkloadController extends Controller
         return view('content.bkd.dosen_view', compact('activePeriod', 'workload'));
     }
 
-    /**
-     * HALAMAN KAPRODI (Auto Sync semua dosen prodi saat dibuka)
-     */
     public function listDosenProdi()
     {
         $kaprodi = Auth::user();
+        /** @var User $user */
         $activePeriod = AcademicPeriod::where('is_active', true)->first();
         $prodi = Prodi::where('kaprodi_id', $kaprodi->id)->first();
 
@@ -140,6 +138,7 @@ class WorkloadController extends Controller
         // 2. LOGIC FILTER KEGIATAN BERDASARKAN PRODI
         $queryActivities = WorkloadActivitie::where('workload_id', $workload->id);
 
+        /** @var User $user */
         if (!$currentUser->hasRole('admin')) {
             // Jika Kaprodi, ambil data Prodi-nya
             $myProdi = Prodi::where('kaprodi_id', $currentUser->id)->first();
@@ -186,35 +185,9 @@ class WorkloadController extends Controller
         return view('content.bkd.kaprodi_edit', compact('activePeriod', 'targetDosen', 'workload', 'activities'));
     }
     // Method API untuk AJAX Chart
-    public function getDosenStats($userId)
-    {
-        $activePeriod = AcademicPeriod::where('is_active', true)->first();
-        $workload = Workload::where('user_id', $userId)
-            ->where('academic_period_id', $activePeriod->id)
-            ->with('activities')
-            ->first();
+    // Di WorkloadController.php
 
-        if (!$workload) {
-            return response()->json(['status' => 'empty']);
-        }
 
-        // Hitung Komposisi
-        $stats = [
-            'total_sks' => $workload->total_sks_pendidikan,
-            'pendidikan' => $workload->activities->where('category', 'pendidikan')->sum('sks_real'),
-            'penelitian' => $workload->total_sks_penelitian,
-            'pengabdian' => $workload->total_sks_pengabdian,
-            'detail_matkul' => $workload->activities->where('category', 'pendidikan')->map(function ($act) {
-                return [
-                    'name' => $act->activity_name,
-                    'sks' => $act->sks_real,
-                    'tugas' => ($act->is_uts_maker ? 'UTS ' : '') . ($act->is_uas_maker ? 'UAS' : '')
-                ];
-            })
-        ];
-
-        return response()->json(['status' => 'success', 'data' => $stats]);
-    }
 
     public function generate(Request $request)
     {
@@ -396,68 +369,160 @@ class WorkloadController extends Controller
 
 
 
-    public function rekapIndex(Request $request)
+    public function monitoringIndex(Request $request)
     {
         $activePeriod = AcademicPeriod::where('is_active', true)->first();
-        $user = Auth::user();
+        $query = User::with('roles')->orderBy('id', 'DESC');
 
-        // Default variable
-        /** @var User $user */
-        $prodiId = null;
-        $isKaprodi = $user->hasRole('kaprodi');
-        $dosens = collect([]);
-        $approvalDoc = null;
+        if ($request->filled('q')) {
+            $search = $request->q;
+            $query->where(function ($q) use ($search) {
+                $q->where('name', 'LIKE', "%{$search}%")
+                    ->orWhere('nidn', 'LIKE', "%{$search}%")
+                    ->orWhere('username', 'LIKE', "%{$search}%");
+            });
+        }
 
-        if ($isKaprodi) {
-            $myProdi = Prodi::where('kaprodi_id', $user->id)->first();
+        if ($request->filled('role')) {
+            $query->role($request->role);
+        }
 
-            if ($myProdi) {
-                $prodiId = $myProdi->id;
+        $data = $query->paginate(10);
+
+        return view('content.bkd.monitor_bkd', compact('data', 'activePeriod'));
+    }
+
+    public function getDosenStats($userId)
+    {
+        $activePeriod = AcademicPeriod::where('is_active', true)->first();
+
+        $workload = Workload::where('user_id', $userId)
+            ->where('academic_period_id', $activePeriod->id)
+            ->with('activities') // Ambil kegiatan yang sudah ada
+            ->first();
+
+        if (!$workload || $workload->activities->isEmpty()) {
+            return response()->json(['status' => 'empty']);
+        }
+
+        // Variabel untuk Chart
+        $sksTeori = 0;
+        $sksPraktik = 0;
+        $sksLapangan = 0;
+
+        // Variabel untuk List Summary
+        $prodiSummary = [];
+        $detailMatkul = [];
+
+        // 2. Loop Kegiatan BKD
+        foreach ($workload->activities as $act) {
+
+            // Hanya proses kategori pendidikan untuk Chart & Tabel Matkul
+            if ($act->category !== 'pendidikan') continue;
+
+            $sksJatah = $act->sks_real > 0 ? $act->sks_real : $act->sks_assigned;
+
+            // B. Logika Mencari Jenis Matkul (Teori/Praktik/Lapangan)
+            // Karena di tabel workload_activities tidak ada FK ke course, kita cari manual via nama
+            // atau kita asumsikan berdasarkan 'sks_load' (SKS Asli Matkul)
+
+            // Coba cari distribusi asli untuk mendapatkan metadata course (Teori/Praktik/nya)
+            $distribusiAsli = CourseDistribution::with('course', 'studyClass.prodi')
+                ->where('academic_period_id', $activePeriod->id)
+                ->get()
+                ->first(function ($d) use ($act) {
+                    // Pencocokan nama activity dengan nama generate-an distribusi
+                    // Ini "Best Effort" matching string
+                    $shiftLabel = ucfirst($d->studyClass->shift);
+                    $genName = $d->course->name . ' - Kelas ' . $d->studyClass->full_name . ' (' . $shiftLabel . ')';
+                    return $genName === $act->activity_name;
+                });
+
+            if ($distribusiAsli) {
+                $course = $distribusiAsli->course;
+                $sksTotalMatkul = $course->sks_teori + $course->sks_praktik + $course->sks_lapangan;
+                $sksTotalMatkul = $sksTotalMatkul > 0 ? $sksTotalMatkul : 1; // Prevent division by zero
+
+                // HITUNG PROPORSI CHART
+                // Contoh: Matkul 3 SKS (2 Teori, 1 Praktik). Dosen dapat jatah 3 SKS.
+                // Maka: Teori = (2/3) * 3 = 2. Praktik = (1/3) * 3 = 1.
+                $ratioTeori = $course->sks_teori / $sksTotalMatkul;
+                $ratioPraktik = $course->sks_praktik / $sksTotalMatkul;
+                $ratioLapangan = $course->sks_lapangan / $sksTotalMatkul;
+
+                $sksTeori += ($sksJatah * $ratioTeori);
+                $sksPraktik += ($sksJatah * $ratioPraktik);
+                $sksLapangan += ($sksJatah * $ratioLapangan);
+
+                // Data untuk Tabel Detail
+                $matkulName = $course->name; // Nama Matkul Murni
+                $className  = $distribusiAsli->studyClass->full_name; // Nama Kelas (TI-1A)
+                $shift      = strtolower($distribusiAsli->studyClass->shift); // pagi/malam
+                $kode       = $course->code;
+                $prodiName  = $distribusiAsli->studyClass->prodi->name ?? 'Umum';
+                $jenisLabel = $this->getJenisSksLabel($course);
             } else {
-                return back()->with('error', 'Akun Anda terdaftar sebagai Kaprodi, namun belum dipetakan ke Program Studi manapun.');
+                $parts = explode(' - Kelas ', $act->activity_name);
+
+                $matkulName = $parts[0]; // Bagian depan (Nama Matkul)
+                $fullClass  = $parts[1] ?? '-'; // Bagian belakang (Kelas + Shift)
+
+                // Deteksi Shift manual dari string
+                if (str_contains(strtolower($fullClass), 'malam')) {
+                    $shift = 'malam';
+                    $className = str_replace(['(Malam)', '()'], '', $fullClass);
+                } else {
+                    $shift = 'pagi'; // Default pagi
+                    $className = str_replace(['(Pagi)', '()'], '', $fullClass);
+                }
+
+                $className  = trim($className);
+                $sksTeori  += $sksJatah; // Default ke teori
+                $kode       = '-';
+                $prodiName  = 'Lainnya';
+                $jenisLabel = 'Manual';
             }
-        } else {
-            // Jika Admin/BAAK, ambil dari Input Filter
-            $prodiId = $request->input('prodi_id');
+
+            // C. Akumulasi Summary Prodi
+            if (!isset($prodiSummary[$prodiName])) {
+                $prodiSummary[$prodiName] = 0;
+            }
+            $prodiSummary[$prodiName] += $sksJatah;
+
+            // D. Push Data Tabel
+            $detailMatkul[] = [
+                'matkul'    => $matkulName, // Hanya Nama Matkul
+                'kode'      => $kode,
+                'kelas'     => $className,  // Hanya Nama Kelas (Misal: TI-1A)
+                'shift'     => $shift,      // 'pagi' atau 'malam' (untuk penentu warna badge)
+                'prodi'     => $prodiName,
+                'jenis'     => $jenisLabel,
+                'sks_total' => number_format($sksJatah, 2)
+            ];
         }
 
-        // 2. EKSEKUSI QUERY HANYA JIKA PRODI ID ADA
-        // (Kaprodi otomatis ada, Admin menunggu input)
-        if ($prodiId) {
-            $dosens = User::role('dosen')
-                ->whereHas('teachingDistributions', function ($qDist) use ($prodiId, $activePeriod) {
-                    $qDist->where('academic_period_id', $activePeriod->id ?? 0);
-                    $qDist->whereHas('studyClass', function ($qClass) use ($prodiId) {
-                        $qClass->where('prodi_id', $prodiId);
-                    });
-                })
-                ->with(['prodi', 'workloads' => function ($q) use ($activePeriod) {
-                    $q->where('academic_period_id', $activePeriod->id ?? 0);
-                }])
-                ->orderBy('name')
-                ->get();
+        return response()->json([
+            'status' => 'success',
+            'chart_data' => [
+                round($sksTeori, 2),
+                round($sksPraktik, 2),
+                round($sksLapangan, 2)
+            ],
+            'prodi_data' => $prodiSummary,
+            'detail_table' => $detailMatkul,
+            // Total SKS diambil langsung dari perhitungan controller BKD agar konsisten
+            'total_sks' => number_format($workload->total_sks_pendidikan, 2)
+        ]);
+    }
 
-            // Cek Dokumen Approval
-            if ($activePeriod) {
-                $approvalDoc = AprovalDocument::where([
-                    'academic_period_id' => $activePeriod->id,
-                    'prodi_id' => $prodiId,
-                    'type' => 'beban_kerja_dosen'
-                ])->first();
-            }
-        }
-
-        // 3. AMBIL LIST PRODI UNTUK DROPDOWN
-        $prodis = Prodi::orderBy('name')->get();
-
-        return view('content.bkd.admin_rekap', compact(
-            'activePeriod',
-            'dosens',
-            'prodis',
-            'prodiId',
-            'approvalDoc',
-            'isKaprodi'
-        ));
+    // Helper kecil untuk label jenis (taruh di paling bawah class)
+    private function getJenisSksLabel($course)
+    {
+        $labels = [];
+        if ($course->sks_teori > 0) $labels[] = 'T';
+        if ($course->sks_praktik > 0) $labels[] = 'P';
+        if ($course->sks_lapangan > 0) $labels[] = 'L';
+        return implode('/', $labels);
     }
 
     public function submit(Request $request)

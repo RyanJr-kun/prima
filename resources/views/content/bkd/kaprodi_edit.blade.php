@@ -224,7 +224,12 @@
                         <tr>
                             <td colspan="8" class="text-end fw-bold text-uppercase">Total Beban Kerja Pendidikan :</td>
                             <td colspan="2" class="text-center fw-bold fs-5 text-primary">
-                                {{ number_format($workload->total_sks_pendidikan, 2) }}
+                                @php
+                                    // Filter kategori pendidikan (jaga-jaga) lalu sum sks_real
+                                    $totalSksView = $activities->where('category', 'pendidikan')->sum('sks_real');
+                                @endphp
+
+                                {{ number_format($totalSksView, 2) }}
                             </td>
                         </tr>
                     </tfoot>

@@ -109,10 +109,15 @@
         <!-- User -->
         <li class="nav-item navbar-dropdown dropdown-user dropdown">
             <a class="nav-link dropdown-toggle hide-arrow p-0" href="javascript:void(0);" data-bs-toggle="dropdown">
-                <div class="avatar avatar-online">
-                    <span
-                        class="avatar-initial rounded-circle bg-label-primary">{{ substr(Auth::user()->name, 0, 2) }}</span>
-                </div>
+                @if (auth()->user()->img_user)
+                    <img src="{{ asset('storage/' . auth()->user()->avatars) }}" alt="Profile"
+                        class="avatar avatar-sm rounded-circle cursor-pointer">
+                @else
+                    <div class="avatar avatar-online">
+                        <span
+                            class="avatar-initial rounded-circle bg-label-primary">{{ substr(Auth::user()->name, 0, 2) }}</span>
+                    </div>
+                @endif
             </a>
             <ul class="dropdown-menu dropdown-menu-end">
                 <li>

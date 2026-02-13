@@ -1,7 +1,3 @@
-/**
- * Dashboard Analytics
- */
-
 'use strict';
 
 document.addEventListener('DOMContentLoaded', function (e) {
