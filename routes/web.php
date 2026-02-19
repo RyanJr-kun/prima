@@ -92,6 +92,21 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
 
     Route::middleware(['role:admin|baak|kaprodi'])->group(function () {
+        // kurikulum & matkul
+        Route::prefix('master')->name('master.')->group(function () {
+            Route::resource('kurikulum', KurikulumController::class)->except('show', 'edit', 'create');
+            Route::resource('mata-kuliah', CourseController::class)->except('show', 'edit', 'create');
+        });
+
+        Route::prefix('mata-kuliah')->name('mata-kuliah.')->group(function () {
+            Route::get('/template', [CourseController::class, 'downloadTemplate'])->name('template');
+            Route::post('/import', [CourseController::class, 'import'])->name('import');
+            Route::post('/sync-siakad', [CourseController::class, 'syncSiakad'])->name('sync-siakad');
+        });
+
+        Route::get('/ajax/get-curriculums-by-prodi/{prodiId}', [StudyClassController::class, 'getKurikulumByProdi']);
+        Route::post('kurikulum/sync-siakad', [KurikulumController::class, 'syncSiakad'])->name('kurikulums.sync-siakad');
+
         // Beban Kerja Dosen
         Route::prefix('bkd-dosen')->name('bkd-dosen.')->group(function () {
             Route::get('/list-dosen', [WorkloadController::class, 'listDosenProdi'])->name('list');
@@ -145,11 +160,10 @@ Route::middleware(['auth', 'verified'])->group(function () {
             Route::get('events', [AcademicCalendarController::class, 'getEvents'])->name('events');
         });
 
+
         // --- Data Master Resources ---
         Route::prefix('master')->name('master.')->group(function () {
-            Route::resource('kurikulum', KurikulumController::class)->except('show', 'edit', 'create');
             Route::resource('kelas', StudyClassController::class)->except('show', 'edit');
-            Route::resource('mata-kuliah', CourseController::class)->except('show', 'edit', 'create');
             Route::resource('program-studi', ProdiController::class)->except('show', 'edit', 'create');
             Route::resource('ruangan', RoomController::class)->except('show', 'edit', 'create');
             Route::resource('periode-akademik', AcademicPeriodController::class)->except('show', 'edit', 'create');
@@ -158,19 +172,12 @@ Route::middleware(['auth', 'verified'])->group(function () {
         // --- Helpers Master (Sync/Import/Ajax) ---
         Route::patch('/periode-akademik/{id}/set-active', [AcademicPeriodController::class, 'setActive'])->name('periode-akademik.set-active');
         Route::post('/study-classes/copy', [StudyClassController::class, 'copyFromPeriod'])->name('study-classes.copy');
-        Route::get('/ajax/get-curriculums-by-prodi/{prodiId}', [StudyClassController::class, 'getKurikulumByProdi']);
-        Route::post('kurikulum/sync-siakad', [KurikulumController::class, 'syncSiakad'])->name('kurikulums.sync-siakad');
+
 
         Route::prefix('kelas-perkuliahan')->name('kelas-perkuliahan.')->group(function () {
             Route::get('/template', [StudyClassController::class, 'downloadTemplate'])->name('template');
             Route::post('/import', [StudyClassController::class, 'import'])->name('import');
             Route::post('/sync-siakad', [StudyClassController::class, 'syncSiakad'])->name('sync-siakad');
-        });
-
-        Route::prefix('mata-kuliah')->name('mata-kuliah.')->group(function () {
-            Route::get('/template', [CourseController::class, 'downloadTemplate'])->name('template');
-            Route::post('/import', [CourseController::class, 'import'])->name('import');
-            Route::post('/sync-siakad', [CourseController::class, 'syncSiakad'])->name('sync-siakad');
         });
     });
 

@@ -23,7 +23,7 @@
         {
             "url": "/bkd-saya",
             "name": "Beban Kerja Dosen",
-            "icon": "menu-icon icon-base bx bx-edit",
+            "icon": "menu-icon icon-base bx bx-workload",
             "slug": "bkd.saya",
             "role": ["dosen"]
         },
@@ -89,7 +89,7 @@
             "name": "Kurikulum",
             "icon": "menu-icon icon-base bx bx-document-add-outline",
             "slug": "master.kurikulum.index",
-            "role": ["admin", "baak"]
+            "role": ["admin", "baak", "kaprodi"]
         },
         {
             "url": "master/ruangan",
@@ -110,7 +110,7 @@
             "name": "Mata Kuliah",
             "icon": "menu-icon icon-base bx bx-book-bookmark",
             "slug": "master.mata-kuliah.index",
-            "role": ["admin", "baak"]
+            "role": ["admin", "baak", "kaprodi"]
         },
         {
         "menuHeader": "Autentikasi",

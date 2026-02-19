@@ -2,6 +2,8 @@
 
 namespace App\Http\Controllers\Master;
 
+use App\Models\User;
+use Illuminate\Support\Facades\Auth;
 use App\Models\Prodi;
 use App\Models\Kurikulum;
 use Illuminate\Http\Request;
@@ -12,10 +14,36 @@ use Illuminate\Support\Facades\Storage;
 
 class KurikulumController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
-        $prodis = Prodi::all();
-        $kurikulums = Kurikulum::with('prodi')->get();
+        $user = Auth::user();
+
+        /** @var User $user */
+        $isKaprodi = $user->hasRole('kaprodi');
+        $managedProdiId = null;
+
+        if ($isKaprodi) {
+            $managedProdi = $user->managedProdi;
+            if ($managedProdi) {
+                $managedProdiId = $managedProdi->id;
+                $request->merge(['prodi_id' => $managedProdiId]);
+            }
+        }
+
+        $query = Kurikulum::with('prodi');
+
+        if ($request->filled('prodi_id')) {
+            $query->where('prodi_id', $request->prodi_id);
+        }
+
+        $kurikulums = $query->get();
+
+        if ($isKaprodi && $managedProdiId) {
+            $prodis = Prodi::where('id', $managedProdiId)->get();
+        } else {
+            $prodis = Prodi::all();
+        }
+
         return view('content.master.kurikulum.index', compact('kurikulums', 'prodis'));
     }
 

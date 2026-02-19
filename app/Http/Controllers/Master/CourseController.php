@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Master;
 
 use App\Models\Prodi;
 use App\Models\Course;
+use App\Models\User;
 use App\Models\Kurikulum;
 use Illuminate\Http\Request;
 use App\Imports\CoursesImport;
@@ -13,6 +14,7 @@ use App\Http\Controllers\Controller;
 use Maatwebsite\Excel\Facades\Excel;
 use App\Exports\CoursesTemplateExport;
 use Illuminate\Database\QueryException;
+use Illuminate\Support\Facades\Auth;
 
 class CourseController extends Controller
 {
@@ -34,7 +36,24 @@ class CourseController extends Controller
             'anatomy_bed'     => 'Anatomi & Bed Pasien',
         ];
 
-        $prodis = Prodi::all();
+        $user = Auth::user();
+        /** @var User $user */
+        $isKaprodi = $user->hasRole('kaprodi');
+        $managedProdiId = null;
+
+        if ($isKaprodi) {
+            $managedProdi = $user->managedProdi;
+            if ($managedProdi) {
+                $managedProdiId = $managedProdi->id;
+                $request->merge(['prodi_id' => $managedProdiId]);
+            }
+        }
+
+        if ($isKaprodi && $managedProdiId) {
+            $prodis = Prodi::where('id', $managedProdiId)->get();
+        } else {
+            $prodis = Prodi::all();
+        }
 
         $query = Course::with('kurikulum.prodi');
 
@@ -59,9 +78,13 @@ class CourseController extends Controller
 
         $courses = $query->get();
 
-        $kurikulums = Kurikulum::with('prodi')
-            ->where('is_active', true)
-            ->get();
+        $kurikulumQuery = Kurikulum::with('prodi')->where('is_active', true);
+
+        if ($isKaprodi && $managedProdiId) {
+            $kurikulumQuery->where('prodi_id', $managedProdiId);
+        }
+
+        $kurikulums = $kurikulumQuery->get();
 
         return view('content.master.courses.index', compact('courses', 'kurikulums', 'prodis', 'tags'));
     }
