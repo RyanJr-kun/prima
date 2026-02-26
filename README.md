@@ -7,9 +7,9 @@ Sistem ini dirancang untuk mendukung pengelolaan akademik secara
 terintegrasi dan efisien.
 
 ## ✨ Fitur Utama
-
--   📅 Manajemen Jadwal Perkuliahan\
+-   📚 Manajemen Distribusi Mata kuliah\
 -   📊 Pengelolaan Beban Kerja Dosen (BKD)\
+-   📅 Manajemen Jadwal Perkuliahan\
 -   ✅ Sistem Approval Dokumen Akademik\
 -   📧 Notifikasi Email Otomatis (Background Queue)
 
