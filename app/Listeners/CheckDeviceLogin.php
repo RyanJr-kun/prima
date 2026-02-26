@@ -2,9 +2,10 @@
 
 namespace App\Listeners;
 
+use App\Models\User;
+use App\Notifications\NewDeviceLogin;
 use Illuminate\Auth\Events\Login;
 use Illuminate\Support\Facades\DB;
-use App\Notifications\NewDeviceLogin;
 use Illuminate\Support\Facades\Request;
 
 class CheckDeviceLogin

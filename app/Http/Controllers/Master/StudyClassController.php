@@ -38,7 +38,7 @@ class StudyClassController extends Controller
             'prodi',
             'period'
         ])
-            ->select('study_classes.*') // Penting: Pilih kolom study_classes saja agar ID tidak tertimpa
+            ->select('study_classes.*')
             ->join('prodis', 'study_classes.prodi_id', '=', 'prodis.id') // Join ke tabel prodi
             ->where('study_classes.academic_period_id', $activePeriod->id ?? 0);
 
@@ -78,11 +78,6 @@ class StudyClassController extends Controller
         return view('content.master.classes.index', compact('classes', 'prodis', 'dosens', 'kurikulums', 'activePeriod', 'periods', 'angkatans'));
     }
 
-    public function create()
-    {
-        //
-    }
-
     public function store(Request $request)
     {
         $request->validate([
@@ -113,11 +108,6 @@ class StudyClassController extends Controller
         ]);
 
         return redirect()->route('master.kelas.index')->with('success', 'Kelas berhasil dibuat!');
-    }
-
-    public function edit(Request $request)
-    {
-        //
     }
 
     public function update(Request $request, $id)
@@ -160,52 +150,6 @@ class StudyClassController extends Controller
         }
     }
 
-
-    public function generate(Request $request)
-    {
-        $request->validate([
-            'source_period_id' => 'required|exists:academic_periods,id',
-            'target_period_id' => 'required|exists:academic_periods,id|different:source_period_id',
-        ]);
-
-        $previousClasses = StudyClass::with('prodi')
-            ->where('academic_period_id', $request->source_period_id)
-            ->get();
-
-        if ($previousClasses->isEmpty()) {
-            return back()->with('error', 'Tidak ada kelas di periode sumber.');
-        }
-
-        DB::beginTransaction();
-        try {
-            $count = 0;
-
-            foreach ($previousClasses as $class) {
-                $maxSemester = $class->prodi->lama_studi ?? 8;
-                if ($class->semester >= $maxSemester) {
-                    continue;
-                }
-                StudyClass::create([
-                    'academic_period_id' => $request->target_period_id,
-                    'semester'           => $class->semester + 1,
-                    'name'               => $class->name,
-                    'angkatan'           => $class->angkatan,
-                    'prodi_id'           => $class->prodi_id,
-                    'kurikulum_id'       => $class->kurikulum_id,
-                    'academic_advisor_id' => $class->academic_advisor_id,
-                    'total_students'     => $class->total_students,
-                ]);
-
-                $count++;
-            }
-
-            DB::commit();
-            return back()->with('success', "Sukses! Berhasil men-generate $count kelas untuk semester baru.");
-        } catch (\Exception $e) {
-            DB::rollBack();
-            return back()->with('error', 'Gagal generate kelas: ' . $e->getMessage());
-        }
-    }
     public function getKurikulumByProdi($prodiId)
     {
         $kurikulum = Kurikulum::where('prodi_id', $prodiId)

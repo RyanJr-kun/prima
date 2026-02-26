@@ -2,13 +2,11 @@
 
 namespace App\Services;
 
-use App\Models\User;
 use App\Models\Prodi;
 use App\Models\Course;
 use App\Models\Kurikulum;
 use App\Models\StudyClass;
 use App\Models\AcademicPeriod;
-use Illuminate\Support\Facades\Log;
 use Illuminate\Http\Client\Response;
 use Illuminate\Support\Facades\Http;
 
