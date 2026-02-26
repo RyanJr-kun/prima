@@ -89,14 +89,8 @@ class CourseController extends Controller
         return view('content.master.courses.index', compact('courses', 'kurikulums', 'prodis', 'tags'));
     }
 
-    public function create()
-    {
-        //
-    }
-
     public function store(Request $request)
     {
-        // Validasi Input SKS Pecahan
         $request->validate([
             'code'           => 'required|unique:courses,code',
             'name'           => 'required',
@@ -117,11 +111,6 @@ class CourseController extends Controller
 
         Course::create($data);
         return redirect()->route('master.mata-kuliah.index')->with('success', 'Mata Kuliah tersimpan!');
-    }
-
-    public function edit(Request $request)
-    {
-        //
     }
 
     public function update(Request $request, string $id)
@@ -204,7 +193,7 @@ class CourseController extends Controller
 
     public function syncSiakad(SiakadSyncService $service)
     {
-        $result = $service->syncCourses(); // Panggil method courses
+        $result = $service->syncCourses();
 
         if ($result['status']) {
             return back()->with('success', $result['message']);

@@ -5,13 +5,11 @@ namespace App\Http\Controllers\authentications;
 use App\Models\User;
 use Illuminate\Support\Arr;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
 use Spatie\Permission\Models\Role;
 use App\Http\Controllers\Controller;
 use Illuminate\Database\QueryException;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rule;
-use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Hash;
 
@@ -19,9 +17,10 @@ class UserController extends Controller
 {
     public function index(Request $request)
     {
-
+        // ambil user dari data terakhir
         $query = User::with('roles')->orderBy('id', 'DESC');
 
+        // filter pencarian name, nidn, username.
         if ($request->filled('q')) {
             $search = $request->q;
             $query->where(function ($q) use ($search) {
@@ -31,12 +30,13 @@ class UserController extends Controller
             });
         }
 
+        //filter select role
         if ($request->filled('role')) {
             $query->role($request->role);
         }
 
-        $data = $query->get();
-        $roles = Role::pluck('name', 'name')->all();
+        $data = $query->get(); // ambil semua data query
+        $roles = Role::pluck('name', 'name')->all(); // ambil semua data role
         return view('content.authentications.user', compact('data', 'roles'));
     }
 
@@ -49,12 +49,13 @@ class UserController extends Controller
             'email' => 'required|email|unique:users,email',
             'password' => 'required|same:confirm-password',
             'userRole' => 'required|array',
-            'signature_path' => 'nullable|image|mimes:png,webp|max:3072',
+            'signature_path' => 'nullable|image|mimes:png,webp,jpeg,jpg|max:3072',
             'status' => 'required|boolean',
         ]);
 
-        $input['password'] = Hash::make($input['password']);
+        $input['password'] = Hash::make($input['password']); // convert password ke code hash
 
+        // input ttd kalo ada
         if ($request->hasFile('signature_path')) {
             $input['signature_path'] = $request->file('signature_path')->store('signatures', 'public');
         }
@@ -62,17 +63,11 @@ class UserController extends Controller
         $user = User::create($input);
         $user->assignRole($request->input('userRole'));
 
-
         return redirect()->route('user.index')->with('success', 'User berhasil ditambahkan.');
     }
 
     public function update(Request $request, string $id)
     {
-        // Pastikan input kosong dikonversi menjadi null agar lolos validasi unique (nullable)
-        // if ($request->input('nidn') === '') {
-        //     $request->merge(['nidn' => null]);
-        // }
-
         $input = $request->validate([
             'name' => 'required',
             'username' => 'required|unique:users,username,' . $id,
@@ -80,18 +75,20 @@ class UserController extends Controller
             'email' => 'required|email|unique:users,email,' . $id,
             'password' => 'nullable|same:confirm-password',
             'userRole' => 'required|array',
-            'signature_path' => 'nullable|image|mimes:png,webp|max:3072',
+            'signature_path' => 'nullable|image|mimes:png,webp,jpeg,jpg|max:3072',
             'status' => 'required|boolean',
         ]);
 
+        // kalau kosong nggak usah di update
         if (!empty($input['password'])) {
             $input['password'] = Hash::make($input['password']);
         } else {
             $input = Arr::except($input, array('password'));
         }
 
-        $user = User::find($id);
+        $user = User::find($id); // cari user dengan id
 
+        // update kalau ttd di up atau diganti
         if ($request->hasFile('signature_path')) {
             if ($user->signature_path && Storage::disk('public')->exists($user->signature_path)) {
                 Storage::disk('public')->delete($user->signature_path);
@@ -110,9 +107,11 @@ class UserController extends Controller
 
     public function destroy(string $id)
     {
+        // coba dulu cari user dengan id
         try {
             $user = User::findOrFail($id);
 
+            // cari ttd user kalo ada lalu hapus dulu
             if ($user->signature_path && Storage::disk('public')->exists($user->signature_path)) {
                 Storage::disk('public')->delete($user->signature_path);
             }
@@ -123,6 +122,7 @@ class UserController extends Controller
                 ->with('success', 'User berhasil dihapus!');
         } catch (QueryException $e) {
 
+            // kalau gagal kembalikan ke view kirim status error
             if ($e->errorInfo[1] == 1451) {
                 return redirect()->route('user.index')
                     ->with('error', 'Gagal menghapus: Data User ini masih digunakan oleh data lain.');
@@ -135,22 +135,33 @@ class UserController extends Controller
 
     public function syncSiakad()
     {
+        // coba sinkronisasi
         try {
             $response = Http::withHeaders([
-                'Authorization' => 'Bearer TOKEN_RAHASIA_DARI_MAS_ANDRE',
-            ])->get('#link_api');
+                'Authorization' => 'Bearer #token', // token keamanan
+            ])->get('#link_api'); // link dari sistem luar
 
             /** @var \Illuminate\Http\Client\Response $response */
             if ($response->failed()) {
                 return back()->with('error', 'Gagal koneksi ke SIAKAD.');
             }
 
-            $dosenSiakad = $response->json();
+            $dosenSiakad = $response->json(); // format data masuk harus array
             $updatedCount = 0;
             $createdCount = 0;
 
+            /*  contoh output dari link sistem luar:
+                ]
+                    {
+                        "nidn": "06123456",
+                        "name": "Budi Santoso, M.Kom",
+                        "email": "budi@kampus.ac.id"
+                    },
+                    ...
+                ]
+            */
             foreach ($dosenSiakad as $dosen) {
-                $namaApi = trim($dosen['nama']);
+                $namaApi = trim($dosen['name']); // sesuaikan output dari api
                 $localUser = User::where('name', 'LIKE', $namaApi)->first();
 
                 if ($localUser) {
@@ -178,7 +189,7 @@ class UserController extends Controller
                         'name' => $namaApi,
                         'nidn' => $dosen['nidn'],
                         'email' => $dosen['email'] ?? str_replace(' ', '', strtolower($namaApi)) . '@poltekindonusa.ac.id',
-                        'password' => Hash::make('dosen123'),
+                        'password' => Hash::make('indonusa'), // password default
                         'role' => 'dosen',
                     ]);
                     $createdCount++;

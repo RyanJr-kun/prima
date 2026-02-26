@@ -255,8 +255,8 @@
                     <select name="shift" class="form-select select2" id="shift" required
                         data-placeholder="Pilih Shift">
                         <option value=""></option>
-                        <option value="pagi">Pagi (08.00 - 16.00) - Reguler 1</option>
-                        <option value="malam">Malam (17.00 - 20.00) - Reguler 2 & Karyawan</option>
+                        <option value="pagi">Reguler 1</option>
+                        <option value="malam">Reguler 2</option>
                     </select>
                 </div>
                 <div class="row">

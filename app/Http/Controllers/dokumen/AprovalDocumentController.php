@@ -17,8 +17,8 @@ class AprovalDocumentController extends Controller
 {
     public function index(Request $request)
     {
+        // filter periode aktif
         $periods = AcademicPeriod::orderBy('name', 'desc')->get();
-
         if ($request->has('period_id')) {
             $activePeriod = $periods->where('id', $request->period_id)->first();
         } else {
@@ -32,7 +32,6 @@ class AprovalDocumentController extends Controller
         $query = AprovalDocument::with(['prodi', 'academicPeriod', 'lastActionUser'])
             ->where('academic_period_id', $activePeriod->id);
 
-        // hak akses (siapa liat apa?)
         /** @var \App\Models\User $user */
         $user = Auth::user();
 
@@ -40,12 +39,15 @@ class AprovalDocumentController extends Controller
             $query->where('type', $request->type);
         }
 
+        // filter untuk role kaprodi
         if ($user->hasRole('kaprodi')) {
             $prodiId = $user->managedProdi->id ?? 0;
             $query->where(function ($q) use ($prodiId) {
                 $q->where('prodi_id', $prodiId)
                     ->orWhereNull('prodi_id'); // Dokumen Global (Kalender Akademik)
             });
+
+            // filter untuk role lain
         } elseif ($user->hasRole(['wadir1', 'wadir2', 'direktur'])) {
             $query->where('status', '!=', 'draft');
         } else {
@@ -61,36 +63,6 @@ class AprovalDocumentController extends Controller
             'activePeriod',
             'periods'
         ));
-    }
-
-    public function show($id)
-    {
-        //
-    }
-
-    public function create()
-    {
-        //
-    }
-
-    public function store(Request $request)
-    {
-        //
-    }
-
-    public function edit($id)
-    {
-        //
-    }
-
-    public function update(Request $request, $id)
-    {
-        //
-    }
-
-    public function destroy($id)
-    {
-        //
     }
 
     public function approve(Request $request, $id)

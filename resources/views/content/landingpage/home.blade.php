@@ -252,18 +252,17 @@
             <div class="row align-items-center">
                 <div class="col-lg-6 z-1" data-aos="fade-up">
                     <span class="stats-badge mb-4 d-inline-block fw-bold">
-                        <i class='bx bxs-graduation me-2'></i>SISTEM AKADEMIK V2.0
+                        <i class='bx bxs-graduation me-2'></i>PRIMA V1.0
                     </span>
                     <h1 class="display-4 mb-4 fw-extrabold">
-                        Manajemen Akademik <br>
+                        Manajemen Informasi <br>
                         <span
                             style="background: linear-gradient(135deg, #fff 0%, #696cff 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">
-                            Jauh Lebih Modern.
+                            Akademis
                         </span>
                     </h1>
                     <p class="lead mb-5 fs-5" style="max-width: 90%;">
-                        Otomatisasi penjadwalan, monitoring beban kerja dosen, dan distribusi mata kuliah dalam satu
-                        platform yang elegan dan responsif.
+                        PRIMA - Sistem Persiapan Informasi Manajemen Akademis.
                     </p>
                     <div class="d-flex gap-3 flex-wrap">
                         <a href="{{ route('login') }}" class="btn btn-primary btn-lg rounded-pill px-5 shadow-lg">

@@ -15,8 +15,6 @@ use App\Models\CourseDistribution;
 use App\Http\Controllers\Controller;
 use Maatwebsite\Excel\Facades\Excel;
 use Illuminate\Database\QueryException;
-use App\Imports\CourseDistributionImport;
-use App\Exports\CourseDistributionTemplateExport;
 use App\Models\AprovalDocument;
 use Illuminate\Support\Facades\Auth;
 use App\Notifications\DocumentActionNotification;
@@ -30,7 +28,7 @@ class DistributionController extends Controller
         $user = Auth::user();
         $periods = AcademicPeriod::orderBy('name', 'desc')->get();
 
-        // 1. Tentukan Periode Aktif
+        // Periode Aktif
         if ($request->has('period_id')) {
             $activePeriod = $periods->find($request->period_id);
         } else {
@@ -45,16 +43,14 @@ class DistributionController extends Controller
         $managedProdiId = null;
 
         if ($isKaprodi) {
-            // Asumsi relasi managedProdi ada di Model User
             $managedProdi = $user->managedProdi;
             if ($managedProdi) {
                 $managedProdiId = $managedProdi->id;
-                // Paksa request untuk menggunakan Prodi si Kaprodi
                 $request->merge(['prodi_id' => $managedProdiId]);
             }
         }
 
-        // 3. Query Data Distribusi
+        // Query Data Distribusi
         $query = CourseDistribution::query()
             ->with([
                 'studyClass.prodi',
@@ -137,13 +133,12 @@ class DistributionController extends Controller
 
     public function store(Request $request)
     {
-        // 1. Validasi Input (Perhatikan study_class_ids harus array)
         $request->validate([
-            'study_class_ids'   => 'required|array',             // Wajib Array
-            'study_class_ids.*' => 'exists:study_classes,id',    // Cek tiap item valid
+            'study_class_ids'   => 'required|array',
+            'study_class_ids.*' => 'exists:study_classes,id',
             'course_id'         => 'required|exists:courses,id',
-            'teaching_ids'      => 'nullable|array',             // Array Dosen Pengajar
-            'pddikti_ids'       => 'nullable|array',             // Array Dosen PDDIKTI
+            'teaching_ids'      => 'nullable|array',
+            'pddikti_ids'       => 'nullable|array',
             'referensi'         => 'nullable|string',
             'luaran'            => 'nullable|string',
         ]);
@@ -159,10 +154,9 @@ class DistributionController extends Controller
         $skippedCount = 0;
 
         try {
-            // 2. LOOPING SETIAP KELAS YANG DIPILIH
             foreach ($request->study_class_ids as $classId) {
 
-                // A. Cek Duplikasi (Agar tidak double matkul di kelas yg sama)
+                // Cek Duplikasi (Agar tidak double matkul di kelas yg sama)
                 $exists = CourseDistribution::where([
                     'academic_period_id' => $activePeriod->id,
                     'study_class_id'     => $classId,
@@ -174,17 +168,16 @@ class DistributionController extends Controller
                     continue; // Lewati kelas ini jika sudah ada
                 }
 
-                // B. Buat Data Distribusi Utama
+                // Buat Data Distribusi Utama
                 $dist = CourseDistribution::create([
                     'academic_period_id' => $activePeriod->id,
                     'study_class_id'     => $classId,
                     'course_id'          => $request->course_id,
                     'referensi'          => $request->referensi,
                     'luaran'             => $request->luaran,
-                    // 'user_id' dihapus atau dibiarkan null jika kita full pakai pivot
                 ]);
 
-                // C. Simpan Dosen ke Pivot Table
+                // Simpan Dosen ke Pivot Table
                 // 1. Dosen Pengajar (Real Teaching)
                 if ($request->teaching_ids) {
                     foreach ($request->teaching_ids as $uid) {
@@ -195,8 +188,6 @@ class DistributionController extends Controller
                 // 2. Dosen Pelapor (PDDIKTI)
                 if ($request->pddikti_ids) {
                     foreach ($request->pddikti_ids as $uid) {
-                        // Gunakan try-catch atau syncWithoutDetaching untuk hindari error unique constraint
-                        // jika dosen yg sama dipilih sbg pengajar & pelapor (biasanya boleh)
                         try {
                             $dist->pddiktiLecturers()->attach($uid, ['category' => 'pddikti_reporting']);
                         } catch (\Exception $e) {
@@ -210,7 +201,7 @@ class DistributionController extends Controller
 
             DB::commit();
 
-            // 3. Feedback ke User
+            // Feedback ke User
             if ($successCount == 0 && $skippedCount > 0) {
                 return back()->with('error', 'Semua data gagal ditambahkan karena mata kuliah tersebut sudah ada di semua kelas yang dipilih.');
             }
@@ -248,17 +239,14 @@ class DistributionController extends Controller
             $newClassId = $request->study_class_ids[0];
 
             $dist->update([
-                'study_class_id' => $newClassId, // Bisa pindah kelas
+                'study_class_id' => $newClassId,
                 'course_id'      => $request->course_id,
                 'referensi'      => $request->referensi,
                 'luaran'         => $request->luaran,
             ]);
 
-            // Sync Pivot Dosen (Pakai helper sync yang sudah ada atau manual)
-            // Hapus lama
             $dist->allLecturers()->detach();
 
-            // Pasang Baru
             if ($request->teaching_ids) {
                 foreach ($request->teaching_ids as $uid) {
                     $dist->teachingLecturers()->attach($uid, ['category' => 'real_teaching']);
@@ -289,6 +277,7 @@ class DistributionController extends Controller
                 $dist->teachingLecturers()->attach($uid, ['category' => 'real_teaching']);
             }
         }
+
         // Pasang Dosen PDDIKTI
         if ($request->pddikti_ids) {
             foreach ($request->pddikti_ids as $uid) {
@@ -392,28 +381,6 @@ class DistributionController extends Controller
             ->get();
 
         return response()->json($courses);
-    }
-
-    public function downloadTemplate()
-    {
-        return Excel::download(new CourseDistributionTemplateExport, 'template_distribusi.xlsx');
-    }
-
-    public function import(Request $request)
-    {
-        $request->validate([
-            'file' => 'required|mimes:xlsx,xls',
-            'study_class_id' => 'required|exists:study_classes,id',
-        ]);
-
-        set_time_limit(300);
-
-        try {
-            Excel::import(new CourseDistributionImport($request->study_class_id), $request->file('file'));
-            return back()->with('success', 'Import Berhasil!');
-        } catch (\Exception $e) {
-            return back()->with('error', 'Gagal: ' . $e->getMessage());
-        }
     }
 
     public function generate(Request $request)

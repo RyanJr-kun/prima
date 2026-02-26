@@ -48,8 +48,8 @@ class WorkloadController extends Controller
 
     public function listDosenProdi()
     {
+        /** @var \App\Models\User $kaprodi */
         $kaprodi = Auth::user();
-        /** @var User $user */
         $activePeriod = AcademicPeriod::where('is_active', true)->first();
         $prodi = Prodi::where('kaprodi_id', $kaprodi->id)->first();
 
@@ -73,7 +73,6 @@ class WorkloadController extends Controller
                 ->exists();
 
             if (!$exists) {
-                // Generate diam-diam
                 $this->processGeneration($activePeriod->id, $uid);
             }
         }
@@ -129,75 +128,56 @@ class WorkloadController extends Controller
         $targetDosen = User::findOrFail($userId);
         $currentUser = Auth::user();
 
-        // 1. Pastikan Header Workload Ada
         $workload = Workload::firstOrCreate(
             ['academic_period_id' => $activePeriod->id, 'user_id' => $userId],
             ['total_sks_pendidikan' => 0]
         );
 
-        // 2. LOGIC FILTER KEGIATAN BERDASARKAN PRODI
         $queryActivities = WorkloadActivitie::where('workload_id', $workload->id);
 
-        /** @var User $user */
+        /** @var \App\Models\User $currentUser */
         if (!$currentUser->hasRole('admin')) {
-            // Jika Kaprodi, ambil data Prodi-nya
             $myProdi = Prodi::where('kaprodi_id', $currentUser->id)->first();
 
             if (!$myProdi) {
                 return back()->with('error', 'Akses Ditolak. Anda bukan Kaprodi.');
             }
 
-            // A. Cari Daftar Mata Kuliah (Distribusi) yang Valid untuk Prodi Kaprodi ini
-            // Logic ini meniru cara 'processGeneration' membuat nama activity
             $validActivityNames = \App\Models\CourseDistribution::query()
                 ->where('academic_period_id', $activePeriod->id)
-                // FILTER KUNCI: Hanya ambil kelas yang prodi_id nya sama dengan Kaprodi
                 ->whereHas('studyClass', function ($q) use ($myProdi) {
                     $q->where('prodi_id', $myProdi->id);
                 })
-                // Filter Dosen Target
                 ->whereHas('teachingLecturers', function ($q) use ($userId) {
                     $q->where('users.id', $userId);
                 })
                 ->with(['course', 'studyClass'])
                 ->get()
                 ->map(function ($dist) {
-                    // Generate Nama Activity yang Sama Persis dengan processGeneration
                     $shiftLabel = ucfirst($dist->studyClass->shift);
                     return $dist->course->name . ' - Kelas ' . $dist->studyClass->full_name . ' (' . $shiftLabel . ')';
                 })
                 ->toArray();
 
-            // B. Terapkan Filter ke Query
-            // Hanya tampilkan kegiatan yang namanya ada dalam daftar valid di atas
             $queryActivities->whereIn('activity_name', $validActivityNames);
         }
 
-        // 3. Eksekusi Query
         $activities = $queryActivities->get();
 
-        // Validasi Tambahan: Jika kosong, mungkin dosen ini memang tidak mengajar di prodi kaprodi tersebut
         if ($activities->isEmpty() && !$currentUser->hasRole('admin')) {
-            // Cek apakah memang tidak ada jadwal atau belum di-generate
-            // Opsional: Bisa return back with warning, atau biarkan tampil kosong
+            //
         }
 
         return view('content.bkd.kaprodi_edit', compact('activePeriod', 'targetDosen', 'workload', 'activities'));
     }
-    // Method API untuk AJAX Chart
-    // Di WorkloadController.php
-
-
 
     public function generate(Request $request)
     {
         $activePeriod = AcademicPeriod::where('is_active', true)->first();
         if (!$activePeriod) return back()->with('error', 'Periode tidak aktif.');
 
-        // Support untuk Kaprodi men-generate punya orang lain
         $targetUserId = $request->input('user_id', Auth::id());
 
-        // Validasi akses sederhana
         if ($targetUserId != Auth::id() && !Auth::user()->hasRole(['kaprodi', 'admin'])) {
             return back()->with('error', 'Anda tidak memiliki akses.');
         }
@@ -367,8 +347,6 @@ class WorkloadController extends Controller
         }
     }
 
-
-
     public function monitoringIndex(Request $request)
     {
         $activePeriod = AcademicPeriod::where('is_active', true)->first();
@@ -515,15 +493,7 @@ class WorkloadController extends Controller
         ]);
     }
 
-    // Helper kecil untuk label jenis (taruh di paling bawah class)
-    private function getJenisSksLabel($course)
-    {
-        $labels = [];
-        if ($course->sks_teori > 0) $labels[] = 'T';
-        if ($course->sks_praktik > 0) $labels[] = 'P';
-        if ($course->sks_lapangan > 0) $labels[] = 'L';
-        return implode('/', $labels);
-    }
+
 
     public function submit(Request $request)
     {
@@ -572,8 +542,6 @@ class WorkloadController extends Controller
         return back()->with('success', 'Dokumen Rekap BKD berhasil diajukan!');
     }
 
-    // Tambahkan di WorkloadController.php
-
     public function showDoc($id)
     {
         $doc = AprovalDocument::with(['prodi', 'academicPeriod'])->findOrFail($id);
@@ -594,9 +562,7 @@ class WorkloadController extends Controller
         return $pdf->stream('Laporan_BKD_' . $doc->prodi->code . '.pdf');
     }
 
-    /**
-     * Helper untuk menstruktur data agar sesuai gambar tabel
-     */
+    // Helper untuk menstruktur data agar sesuai gambar tabel
     private function prepareReportData($doc)
     {
         $validClassNames = StudyClass::with('prodi')
@@ -699,5 +665,15 @@ class WorkloadController extends Controller
         usort($finalData, fn($a, $b) => strcmp($a['user']->name, $b['user']->name));
 
         return $finalData;
+    }
+
+    // Helper kecil untuk label jenis (taruh di paling bawah class)
+    private function getJenisSksLabel($course)
+    {
+        $labels = [];
+        if ($course->sks_teori > 0) $labels[] = 'T';
+        if ($course->sks_praktik > 0) $labels[] = 'P';
+        if ($course->sks_lapangan > 0) $labels[] = 'L';
+        return implode('/', $labels);
     }
 }

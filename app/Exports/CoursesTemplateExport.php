@@ -12,7 +12,7 @@ class CoursesTemplateExport implements WithMultipleSheets
             // Sheet 1: Template Kosong (Input Data)
             new CoursesDataSheet(),
 
-            // Sheet 2: Contekan Tags Fasilitas
+            // Sheet 2: Referensi Tags Fasilitas
             new FacilitiesReferenceSheet(),
         ];
     }

@@ -73,11 +73,6 @@ class KurikulumController extends Controller
         return redirect()->route('master.kurikulum.index')->with('success', 'Kurikulum berhasil disimpan');
     }
 
-    public function edit($id)
-    {
-        // Tidak digunakan karena edit menggunakan Offcanvas/Modal di index
-    }
-
     public function update(Request $request, $id)
     {
         $kurikulum = Kurikulum::findOrFail($id);

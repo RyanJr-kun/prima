@@ -24,11 +24,6 @@ class ProdiController extends Controller
         return view('content.master.prodi.index', compact('prodis', 'dosens'));
     }
 
-    public function create()
-    {
-        //
-    }
-
     public function store(Request $request)
     {
         $request->validate([
@@ -42,16 +37,6 @@ class ProdiController extends Controller
         Prodi::create($request->all());
 
         return redirect()->route('master.program-studi.index')->with('success', 'Prodi berhasil disimpan!');
-    }
-
-    public function show(string $id)
-    {
-        //
-    }
-
-    public function edit(string $id)
-    {
-        //
     }
 
     public function update(Request $request, string $id)

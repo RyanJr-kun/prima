@@ -28,7 +28,7 @@ class PengaturanController extends Controller
       'username' => 'required|string|unique:users,username,' . $user->id,
       'nidn' => 'nullable|string',
       'upload' => 'nullable|image|mimes:jpg,jpeg,png|max:1024',
-      'signature' => 'nullable|image|mimes:png|max:1024',
+      'signature' => 'nullable|image|mimes:png,jpeg,jpg,webp|max:1024',
     ]);
 
     $user->name = $request->name;

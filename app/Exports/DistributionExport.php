@@ -23,7 +23,7 @@ class DistributionExport implements WithMultipleSheets
             // Sheet 1: Data Distribusi (Yang mau diedit)
             new DistributionDataSheet($this->periodId, $this->prodiId, $this->semester),
 
-            // Sheet 2: Kamus Data Dosen (Untuk Contekkan)
+            // Sheet 2: Referensi Data Dosen
             new LecturerReferenceSheet(),
         ];
     }

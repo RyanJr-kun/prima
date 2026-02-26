@@ -26,12 +26,14 @@ class MyScheduleController extends Controller
                 'prodis' => []
             ]);
         }
+
         $query = Schedule::with(['course', 'studyClass.prodi', 'room', 'lecturer'])
             ->where('user_id', $user->id)
             ->whereHas('courseDistribution', function ($q) use ($activePeriod) {
                 $q->where('academic_period_id', $activePeriod->id);
             });
 
+        // filter pencarian 
         if ($request->filled('q')) {
             $search = $request->q;
             $query->where(function ($q) use ($search) {
@@ -47,11 +49,12 @@ class MyScheduleController extends Controller
             });
         }
 
-        // 4. Filter Prodi
+        // Filter Prodi
         if ($request->filled('prodi_id')) {
             $query->whereHas('studyClass', fn($q) => $q->where('prodi_id', $request->prodi_id));
         }
 
+        //filter hari
         $schedules = $query
             ->orderByRaw("FIELD(day, 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday')")
             ->get();

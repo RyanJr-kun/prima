@@ -13,6 +13,7 @@ class StudyClassTemplateExport implements FromArray, WithHeadings, ShouldAutoSiz
     public function array(): array
     {
         return [
+            // contoh output
             ['1', 'A', 'TRPL', '2024', '30', '1', 'pagi', 'software', 'Wachid'],
             ['2', 'B', 'TRPL', '2024', '28', '1', 'pagi', 'software', 'Canggih'],
             ['3', 'A', 'TRPL', '2023', '32', '3', 'malam', 'software', 'Dwi'],

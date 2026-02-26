@@ -35,8 +35,8 @@
                         <div class="mb-6">
                             <label for="username" class="form-label">Username / NIM / NIDN</label>
 
-                            <input type="text" class="form-control" id="username" name="username"
-                                placeholder="Masukkan NIM atau NIDN" value="{{ old('username') }}" autocomplete="username"
+                            <input type="text" class="form-control" id="username" name="login"
+                                placeholder="Masukkan NIM atau NIDN" value="{{ old('login') }}" autocomplete="login"
                                 autofocus required />
                         </div>
 

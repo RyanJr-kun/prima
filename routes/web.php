@@ -2,7 +2,6 @@
 
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\PublicController;
-use App\Http\Controllers\BookingController;
 use App\Http\Controllers\Master\RoomController;
 use App\Http\Controllers\RoomBookingController;
 use App\Http\Controllers\Master\ProdiController;
@@ -75,11 +74,11 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::get('/api/dosen-stats/{userId}', [WorkloadController::class, 'getDosenStats'])->name('api.dosen-stats');
 
         // Approval Document System (Global)
-        Route::resource('documents', AprovalDocumentController::class)->only(['index', 'show']);
+        Route::get('documents', [AprovalDocumentController::class, 'index'])->name('documents.index');
         Route::prefix('documents')->name('documents.')->group(function () {
             Route::post('/{id}/approve', [AprovalDocumentController::class, 'approve'])->name('approve');
             Route::post('/{id}/reject', [AprovalDocumentController::class, 'reject'])->name('reject');
-            Route::post('/submit', [AprovalDocumentController::class, 'submit'])->name('submit'); // Submit Dokumen Approval
+            Route::post('/submit', [AprovalDocumentController::class, 'submit'])->name('submit');
         });
 
         Route::get('distribusi-mata-kuliah/doc/{document}', [DistributionController::class, 'show'])->name('distribusi-mata-kuliah.show-doc');
@@ -136,7 +135,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
     /*
     |--------------------------------------------------------------------------
-    | 5. ADMIN & BAAK AREA (Data Master & Penjadwalan Global)
+    | ADMIN & BAAK AREA
     |--------------------------------------------------------------------------
     */
     Route::middleware(['role:admin|baak'])->group(function () {
@@ -156,7 +155,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
         // --- Kalender Akademik ---
         Route::resource('kalender-akademik', AcademicCalendarController::class)->except('show', 'edit', 'create');
         Route::prefix('kalender-akademik')->name('kalender-akademik.')->group(function () {
-            Route::post('submit', [AcademicCalendarController::class, 'submitValidation'])->name('submit');
+            Route::post('submit', [AcademicCalendarController::class, 'submitCalendar'])->name('submit');
             Route::get('events', [AcademicCalendarController::class, 'getEvents'])->name('events');
         });
 

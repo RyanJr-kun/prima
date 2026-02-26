@@ -14,20 +14,13 @@ class RoomController extends Controller
     public function index(Request $request)
     {
         $tags = [
-            // UMUM
             'general'         => 'Umum (AC, Proyektor, Board)',
-
-            // IT & TEKNIK
             'computer'        => 'Komputer (PC / Lab Kom)',
             'network_iot'     => 'Jaringan, Sensor & IoT',
             'automotive'      => 'Mesin & Otomotif',
             'broadcasting'    => 'Studio, Kamera & Audio',
-
-            // BISNIS & PERHOTELAN
             'retail_sim'      => 'Simulasi Ritel & Kasir',
             'kitchen_resto'   => 'Dapur, Bar & Resto',
-
-            // KESEHATAN (MIK/TLM/FARMASI)
             'medical_record'  => 'Rekam Medis (Rak/Berkas)',
             'microscope'      => 'Mikroskop & Biologi',
             'chemistry'       => 'Kimia & Lemari Asam',
@@ -61,8 +54,6 @@ class RoomController extends Controller
         return view('content.master.room.index', compact('rooms', 'prodis', 'tags'));
     }
 
-    public function create() {}
-
     public function store(Request $request)
     {
         $request->validate([
@@ -74,11 +65,9 @@ class RoomController extends Controller
             'building'      => 'nullable|string',
             'floor'         => 'required|numeric',
 
-            // Validasi Array Prodi (Pivot)
             'prodi_ids'     => 'nullable|array',
             'prodi_ids.*'   => 'exists:prodis,id',
 
-            // Validasi Array Tags (JSON)
             'facility_tags'   => 'nullable|array',
             'facility_tags.*' => 'string',
         ]);
@@ -97,13 +86,6 @@ class RoomController extends Controller
 
         return redirect()->route('master.ruangan.index')->with('success', 'Ruangan berhasil dibuat');
     }
-
-    public function show(string $id)
-    {
-        //
-    }
-
-    public function edit(Request $request, string $id) {}
 
     public function update(Request $request, string $id)
     {

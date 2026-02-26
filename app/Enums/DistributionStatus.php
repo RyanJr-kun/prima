@@ -12,10 +12,10 @@ enum DistributionStatus: string
     case APPROVED_DIREKTUR = 'approved_direktur';
     case REJECTED = 'rejected';
 
-    // Helper untuk label warna di tampilan nanti
+    // Helper untuk label warna di view
     public function color(): string
     {
-        return match($this) {
+        return match ($this) {
             self::DRAFT => 'secondary',
             self::VERIFIED_KAPRODI => 'info',
             self::VERIFIED_WADIR1 => 'primary',

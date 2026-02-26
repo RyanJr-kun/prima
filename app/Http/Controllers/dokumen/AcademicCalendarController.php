@@ -14,9 +14,6 @@ use App\Notifications\DocumentActionNotification;
 
 class AcademicCalendarController extends Controller
 {
-    /**
-     * Display a listing of the resource.
-     */
     public function index()
     {
         $activePeriod = AcademicPeriod::where('is_active', true)->first();
@@ -71,12 +68,8 @@ class AcademicCalendarController extends Controller
         return response()->json($events);
     }
 
-    /**
-     * Store a newly created resource in storage.
-     */
     public function store(Request $request)
     {
-        // Validasi (Otomatis redirect kembali jika gagal)
         $request->validate([
             'name' => 'required|string|max:255',
             'start_date' => 'required|date',
@@ -97,10 +90,8 @@ class AcademicCalendarController extends Controller
                 'description' => $request->description,
             ]);
 
-            // UBAH DI SINI: Redirect Back dengan Pesan Sukses
             return redirect()->back()->with('success', 'Agenda berhasil disimpan!');
         } catch (\Exception $e) {
-            // Redirect Back dengan Pesan Error
             return redirect()->back()->with('error', 'Terjadi kesalahan: ' . $e->getMessage());
         }
     }
@@ -110,42 +101,36 @@ class AcademicCalendarController extends Controller
         $event = AcademicCalendar::findOrFail($id);
         $event->delete();
 
-        // UBAH DI SINI: Redirect Back
         return redirect()->back()->with('success', 'Agenda berhasil dihapus!');
     }
 
-    public function submitValidation(Request $request)
+    public function submitCalendar(Request $request)
     {
         $activePeriodId = AcademicPeriod::where('is_active', true)->value('id');
 
-        // 1. Validasi Isi Kalender
+        // Validasi Isi Kalender
         $count = AcademicCalendar::where('academic_period_id', $activePeriodId)->count();
         if ($count == 0) {
             return back()->with('error', 'Tidak bisa mengajukan! Data kalender masih kosong.');
         }
 
-        // 2. Simpan/Update Dokumen Approval
-        // Simpan ke variabel $doc untuk dikirim ke notifikasi
         $doc = AprovalDocument::updateOrCreate(
             [
                 'academic_period_id' => $activePeriodId,
                 'type' => 'kalender_akademik',
-                'prodi_id' => null, // Global Campus Document
+                'prodi_id' => null,
             ],
             [
-                'status' => 'submitted', // Status naik ke Submitted
-                'action_by_user_id' => Auth::id(), // Siapa yang mengajukan
-                'feedback_message' => null // Reset feedback revisi jika ada
+                'status' => 'submitted',
+                'action_by_user_id' => Auth::id(),
+                'feedback_message' => null
             ]
         );
 
-        // 3. LOGIC NOTIFIKASI KE WADIR 1
+        // NOTIFIKASI KE WADIR 1
         $currentUser = Auth::user();
-
-        // Cari user dengan role 'wadir1'
         $wadir1 = User::role('wadir1')->first();
 
-        // Kirim notif jika Wadir 1 ditemukan & bukan user yang sedang submit
         if ($wadir1 && $wadir1->id !== $currentUser->id) {
             $wadir1->notify(new DocumentActionNotification(
                 $doc,
@@ -157,9 +142,6 @@ class AcademicCalendarController extends Controller
         return back()->with('success', 'Kalender Akademik berhasil diajukan ke Wadir 1!');
     }
 
-    /**
-     * Display the specified resource.
-     */
     public function show($id)
     {
         $doc = AprovalDocument::with(['academicPeriod', 'lastActionUser'])->findOrFail($id);
@@ -170,17 +152,6 @@ class AcademicCalendarController extends Controller
         return view('content.calendar.show', compact('doc', 'events'));
     }
 
-    /**
-     * Show the form for editing the specified resource.
-     */
-    public function edit(string $id)
-    {
-        //
-    }
-
-    /**
-     * Update the specified resource in storage.
-     */
     public function update(Request $request, $id)
     {
         $request->validate([
@@ -206,14 +177,6 @@ class AcademicCalendarController extends Controller
         } catch (\Exception $e) {
             return redirect()->back()->with('error', 'Gagal update: ' . $e->getMessage());
         }
-    }
-
-    /**
-     * Show the form for creating a new resource.
-     */
-    public function create()
-    {
-        //
     }
 
     public function printPdf($id)

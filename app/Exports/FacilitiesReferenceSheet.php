@@ -13,7 +13,7 @@ class FacilitiesReferenceSheet implements FromArray, WithHeadings, ShouldAutoSiz
 {
     public function title(): string
     {
-        return 'KODE FASILITAS (REF)';
+        return 'KODE FASILITAS (REF)'; // nama sheet
     }
 
     public function headings(): array
@@ -26,7 +26,7 @@ class FacilitiesReferenceSheet implements FromArray, WithHeadings, ShouldAutoSiz
 
     public function array(): array
     {
-        // Daftar Tags dari Request Anda
+        // list fasilitas
         $tags = [
             'general'        => 'Umum (AC, Proyektor, Board)',
             'computer'       => 'Komputer (PC / Lab Kom)',
@@ -59,9 +59,8 @@ class FacilitiesReferenceSheet implements FromArray, WithHeadings, ShouldAutoSiz
                 'font' => ['bold' => true],
 
             ],
-            // Kolom A (Kode) dikasih warna kuning biar sadar itu yang harus dicopy
             'A' => [
-                'font' => ['bold' => true, 'color' => ['rgb' => '0000FF']], // Biru
+                'font' => ['bold' => true, 'color' => ['rgb' => '0000FF']],
             ]
         ];
     }

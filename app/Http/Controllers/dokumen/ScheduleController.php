@@ -29,7 +29,6 @@ class ScheduleController extends Controller
      */
     public function index(Request $request)
     {
-        // 1. Setup Filter Dasar
         $campus  = $request->input('campus', 'kampus_1');
         $shift   = $request->input('shift', 'pagi');
         $prodiId = $request->input('prodi_id');
@@ -41,7 +40,6 @@ class ScheduleController extends Controller
             return redirect()->back()->with('error', 'Tidak ada periode akademik yang aktif.');
         }
 
-        // 2. Ambil Dokumen Approval (Logic Baru: Kampus & Shift)
         $document = AprovalDocument::where('academic_period_id', $activePeriodId)
             ->where('type', 'jadwal_perkuliahan')
             ->where('campus', $campus)
@@ -49,67 +47,58 @@ class ScheduleController extends Controller
             ->first();
 
         $isReadOnly = false;
-        // Jika dokumen ada DAN statusnya bukan draft/rejected, maka kunci (Read Only)
         if ($document && !in_array($document->status, ['draft', 'rejected'])) {
             $isReadOnly = true;
         }
 
-        // 3. Ambil Prodi yang Distribusinya Sudah ACC Direktur
+        // Ambil Prodi yang Distribusinya Sudah ACC Direktur
         $approvedProdiIds = AprovalDocument::where('academic_period_id', $activePeriodId)
             ->where('type', 'distribusi_matkul')
             ->where('status', 'approved_direktur')
             ->pluck('prodi_id')
             ->toArray();
 
-        // 4. Query Matkul yang Belum Terjadwal (FIXED VARIABLE SCOPE)
+        // Query Matkul yang Belum Terjadwal
         $unscheduledDistributions = CourseDistribution::query()
             ->where('academic_period_id', $activePeriodId)
             ->has('teachingLecturers')
-            ->whereHas('studyClass', function ($query) use ($approvedProdiIds, $shift, $campus, $prodiId) {
-                // PERBAIKAN DI SINI: Tambahkan $shift, $campus, $prodiId ke dalam 'use'
+            ->whereHas('studyClass', function ($query) use ($approvedProdiIds, $shift, $prodiId, $campus) {
 
                 $query->whereIn('prodi_id', $approvedProdiIds);
                 $query->where('shift', $shift);
 
-                // Filter Kampus via Relasi Prodi
-                $query->whereHas('prodi', function ($q) use ($campus) {
-                    $q->where('primary_campus', $campus);
-                });
-
-                // Filter Optional User (Jika user memilih filter Prodi)
                 if ($prodiId) {
                     $query->where('prodi_id', $prodiId);
+                } else {
+                    $query->whereHas('prodi', function ($q) use ($campus) {
+                        $q->where('primary_campus', $campus);
+                    });
                 }
             })
             ->doesntHave('schedule')
             ->with(['course', 'studyClass', 'teachingLecturers'])
             ->get()
             ->map(function ($dist) {
-                // Ambil Raw Tags dari Course
                 $rawTags = $dist->course->required_tags;
-                // Handle format data (array/json string)
                 $tags = is_array($rawTags) ? $rawTags : json_decode($rawTags ?? '[]', true);
                 if (!is_array($tags)) $tags = [];
 
-                // TAMBAHAN: Generate HTML Badge siap pakai untuk View
                 $badges = [];
                 foreach ($tags as $t) {
                     $label = Room::getTagName($t);
                     $color = Room::getTagColor($t);
-                    // Kita simpan struktur data untuk diloop di view
                     $badges[] = [
                         'label' => $label,
                         'color' => $color
                     ];
                 }
 
-                $dist->needs_lab = !empty(array_diff($tags, ['general'])); // Logic: butuh lab jika tags bukan cuma general
-                $dist->formatted_tags = $badges; // Kirim ini ke View
+                $dist->needs_lab = !empty(array_diff($tags, ['general']));
+                $dist->formatted_tags = $badges;
 
                 return $dist;
             });
 
-        // 5. Ambil Data Ruangan (Resources)
         $rooms = Room::where('location', $campus)
             ->orderBy('building')
             ->orderBy('name')
@@ -136,7 +125,6 @@ class ScheduleController extends Controller
             ];
         }
 
-        // 6. Return View (FIXED COMPACT TYPO)
         return view('content.jadwal.index', compact(
             'resources',
             'campus',
@@ -145,7 +133,7 @@ class ScheduleController extends Controller
             'unscheduledDistributions',
             'document',
             'isReadOnly',
-            'prodiId' // Perbaikan: sebelumnya 'ProdiId' (Typo kapital)
+            'prodiId'
         ));
     }
 
@@ -158,8 +146,6 @@ class ScheduleController extends Controller
 
         $activePeriodId = AcademicPeriod::where('is_active', true)->value('id');
 
-        // 1. Definisikan Slot Waktu (Master Data Grid)
-        // Format: [Label Jam, Start, End]
         $slotsPagi = [
             ['08:00', '08:50'],
             ['08:50', '09:40'],
@@ -172,8 +158,6 @@ class ScheduleController extends Controller
             ['15:30', '16:20']
         ];
 
-        // Shift Malam (Senin-Jumat beda, Sabtu ikut pagi)
-        // Kita buat master slot malam standar dulu
         $slotsMalam = [
             ['13:00', '13:50'],
             ['13:50', '14:40'],
@@ -188,24 +172,19 @@ class ScheduleController extends Controller
             ['19:30', '20:00']
         ];
 
-        // Pilih Slot Berdasarkan Filter
         $masterSlots = ($shift === 'malam') ? $slotsMalam : $slotsPagi;
 
-        // 2. Query Data Jadwal
         $query = Schedule::query()
             ->with(['course', 'studyClass', 'lecturer', 'room'])
             ->whereHas('room', fn($q) => $q->where('location', $campus))
             ->whereHas('courseDistribution', fn($q) => $q->where('academic_period_id', $activePeriodId))
             ->whereHas('studyClass', function ($q) use ($shift, $prodiId, $semester) {
-                // Filter Shift (Penting!)
                 $q->where('shift', $shift);
                 if ($prodiId) $q->where('prodi_id', $prodiId);
                 if ($semester) $q->where('semester', $semester);
             });
 
         $schedules = $query->get();
-
-        // 3. Ambil Ruangan yang TERPAKAI saja (Agar tidak terlalu lebar)
         $usedRoomIds = $schedules->pluck('room_id')->unique();
 
         $rooms = Room::whereIn('id', $usedRoomIds)
@@ -213,24 +192,15 @@ class ScheduleController extends Controller
             ->orderBy('name')
             ->get();
 
-        // 4. CHUNKING (PENTING UNTUK PDF)
-        // Karena kertas terbatas, kita bagi ruangan misal per 6 ruangan satu tabel
         $roomChunks = $rooms->chunk(6);
-
-        // 5. PETA MATRIKS (Mapping Data ke Grid)
-        // Struktur: $scheduleMatrix[Hari][IndexSlot][RoomId] = DataJadwal
         $scheduleMatrix = [];
         $days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
 
         foreach ($schedules as $sched) {
-            // Ambil Slot ID pertama dari jadwal ini
             $firstSlotId = $sched->time_slot_ids[0] ?? null;
             if (!$firstSlotId) continue;
-
-            // Cari jadwal ini masuk ke "Master Slot" nomor berapa?
-            // Kita bandingkan jam mulainya.
-            $startTime = TimeSlots::find($firstSlotId)->start_time; // ex: 08:00:00
-            $startHi = substr($startTime, 0, 5); // 08:00
+            $startTime = TimeSlots::find($firstSlotId)->start_time;
+            $startHi = substr($startTime, 0, 5);
 
             // Cari index di masterSlots
             foreach ($masterSlots as $index => $slotVal) {
@@ -267,7 +237,6 @@ class ScheduleController extends Controller
         try {
             $activePeriodId = AcademicPeriod::where('is_active', true)->value('id');
 
-            // 1. Cek Ketersediaan Jadwal
             $hasSchedule = Schedule::whereHas('studyClass', function ($q) use ($request) {
                 $q->where('shift', $request->shift);
             })->whereHas('room', function ($q) use ($request) {
@@ -278,8 +247,6 @@ class ScheduleController extends Controller
                 return back()->with('error', 'Belum ada jadwal yang dibuat untuk ' . $request->campus . ' shift ' . $request->shift);
             }
 
-            // 2. Simpan Dokumen Approval
-            // Tampung ke variabel $doc untuk notifikasi
             $doc = AprovalDocument::updateOrCreate(
                 [
                     'academic_period_id' => $activePeriodId,
@@ -288,20 +255,16 @@ class ScheduleController extends Controller
                     'shift'  => $request->shift,
                 ],
                 [
-                    'prodi_id' => null, // Global document
+                    'prodi_id' => null,
                     'status' => 'submitted',
                     'action_by_user_id' => Auth::id(),
                     'feedback_message' => null
                 ]
             );
 
-            // 3. LOGIC NOTIFIKASI KE WADIR 1
             $currentUser = Auth::user();
-
-            // Cari user yang memiliki role 'wadir1'
             $wadir1 = User::role('wadir1')->first();
 
-            // Kirim notif jika Wadir 1 ada & bukan orang yang mensubmit (biar ga notif diri sendiri)
             if ($wadir1 && $wadir1->id !== $currentUser->id) {
                 $wadir1->notify(new DocumentActionNotification(
                     $doc,
@@ -408,7 +371,6 @@ class ScheduleController extends Controller
             foreach ($daySlots->slice($startIndex) as $slot) {
                 $start = Carbon::parse($slot->start_time);
                 $end   = Carbon::parse($slot->end_time);
-                // Pakai abs() biar aman dari minus
                 $slotDuration = abs($end->getTimestamp() - $start->getTimestamp()) / 60;
 
                 $selectedSlotIds[] = $slot->id;
@@ -424,7 +386,6 @@ class ScheduleController extends Controller
                 ], 422);
             }
 
-            // 6. Cek Bentrok
             $clashError = $this->checkClash(
                 $dayName,
                 $selectedSlotIds,
@@ -439,7 +400,6 @@ class ScheduleController extends Controller
                 return response()->json(['success' => false, 'message' => $clashError], 422);
             }
 
-            // 8. SIMPAN (Versi Bersih)
             $schedule = Schedule::create([
                 'course_distribution_id' => $request->course_distribution_id,
                 'study_class_id' => $request->study_class_id,
@@ -448,7 +408,6 @@ class ScheduleController extends Controller
                 'user_id'        => $request->user_id,
                 'day'            => $dayName,
                 'time_slot_ids'  => $selectedSlotIds,
-                // Kolom status & description SUDAH DIHAPUS
             ]);
 
             return response()->json([
@@ -490,7 +449,7 @@ class ScheduleController extends Controller
             $clashError = $this->checkClash(
                 $dayName,
                 $slots,
-                $schedule->room_id,       // Ganti $request->room_id jadi $schedule->room_id
+                $schedule->room_id,
                 $schedule->user_id,
                 $schedule->study_class_id,
                 $schedule->course_id,
@@ -521,9 +480,8 @@ class ScheduleController extends Controller
         try {
             $schedule = Schedule::with(['course', 'studyClass', 'room'])->findOrFail($id);
 
-            // --- SKENARIO 1: GANTI DOSEN ---
+            // ganti pengajar
             if ($request->has('user_id')) {
-                // 1. Validasi: Pastikan Dosen Baru adalah anggota Team Teaching
                 $dist = CourseDistribution::with('teachingLecturers')->find($schedule->course_distribution_id);
                 $validIds = $dist->teachingLecturers->pluck('id')->toArray();
 
@@ -531,48 +489,42 @@ class ScheduleController extends Controller
                     return response()->json(['success' => false, 'message' => 'Dosen tidak valid untuk matkul ini.'], 422);
                 }
 
-                // 2. Cek Bentrok untuk Dosen Baru di Waktu & Ruang yang SAMA
                 $clashError = $this->checkClash(
-                    $schedule->day, // Hari tetap
-                    $schedule->time_slot_ids, // Jam tetap
-                    $schedule->room_id, // Ruang tetap
-                    $request->user_id, // <--- Dosen Baru
+                    $schedule->day,
+                    $schedule->time_slot_ids,
+                    $schedule->room_id,
+                    $request->user_id,
                     $schedule->study_class_id,
                     $schedule->course_id,
                     $schedule->studyClass->total_students,
-                    $schedule->id // Exclude diri sendiri
+                    $schedule->id
                 );
 
                 if ($clashError) {
                     return response()->json(['success' => false, 'message' => $clashError], 422);
                 }
 
-                // 3. Update
                 $schedule->update(['user_id' => $request->user_id]);
 
                 return response()->json(['success' => true, 'message' => 'Pengajar berhasil diganti!']);
             }
 
-            // --- SKENARIO 2: PINDAH JADWAL (DRAG & DROP) ---
+            // ganti jadwal
             if ($request->has('start_time')) {
                 $request->validate([
                     'room_id'    => 'required|exists:rooms,id',
                     'start_time' => 'required|date',
                 ]);
 
-                // ... (Logika Pindah Jadwal Lama Anda - Copy dari kode sebelumnya) ...
-                // 1. Ambil Data Durasi / SKS
                 $course = $schedule->course;
                 $sks = $course->sks_total;
                 $effectiveSks = ($sks > 1) ? $sks - 1 : 1;
                 $requiredMinutes = $effectiveSks * 50;
 
-                // 2. Parsing Waktu Baru
                 $startTimeISO = Carbon::parse($request->start_time);
-                $dayName      = $startTimeISO->locale('en')->dayName; // Force English
+                $dayName      = $startTimeISO->locale('en')->dayName;
                 $startTime    = $startTimeISO->format('H:i');
 
-                // 3. Ambil Slot
                 $isKaryawan = $schedule->studyClass->shift === 'malam';
                 $daySlots = TimeSlots::forDay($dayName, $isKaryawan)->orderBy('start_time')->get();
                 $startIndex = $daySlots->search(fn($s) => substr($s->start_time, 0, 5) === $startTime);
@@ -591,12 +543,11 @@ class ScheduleController extends Controller
 
                 if ($accumulated < $requiredMinutes) return response()->json(['success' => false, 'message' => 'Waktu tidak cukup'], 422);
 
-                // 4. Cek Bentrok (Lokasi Baru, Dosen Tetap)
                 $clashError = $this->checkClash(
                     $dayName,
                     $selectedSlotIds,
                     $request->room_id,
-                    $schedule->user_id, // <--- Dosen Tetap
+                    $schedule->user_id,
                     $schedule->study_class_id,
                     $schedule->course_id,
                     $schedule->studyClass->total_students,
@@ -605,7 +556,6 @@ class ScheduleController extends Controller
 
                 if ($clashError) return response()->json(['success' => false, 'message' => $clashError], 422);
 
-                // 5. Update
                 $schedule->update([
                     'room_id'       => $request->room_id,
                     'day'           => $dayName,
@@ -624,8 +574,6 @@ class ScheduleController extends Controller
     {
         try {
             $schedule = Schedule::findOrFail($id);
-
-            // Hapus data
             $schedule->delete();
 
             return response()->json([
@@ -642,31 +590,18 @@ class ScheduleController extends Controller
 
     public function getEvents(Request $request)
     {
-        // Parameter dari FullCalendar (Range tanggal yang sedang dilihat user)
-        $startStr = $request->input('start'); // Ex: 2026-01-26
-        $endStr   = $request->input('end');   // Ex: 2026-02-01
-
-        // Load Semua TimeSlot untuk referensi (biar tidak query berulang-ulang)
-        // Kita jadikan Key By ID supaya mudah ambilnya: $slots[1]->start_time
+        // Parameter dari FullCalendar
+        $startStr = $request->input('start');
+        $endStr   = $request->input('end');
         $allSlots = TimeSlots::all()->keyBy('id');
 
-
         // Ambil Jadwal dari Database
-        // Eager Load relasi agar ringan
         $schedules = Schedule::with(['course', 'studyClass.prodi', 'lecturer', 'room'])
             ->get();
 
         $events = [];
-
-        // LOOPING UTAMA: Konversi "Senin" menjadi "2026-01-27"
         foreach ($schedules as $schedule) {
-
-            // 1. Tentukan Tanggal Konkret
-            // Kita cari tanggal di dalam range (startStr s/d endStr) yang harinya sesuai dengan $schedule->day
             $targetDate = $this->findDateForDay($startStr, $endStr, $schedule->day);
-
-            $lecturerNames = $schedule->lecturer->name ?? '-';
-
             $teamList = $schedule->courseDistribution->teachingLecturers->map(function ($l) {
                 return [
                     'id' => $l->id,
@@ -675,12 +610,9 @@ class ScheduleController extends Controller
                 ];
             })->values();
 
-            if (!$targetDate) continue; // Skip jika hari tidak ada di range view
+            if (!$targetDate) continue;
 
-            // 2. Hitung Waktu Mulai & Selesai dari Array TimeSlot IDs
-            // $schedule->time_slot_ids contohnya [1, 2, 3]
             $slotIds = $schedule->time_slot_ids ?? [];
-
             if (empty($slotIds)) continue;
 
             // Ambil Slot Pertama (Start) dan Terakhir (End)
@@ -690,8 +622,8 @@ class ScheduleController extends Controller
             // Cek apakah slot ada di master data
             if (!isset($allSlots[$firstSlotId]) || !isset($allSlots[$lastSlotId])) continue;
 
-            $startTime = $allSlots[$firstSlotId]->start_time; // 08:00:00
-            $endTime   = $allSlots[$lastSlotId]->end_time;    // 10:30:00
+            $startTime = $allSlots[$firstSlotId]->start_time;
+            $endTime   = $allSlots[$lastSlotId]->end_time;
 
             // Gabungkan Tanggal + Jam -> ISO8601 (2026-01-27T08:00:00)
             $startDateTime = $targetDate->format('Y-m-d') . 'T' . $startTime;
@@ -711,7 +643,7 @@ class ScheduleController extends Controller
                 'extendedProps' => [
                     // Panggil Accessor full_name dari Model StudyClass
                     'fullClassName' => $schedule->studyClass->full_name,
-                    'semester'      => $schedule->studyClass->semester,     // <--- Tambah ini
+                    'semester'      => $schedule->studyClass->semester,
                     'prodiCode'     => $schedule->studyClass->prodi->code,
                     'courseName' => $schedule->course->name,
                     'courseCode' => $schedule->course->code,
@@ -719,8 +651,8 @@ class ScheduleController extends Controller
                     'teamTeaching' => $teamList,
                     'sks' => $schedule->course->sks_total,
                     'location' => $schedule->room->name . ' (' . $schedule->room->building . ')',
-                    'jam_mulai' => substr($startTime, 0, 5), // 08:00
-                    'jam_selesai' => substr($endTime, 0, 5), // 10:30
+                    'jam_mulai' => substr($startTime, 0, 5),
+                    'jam_selesai' => substr($endTime, 0, 5),
                     'durasi' => $durationMinutes . ' Menit'
                 ]
             ];
@@ -823,7 +755,7 @@ class ScheduleController extends Controller
             }
         }
 
-        return null; // Aman
+        return null;
     }
 
 

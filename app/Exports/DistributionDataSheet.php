@@ -9,7 +9,8 @@ use Maatwebsite\Excel\Concerns\WithMapping;
 use Maatwebsite\Excel\Concerns\ShouldAutoSize;
 use Maatwebsite\Excel\Concerns\WithStyles;
 use Maatwebsite\Excel\Concerns\WithTitle;
-use PhpOffice\PhpSpreadsheet\Event\AfterSheet;
+use Maatwebsite\Excel\Events\AfterSheet;
+
 use PhpOffice\PhpSpreadsheet\Worksheet\Worksheet;
 
 class DistributionDataSheet implements FromCollection, WithHeadings, WithMapping, ShouldAutoSize, WithStyles, WithTitle
@@ -17,6 +18,8 @@ class DistributionDataSheet implements FromCollection, WithHeadings, WithMapping
     protected $periodId;
     protected $prodiId;
     protected $semester;
+    protected $totalRows;
+
 
     public function __construct($periodId, $prodiId, $semester)
     {
@@ -67,8 +70,8 @@ class DistributionDataSheet implements FromCollection, WithHeadings, WithMapping
     public function headings(): array
     {
         return [
-            'ID_DISTRIBUSI (GABUNGAN)', // Judul Kolom berubah
-            'SHIFT',                    // Tambah info shift biar jelas
+            'ID_DISTRIBUSI (GABUNGAN)',
+            'SHIFT',
             'DAFTAR KELAS',
             'PROGRAM STUDI',
             'SEMESTER',
@@ -118,16 +121,12 @@ class DistributionDataSheet implements FromCollection, WithHeadings, WithMapping
 
                 if ($this->totalRows == 0) return;
 
-                // 1. Tulis Label "TOTAL KESELURUHAN" di Kolom G (Nama Matkul)
-                // Supaya rata kanan dengan angka SKS
                 $sheet->setCellValue('G' . $footerRow, 'TOTAL SKS:');
                 $sheet->getStyle('G' . $footerRow)->getAlignment()->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_RIGHT);
 
-                // 2. Rumus Sum hanya untuk Kolom H (SKS TOTAL)
-                // Karena di format baru kita cuma menampilkan SKS Total (Teori/Praktek di-hide biar ringkas)
                 $sheet->setCellValue('H' . $footerRow, "=SUM(H2:H{$rows})");
 
-                // 3. Styling Footer
+                // Styling Footer
                 $sheet->getStyle("G{$footerRow}:H{$footerRow}")->applyFromArray([
                     'font' => ['bold' => true],
                     'fill' => [

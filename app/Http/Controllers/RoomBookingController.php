@@ -3,19 +3,18 @@
 namespace App\Http\Controllers;
 
 use Carbon\Carbon;
-use App\Models\User; // Tambahkan ini
+use App\Models\User;
 use App\Models\Schedule;
 use App\Models\RoomBooking;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Notification; // Tambahkan ini
-use App\Notifications\BookingStatusNotification; // Tambahkan ini
+use Illuminate\Support\Facades\Notification;
+use App\Notifications\BookingStatusNotification;
 
 class RoomBookingController extends Controller
 {
     public function store(Request $request)
     {
-        // 1. Validasi Input
         $request->validate([
             'room_id'      => 'required|exists:rooms,id',
             'booking_date' => 'required|date|after_or_equal:today',
@@ -29,7 +28,7 @@ class RoomBookingController extends Controller
         $endTime   = $isFullDay ? '21:00' : $request->end_time;
         $dayName   = Carbon::parse($request->booking_date)->format('l');
 
-        // 2. Cek Conflict Schedule (Kuliah Rutin)
+        // Cek Conflict Schedule (Kuliah Rutin)
         $scheduleConflicts = Schedule::where('room_id', $request->room_id)
             ->where('day', $dayName)
             ->get()
@@ -43,7 +42,7 @@ class RoomBookingController extends Controller
             return back()->with('error', 'Gagal! Ruangan digunakan untuk kuliah rutin pada jam tersebut.');
         }
 
-        // 3. Cek Conflict Booking Lain (Approved)
+        // Cek Conflict Booking Lain (Approved)
         $bookingConflicts = RoomBooking::where('room_id', $request->room_id)
             ->where('booking_date', $request->booking_date)
             ->where('status', 'approved')
@@ -59,7 +58,6 @@ class RoomBookingController extends Controller
             return back()->with('error', 'Gagal! Ruangan sudah dibooking orang lain pada jam tersebut.');
         }
 
-        // 4. Simpan Data
         $booking = RoomBooking::create([
             'user_id'      => Auth::id(),
             'room_id'      => $request->room_id,
@@ -71,11 +69,9 @@ class RoomBookingController extends Controller
             'status'       => 'pending',
         ]);
 
-        // --- LOGIC NOTIFIKASI KE ADMIN/BAAK ---
-        // Ambil user dengan role admin ATAU baak
+        // kirim notif ke admin/baak
         $admins = User::role(['admin', 'baak'])->get();
 
-        // Kirim notifikasi massal
         if ($admins->isNotEmpty()) {
             Notification::send($admins, new BookingStatusNotification($booking, 'submitted'));
         }
@@ -91,7 +87,7 @@ class RoomBookingController extends Controller
         $booking = RoomBooking::with('user', 'room')->findOrFail($id);
         $booking->update(['status' => 'approved']);
 
-        // Notif ke Dosen (Pemilik Booking)
+        // Notif ke Dosen
         $booking->user->notify(new BookingStatusNotification($booking, 'approved'));
 
         return back()->with('success', 'Booking berhasil disetujui.');
@@ -109,7 +105,7 @@ class RoomBookingController extends Controller
             'rejection_note' => $request->reason ?? 'Tidak sesuai prosedur.'
         ]);
 
-        // Notif ke Dosen (Pemilik Booking)
+        // Notif ke Dosen
         $booking->user->notify(new BookingStatusNotification($booking, 'rejected'));
 
         return back()->with('success', 'Booking telah ditolak.');

@@ -8,11 +8,9 @@ use App\Models\User;
 use App\Models\Schedule;
 use App\Models\Workload;
 use App\Models\RoomBooking;
-use Illuminate\Support\Str;
 use Illuminate\Http\Request;
 use App\Models\AcademicPeriod;
 use App\Models\AprovalDocument;
-use Illuminate\Support\Facades\DB;
 use App\Http\Controllers\Controller;
 use Illuminate\Support\Facades\Auth;
 
@@ -23,20 +21,21 @@ class AnalisisController extends Controller
     $user = Auth::user();
     $now = Carbon::now();
 
-    // 1. FILTER INPUT
+    // filter tanggal & lokasi kampus
     $filterDate = $request->get('date', $now->format('Y-m-d'));
-    $filterCampus = $request->get('campus'); // 'kampus_1' atau 'kampus_2'
+    $filterCampus = $request->get('campus');
 
-    $dayName = Carbon::parse($filterDate)->format('l'); // Monday, Tuesday...
+    // nama hari + waktu
+    $dayName = Carbon::parse($filterDate)->format('l');
     $greeting = $this->getGreeting($now->format('H'));
 
+    //ambil periode aktif
     $activePeriod = AcademicPeriod::where('is_active', true)->first();
-
 
     // DASHBOARD DOSEN
 
     /** @var User $user */
-    if ($user->hasRole('dosen')) {
+    if ($user->hasRole('dosen')) { // kalau user yang login memiliki role dosen.
 
       $todaySchedules = collect([]);
 
@@ -48,7 +47,7 @@ class AnalisisController extends Controller
             $q->where('academic_period_id', $activePeriod->id);
           })
           ->orderBy('time_slot_ids')
-          ->take(3)
+          ->take(5)
           ->get();
       }
 
@@ -69,29 +68,24 @@ class AnalisisController extends Controller
 
       $availableRooms = $allRooms->map(function ($room) use ($dayName, $filterDate) {
 
-        // A. Ambil Jadwal Rutin (Load Dosen & Matkul)
         $schedules = Schedule::with(['courseDistribution.teachingLecturers', 'course'])
           ->where('room_id', $room->id)
           ->where('day', $dayName)
           ->get();
 
-        // B. Ambil Booking (Load User)
         $bookings = RoomBooking::with('user')
           ->where('room_id', $room->id)
           ->where('booking_date', $filterDate)
           ->where('status', 'approved')
           ->get();
 
-        $usageDetails = []; // Penampung data detail
+        $usageDetails = [];
 
-        // 1. Loop Jadwal Rutin
         foreach ($schedules as $sch) {
           $realTime = $sch->real_time;
           if ($realTime) {
-            // Ambil nama dosen pertama
             $dosenName = $sch->courseDistribution->teachingLecturers->first()->name ?? 'Dosen';
             $courseName = $sch->course->name ?? 'Kuliah';
-
             $usageDetails[] = [
               'start' => $realTime['start_formatted'],
               'end'   => $realTime['end_formatted'],
@@ -102,7 +96,6 @@ class AnalisisController extends Controller
           }
         }
 
-        // 2. Loop Booking
         foreach ($bookings as $book) {
           $start = substr($book->start_time, 0, 5);
           $end = substr($book->end_time, 0, 5);
@@ -121,7 +114,7 @@ class AnalisisController extends Controller
           return $a['start'] <=> $b['start'];
         });
 
-        // C. Tentukan Status & HTML Popover
+        // Status & HTML Popover
         if (empty($usageDetails)) {
           $room->availability_status = 'Kosong Sepanjang Hari';
           $room->availability_color = 'success';
@@ -172,19 +165,15 @@ class AnalisisController extends Controller
         'filterCampus',
         'myBookings'
       ));
-    }
+    } else {
+      // DASHBOARD ADMIN 
 
-    // ==========================================
-    // DASHBOARD ADMIN (Tetap Sama)
-    // ==========================================
-    else {
-      // 1. Pending Bookings (Tetap)
       $pendingBookings = RoomBooking::with(['user', 'room'])
         ->where('status', 'pending')
         ->orderBy('created_at', 'desc')
         ->get();
 
-      // 2. Monitoring Ruangan (UPDATE LOGIC: Ambil Detail Jam)
+      // Monitoring Ruangan
       $allRooms = Room::where('is_active', true)
         ->when($filterCampus, function ($q) use ($filterCampus) {
           return $q->where('location', $filterCampus);
@@ -198,20 +187,19 @@ class AnalisisController extends Controller
             ->where('day', $dayName)
             ->get();
 
-          // B. Cek Booking Approved (Load relasi user)
+          // Cek Booking Approved 
           $bookings = RoomBooking::with('user') // Eager load user
             ->where('room_id', $room->id)
             ->where('booking_date', $filterDate)
             ->where('status', 'approved')
             ->get();
 
-          $usageDetails = []; // Array untuk menampung detail
+          $usageDetails = [];
 
-          // 1. Loop Jadwal Rutin
           foreach ($schedules as $sch) {
             $realTime = $sch->real_time;
             if ($realTime) {
-              // Ambil nama dosen pertama (jika team teaching)
+
               $dosenName = $sch->courseDistribution->teachingLecturers->first()->name ?? 'Dosen';
               $courseName = $sch->course->name ?? 'Kuliah';
 
@@ -225,7 +213,6 @@ class AnalisisController extends Controller
             }
           }
 
-          // 2. Loop Booking
           foreach ($bookings as $book) {
             $start = substr($book->start_time, 0, 5);
             $end = substr($book->end_time, 0, 5);
@@ -239,19 +226,16 @@ class AnalisisController extends Controller
             ];
           }
 
-          // Urutkan berdasarkan jam mulai
           usort($usageDetails, function ($a, $b) {
             return $a['start'] <=> $b['start'];
           });
 
-          // D. Set Status & Generate HTML untuk Popover
           if (empty($usageDetails)) {
             $room->status_hari_ini = 'Kosong';
             $room->popover_content = null;
           } else {
             $room->status_hari_ini = 'Terpakai';
 
-            // Buat HTML string list pemakaian untuk dimasukkan ke data-bs-content
             $htmlList = '<ul class="list-group list-group-flush p-0 m-0">';
             foreach ($usageDetails as $detail) {
               $badgeColor = $detail['type'] == 'Kuliah' ? 'bg-label-primary' : 'bg-label-warning';
@@ -273,7 +257,8 @@ class AnalisisController extends Controller
           return $room;
         });
 
-      // 3. Aktivitas Terkini (Tetap)
+      // Aktivitas Terkini
+      // booking ruangan
       $recentBookings = RoomBooking::with('user', 'room')->latest()->take(5)->get()
         ->map(function ($item) {
           return (object) [
@@ -286,7 +271,7 @@ class AnalisisController extends Controller
           ];
         });
 
-      // 2. RECENT LOGINS (Format Standar)
+      // terakhir login 
       $recentLogins = User::role('dosen')->orderBy('updated_at', 'desc')->take(5)->get()
         ->map(function ($item) {
           return (object) [
@@ -299,15 +284,13 @@ class AnalisisController extends Controller
           ];
         });
 
-      // 3. RECENT APPROVALS (Updated sesuai Model AprovalDocument)
-      // Kita ambil dokumen yang "action_by_user_id" nya tidak null (sudah ada aksi)
+      // dokumen 
       $recentApprovals = AprovalDocument::with(['lastActionUser', 'prodi'])
         ->whereNotNull('action_by_user_id') // Hanya yang sudah di-acc/reject
         ->orderBy('updated_at', 'desc')
         ->take(5)
         ->get()
         ->map(function ($item) {
-          // Tentukan kata kerja
           $isRejected = $item->status == 'rejected';
           $actionWord = $isRejected ? 'meminta revisi' : 'menyetujui';
 
@@ -327,7 +310,7 @@ class AnalisisController extends Controller
           ];
         });
 
-      // 4. RECENT BKD / WORKLOAD (Updated sesuai Model Workload)
+      // managemen bkd
       $recentBkds = Workload::with(['user', 'academicPeriod'])
         ->latest()
         ->take(5)
@@ -377,7 +360,7 @@ class AnalisisController extends Controller
 
   private function getGreeting($hour)
   {
-    if ($hour < 12) return 'Selamat Pagi';
+    if ($hour < 9) return 'Selamat Pagi';
     if ($hour < 15) return 'Selamat Siang';
     if ($hour < 18) return 'Selamat Sore';
     return 'Selamat Malam';

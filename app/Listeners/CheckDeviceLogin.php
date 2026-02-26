@@ -12,9 +12,6 @@ class CheckDeviceLogin
     public function handle(Login $event)
     {
         $user = $event->user;
-
-        // 1. CEK PREFERENSI USER (Sesuai Controller Anda)
-        // Jika user tidak mencentang opsi ini, hentikan proses.
         $settings = $user->notification_settings;
         if (empty($settings['notif_login']) || $settings['notif_login'] == false) {
             return;
